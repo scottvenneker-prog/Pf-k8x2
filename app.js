@@ -624,6 +624,25 @@ function topRisico(){const L=risicos().slice(0,3);if(!L.length)return "";let pre
  try{localStorage.setItem("pf_risk",JSON.stringify(L.map(x=>x.k)))}catch(e){}
  const lv=r=>r>=1.3?["Hoog","r"]:r>=1?["Let op","a"]:["Beheersbaar","g"];
  return `<div class="tile hero2" style="margin-top:8px"><div class="lbl">Je drie grootste risico's nu</div>${L.map((x,i)=>{const v=lv(x.r);return `<details style="${i?"border-top:1px solid var(--line);":""}padding:2px 0"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:600">${i+1}. ${x.t}${prev.length&&!prev.includes(x.k)?` <span class="pill n">nieuw</span>`:""}</span><span style="display:flex;gap:6px;align-items:center"><b class="num">${x.n}</b><span class="pill ${v[1]}">${v[0]}</span></span></div><div class="note" style="margin:2px 0 0">${x.u.split(". ")[0].replace(/\.$/,"")}.</div></summary><div class="note" style="margin:0 0 8px">${x.u}<br><b>Wat kun je doen:</b> ${x.a}</div></details>`}).join("")}<div class="note" style="margin:6px 0 0">Rekent live mee met je portefeuille, dus verandert zodra je wegingen of regels veranderen. Gerangschikt naar hoe ver je boven je eigen limiet zit.</div></div>`}
+
+/* ---- top 3 sterkste punten ---- */
+function sterkten(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,L=[],wa=f=>{let a=0,b=0;own.forEach(r=>{const v=f(r);if(v!=null&&isFinite(v)){a+=r.w*v;b+=r.w}});return b?a/b:null},sh=f=>own.filter(f).reduce((t,r)=>t+r.w,0)/W*100,add=(k,t,n,u,why,r)=>{if(r!=null&&isFinite(r))L.push({k,t,n,u,why,r})};
+ const eps=wa(r=>Math.min(r.eps||0,40)),fcf=wa(r=>r.fcf==null?null:Math.min(r.fcf,40)),roic=wa(r=>r.roic==null?null:Math.min(r.roic,60)),om=wa(r=>r.D&&r.D.om!=null?Math.min(r.D.om*100,70):null),ins=wa(r=>r.D&&r.D.ins_pct!=null?r.D.ins_pct*100:null),dil=wa(r=>r.D&&r.D.dil!=null?r.D.dil*100:null),sur=wa(r=>{const e=((r.D&&r.D.er)||[]).slice(0,4);return e.length?e.reduce((t,q)=>t+(q.k==null?0:q.k*100),0)/e.length:null});
+ const shR=sh(r=>r.roic!=null&&r.roic>=15),shD=sh(r=>r.nd==null||r.nd<=1),shC=sh(r=>cscore(r).s>=9),shM=sh(r=>MOAT[r.tk]&&/breed/i.test(MOAT[r.tk].s));
+ add("eps","Winstgroei",f1(eps)+"%",`Je bedrijven groeien hun winst per aandeel gemiddeld ${f1(eps)}% per jaar (gewogen), tegenover je doel van ${DOEL}%.`,"Winstgroei is de motor van je 15%-doel. Op lange termijn volgt de koers de winst.",eps/DOEL);
+ add("fcf","Kasstroomgroei",f1(fcf)+"%",`De vrije kasstroom groeit gemiddeld ${f1(fcf)}% per jaar. Kasstroom is moeilijker op te poetsen dan winst.`,"Winst zonder kasstroom is verdacht. Hier klopt beide.",fcf/DOEL);
+ add("roic","Rendement op kapitaal",f1(roic)+"%",`Gemiddelde ROIC ${f1(roic)}%. ${Math.round(shR)}% van je geld staat in bedrijven met een ROIC van 15% of meer.`,"Een hoge ROIC betekent dat elke euro die het bedrijf herinvesteert veel oplevert. Dat is het kenmerk van een compounder.",roic/15);
+ add("marge","Winstmarge",f1(om)+"%",`Gemiddelde bedrijfsmarge ${f1(om)}%. Dat wijst op prijsmacht en dus op een moat.`,"Hoge marges houden concurrenten op afstand en geven buffer als het tegenzit.",om/20);
+ add("ins","Eigenbelang management",f1(ins)+"%",`Insiders houden gemiddeld ${f1(ins)}% van de aandelen. Zij varen mee op dezelfde boot als jij.`,"Eigenaar-bestuurders nemen betere kapitaalbeslissingen.",ins/8);
+ add("schuld","Lage schuld",Math.round(shD)+"%",`${Math.round(shD)}% van je geld staat in bedrijven met netto schuld onder 1× EBITDA, of zonder schuldratio.`,"Weinig schuld betekent dat een tegenvaller geen bedrijfsprobleem wordt.",shD/70);
+ add("comp","Compounders",Math.round(shC)+"%",`${Math.round(shC)}% van je portefeuille heeft 9 of meer van 12 punten op mijn compounder-score.`,"Dit zijn de bedrijven die de score van jouw eigen regels het volledigst halen.",shC/50);
+ add("moat","Sterke moat",Math.round(shM)+"%",`${Math.round(shM)}% van je geld staat in bedrijven met een brede moat (mijn beoordeling).`,"Een brede moat beschermt winstgroei tegen concurrenten.",shM/60);
+ add("sur","Cijferverrassingen",(sur>=0?"+":"−")+f1(Math.abs(sur))+"%",`Je bedrijven halen gemiddeld ${f1(Math.abs(sur))}% ${sur>=0?"boven":"onder"} de verwachtingen van analisten bij hun cijfers.`,"Structureel beter dan verwacht hebben is een teken van onderschatting door de markt.",sur/3);
+ const xr=REAL.xirr;add("ren","Je eigen rendement",pc(xr),`${pc(xr)} per jaar sinds ${REAL.start}, tegenover je doel van ${DOEL}%.`,"Het resultaat van je eigen keuzes, na alle kosten.",xr==null?null:xr/DOEL);
+ L.sort((a,b)=>b.r-a.r);return L}catch(e){return []}}
+function topSterkte(){const L=sterkten().slice(0,3);if(!L.length)return "";let prev=[];try{prev=JSON.parse(localStorage.getItem("pf_sterk")||"[]")}catch(e){}
+ try{localStorage.setItem("pf_sterk",JSON.stringify(L.map(x=>x.k)))}catch(e){}
+ return `<div class="tile hero2" style="margin-top:8px"><div class="lbl">Je drie sterkste punten nu</div>${L.map((x,i)=>`<details style="${i?"border-top:1px solid var(--line);":""}padding:2px 0"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:600">${i+1}. ${x.t}${prev.length&&!prev.includes(x.k)?` <span class="pill n">nieuw</span>`:""}</span><span style="display:flex;gap:6px;align-items:center"><b class="num pos">${x.n}</b><span class="pill g">Sterk</span></span></div><div class="note" style="margin:2px 0 0">${x.u}</div></summary><div class="note" style="margin:0 0 8px"><b>Waarom dit telt:</b> ${x.why}</div></details>`).join("")}<div class="note" style="margin:6px 0 0">Rekent live mee. Gerangschikt naar hoeveel je boven een goede drempel zit (bijvoorbeeld winstgroei boven je doel van ${DOEL}%).</div></div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1234,7 +1253,7 @@ function vInz(){
  const T={
   rend:inzRapport()+yearSec()+sekt("Rendement",inzBron()+inzGT()+inzVsSp()+inzWin()+inzDiv()+inzVT()+inzGed()),
   risico:topRisico()+sekt("Risico en spreiding",inzConc()+inzKlap()+inzCorr()+inzOpt()+inzDD())+P.stS+P.stV+aiSec(),
-  kwal:sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
+  kwal:topSterkte()+sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
   bel:sekt("Belasting",inzBox()+inzBronb())+P.ko,
   plan:sekt("Deze maand",inzVolg()+inzZone()+inzSeizoen())+P.vo+sekt("Beslislogboek",inzLog())};
  return head("Inzichten")+seg+(T[inzTab]||T.rend)+demo}
