@@ -523,7 +523,7 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  const eps=wa(r=>Math.min(r.eps||0,40)),gro=cl(eps/DOEL*10);
  const kw=cl(own.reduce((t,r)=>t+r.w*((r.roic==null||r.roic>=15?1:r.roic>=10?.5:0)*.5+((r.nd==null||r.nd<=2)?.5:(r.nd<=3?.25:0))),0)/W*10);
  const top5=[...own].sort((a,b)=>b.w-a.w).slice(0,5).reduce((t,r)=>t+r.w,0)/W*100,eff=effN(own.map(r=>r.w)),secMax=Math.max(...Object.values(secW));
- const smalls=own.filter(r=>r.w<2),smW=smalls.reduce((t,r)=>t+r.w,0)/W*100,spr=cl(((eff>=20?10:eff/20*10)+(secMax<=35?10:cl(10-(secMax-35)/3))+(top5<=45?10:cl(10-(top5-45)/4))+cl(10-smalls.length*1.2))/4);
+ const smalls=own.filter(r=>r.w<2),smW=smalls.reduce((t,r)=>t+r.w,0)/W*100,secC=Math.min(secMax<=PAR.sec?10:cl(10-(secMax-PAR.sec)/3),...CLU.map(c=>{const w=cluW(c);return w<=c.lim?10:cl(10-(w-c.lim)/3)})),spr=cl(((eff>=20?10:eff/20*10)+secC+(top5<=45?10:cl(10-(top5-45)/4))+cl(10-smalls.length*1.2))/4);
  const peg=wa(r=>r.peg==null?null:Math.min(r.peg,4)),wdP=cl(10-Math.max(0,peg-1)*3.3);
  const FV=own.map(r=>({r,f:fairV(r)})).filter(x=>x.f),FW=FV.reduce((t,x)=>t+x.r.w,0)||1,over=FV.filter(x=>x.f.mid<-15),under=FV.filter(x=>x.f.mid>15),overW=over.reduce((t,x)=>t+x.r.w,0)/FW*100,underW=under.reduce((t,x)=>t+x.r.w,0)/FW*100,avgM=FV.reduce((t,x)=>t+x.r.w*x.f.mid,0)/FW,wdF=cl(10-overW/5),wd=(wdP+wdF)/2;
  const xr=REAL.xirr,ren=cl(xr==null?5:xr/DOEL*8);
