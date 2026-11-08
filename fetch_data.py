@@ -234,7 +234,10 @@ def notify(key, title, msg, url=None):
 # ---- tweede databron: Financial Modeling Prep (optioneel, alleen met FMP_KEY). Weekcache om binnen het gratis aantal aanroepen te blijven.
 FMPK = os.environ.get("FMP_KEY")
 FC = json.load(open("fmp_cache.json")) if os.path.exists("fmp_cache.json") else {}
-ALERTS = json.load(open("alerts.json")) if os.path.exists("alerts.json") else {}   # {ticker: instapkoers in euro}, gezet via de app of de chat
+ALERTS = json.load(open("alerts.json")) if os.path.exists("alerts.json") else {}
+NOTES = json.load(open("notities.json")) if os.path.exists("notities.json") else {}   # {ticker: {w: reden, r: {regel: grens}}}
+NREG = dict(eps=("Winstgroei per jaar", "eps_cagr", 100, "onder"), fcf=("Kasstroomgroei per jaar", "fcf_cagr", 100, "onder"),
+            roic=("ROIC", "roic", 100, "onder"), om=("Winstmarge", "om", 100, "onder"), nd=("Schuld/EBITDA", "nd_ebitda", 1, "boven"))   # {ticker: instapkoers in euro}, gezet via de app of de chat
 
 def fmp_get(path, tk):
     r = requests.get(f"https://financialmodelingprep.com/stable/{path}", params=dict(symbol=tk, limit=5, apikey=FMPK), timeout=20)
@@ -282,6 +285,16 @@ for tk in list(H) + [w for w in WL if w not in H]:
             r["instap"] = lv
             if r.get("koers_eur") and r["koers_eur"] <= lv:
                 notify(f"alert-{tk}-{lv}-{today[:7]}", "Instapkoers bereikt", f'{META.get(tk, {}).get("naam") or tk} staat op € {r["koers_eur"]:.0f}, je instapkoers is € {lv:g}', None)
+        nt = NOTES.get(tk)
+        if nt:
+            r["notitie"] = nt
+            for k, g in (nt.get("r") or {}).items():
+                if k not in NREG: continue
+                lab, fld, mul, richt = NREG[k]; x = r.get(fld)
+                if x is None: continue
+                x *= mul
+                if (x < g) if richt == "onder" else (x > g):
+                    notify(f"note-{tk}-{k}-{g}-{today[:7]}", "Koopnotitie: regel geraakt", f'{META.get(tk, {}).get("naam") or tk}: {lab.lower()} is {x:.1f}, je grens is {richt} {g:g}')
         if tk in H:
             n = r["naam"]
             r.update(weging=H[tk].get("weging"), rend=H[tk].get("rend"))   # percentages, geen bedragen
