@@ -1,0 +1,1198 @@
+// ===== Gegevenslaag: echte data uit data.json + portfolio.json (alleen percentages), bedragen uit de versleutelde prive.enc =====
+const DATA=window.DATA,PF=window.PF,PRIVE=window.PRIVE||null;
+const EXEMPEL=false;
+const _ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const TOTBASE=(+_ls("pf_totaal")||0)||100000;
+let CASH,PUT,BROKER_WV=0,DOEL=PF.doel_cagr||15,INLEG=PRIVE&&PRIVE.sdoel?PRIVE.sdoel:1000;
+const SERIAL=["CSU.TO","TOI.V","LMN.V","CHG.DE","TEQ.ST","ROKO-B.ST","LIFCO-B.ST"];
+const WKD=(()=>{const N=53,u=new Date(DATA.bijgewerkt),last=new Date(Date.UTC(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()));last.setUTCDate(last.getUTCDate()+((7-last.getUTCDay())%7));const ds=[];for(let k=0;k<N;k++){const x=new Date(last);x.setUTCDate(x.getUTCDate()-7*(N-1-k));ds.push(x.toISOString().slice(0,10))}return ds})();
+const KY=Math.max(0,WKD.findIndex(d=>d>=new Date().getFullYear()+"-01-01"));
+const DR={};DATA.rows.forEach(x=>DR[x.t]=x);
+const pct=v=>v==null||!isFinite(v)?null:v*100;
+const AI={"NVDA":[2,"Levert de chips","Verkoopt de rekenchips waar AI op draait. Meer AI-investeringen betekent meer vraag.","Minder investeringen van de grote techbedrijven, of sterke eigen chips van klanten."],"TSM":[2,"Maakt de chips","Bouwt de meeste geavanceerde AI-chips voor andere bedrijven.","Spanning rond Taiwan en minder AI-bestellingen."],"ASML.AS":[2,"Machines voor chipfabrieken","Zonder deze machines geen geavanceerde chips. AI drijft de vraag naar nieuwe fabrieken.","Uitstel van fabrieksbouw en exportbeperkingen."],"ASM.AS":[1,"Apparatuur voor chipfabrieken","Profiteert van geavanceerde chips, maar is cyclischer dan ASML.","Minder investeringen van chipmakers."],"BESI.AS":[1,"Chipverpakking","Nieuwe verpakkingstechnieken voor AI-chips vormen een groeimarkt.","Een zwakke chipcyclus of klanten die van leverancier wisselen."],"ANET":[2,"Netwerken voor datacenters","AI-datacenters hebben snel veel netwerkapparatuur nodig.","Veel omzet bij een paar grote klanten."],"MSFT":[1,"Platform en cloud","Verkoopt AI via Azure en Copilot. Het risico is dat de enorme investeringen te weinig opleveren.","Groei van Azure en gebruik van Copilot tegenover de investeringen."],"AMZN":[1,"Cloud en winkel","AWS verhuurt AI-rekenkracht en AI verlaagt de kosten in de eigen winkels en logistiek.","Of AWS de groei vasthoudt tegenover concurrenten."],"GOOGL":[0,"Gemengd","Sterk in AI en cloud, maar zoeken is de kern van de winst en kan veranderen door AI-assistenten.","Marktaandeel en advertentie-inkomsten van zoeken."],"APH":[1,"Verbindingen","Connectoren en kabels voor datacenters en elektronica krijgen extra vraag door AI.","Vertraging in de bouw van datacenters."],"FTNT":[0,"Gemengd","Meer AI betekent meer aanvallen en dus meer vraag naar beveiliging, maar de concurrentie is groot.","Groei van de nieuwe producten."],"GE":[1,"Energie en vliegtuigen","Datacenters hebben veel stroom nodig en dat versterkt de vraag naar gasturbines.","Vraag naar turbines en de luchtvaartcyclus."],"CSU.TO":[-1,"Software voor niches","Veel kleine, kritieke softwarepakketten. AI kan nieuwe concurrenten helpen, maar klantrelaties zijn lang en diep.","Of klanten blijven en of AI-concurrenten de prijzen drukken."],"TOI.V":[-1,"Software voor niches","Valt onder dezelfde familie als Constellation. Kritieke software met lange klantrelaties, maar open voor AI-concurrenten.","Klantverloop en prijsdruk."],"LMN.V":[-1,"Software voor niches","Valt onder dezelfde familie als Constellation. Kleine verticale software met lange klantrelaties.","Klantverloop en prijsdruk."],"ADYEN.AS":[0,"Betalingen","AI verandert hoe mensen kopen, maar de betaalrails blijven nodig.","Nieuwe betaalmethoden voor AI-agenten."],"V":[0,"Betaalnetwerk","Staat tussen koper en winkel, ook bij aankopen door AI-agenten.","Regels en nieuwe betaalmethoden."],"MA":[0,"Betaalnetwerk","Staat tussen koper en winkel, ook bij aankopen door AI-agenten.","Regels en nieuwe betaalmethoden."],"AXP":[0,"Betalen en kaarten","Weinig directe AI-impact, indirect via fraude en krediet.",""],"SPGI":[0,"Data en ratings","Bezit unieke gegevens, maar AI maakt analyse goedkoper. Volgen.","Prijsdruk bij klanten en nieuwe aanbieders van data."],"MCO":[0,"Data en ratings","Bezit unieke gegevens, maar AI maakt analyse goedkoper. Volgen.","Prijsdruk bij klanten en nieuwe aanbieders van data."],"NU":[1,"Digitale bank","AI voor krediet en klantenservice verlaagt de kosten per klant.","Kredietverliezen en regelgeving."],"MELI":[0,"Marktplaats en betalen","AI helpt efficiëntie en advertenties, geen duidelijke bedreiging.",""],"KSPI":[0,"Betalen en marktplaats","Weinig AI-effect, lokale marktpositie bepaalt het.",""],"ISRG":[0,"Operatierobots","AI ondersteunt het systeem, maar robots en artsen blijven nodig.",""],"KNSL":[0,"Verzekeraar","AI kan het beoordelen van risico's verbeteren, verder weinig effect.",""],"RACE.MI":[0,"Luxe auto's","Vrijwel geen AI-effect.",""],"HEI":[0,"Onderdelen voor de luchtvaart","Vrijwel geen AI-effect.",""],"TEQ.ST":[0,"Industriële overnemer","Weinig AI-effect, het model draait op overnames.",""],"LIFCO-B.ST":[0,"Industriële overnemer","Weinig AI-effect.",""],"LIN":[0,"Industriële gassen","Weinig AI-effect, kleine extra vraag via chipfabrieken.",""],"CAR.L":[0,"Kunststof en optiek","Geen duidelijk AI-effect.",""],"III.L":[0,"Beleggingsmaatschappij","Hangt vooral af van de winkelketen Action, AI is niet de drijver.",""],"ASRNL.AS":[0,"Verzekeraar","Efficiëntiewinst mogelijk, verder weinig effect.",""],"AXON":[1,"Technologie voor politie","AI voor video-analyse en rapportages is een groeikans.","Concurrentie en regelgeving."],"SNPS":[1,"Software voor chipontwerp","Chipontwerp wordt complexer door AI. AI kan ook ontwerptools veranderen.","Concurrentie en klantbehoud."],"IBKR":[0,"Broker","Weinig directe AI-impact.",""],"COST":[0,"Winkels","Fysieke winkels, vrijwel geen AI-risico.",""],"FAST":[0,"Distributie","Weinig AI-effect.",""],"CPRT":[0,"Online autoveilingen","Weinig AI-effect.",""],"BN":[0,"Vermogensbeheer en infrastructuur","Profiteert deels van energie en datacenters.",""],"RMS.PA":[0,"Luxe","Vrijwel geen AI-effect.",""],"FICO":[0,"Kredietscores","Sterke positie, maar AI-modellen kunnen scores uitdagen. Volgen.","Nieuwe aanbieders van kredietscores."],"CHG.DE":[-1,"Software voor niches","Neemt kleine softwarebedrijven met vaste klanten over, net als Constellation en Topicus. AI kan nieuwe concurrenten helpen, maar de klantrelaties zijn lang. De groep is jong en klein.","Klantverloop, prijsdruk en of de overnames blijven rendabel."],"ROKO-B.ST":[0,"Overnemer van allerlei bedrijven","Koopt kleine bedrijven in verschillende branches, net als Teqnion. Het AI-effect hangt af van welke bedrijven het koopt en is per onderdeel anders.","Welke branches erbij komen en of AI een deel van de onderdelen raakt."]};
+const aiL=a=>({2:'Profiteert sterk',1:'Profiteert',0:'Neutraal','-1':'Kwetsbaar','-2':'Zwaar kwetsbaar'})[a];
+const aiC=a=>a>=1?'g':a===0?'n':a===-1?'a':'r';
+function mk(tk,M,w){const D=DR[tk]||{};
+ const r1x=v=>v==null?null:Math.round(v*10)/10;let eps=pct(D.eps_cagr);const fcf=pct(D.fcf_cagr),roic=pct(D.roic),pe=D.pe>0?D.pe:null,peh=D.pe_hist>0?D.pe_hist:null,nd=D.nd_ebitda==null?null:D.nd_ebitda;
+ let epsF=false;if(SERIAL.includes(tk)&&fcf!=null&&(eps==null||eps<fcf)){eps=fcf;epsF=true}
+ const pos=pct(D.pos52),yld=pct(D.yld)||0,dag=pct(D.dag)||0;
+ const o={tk,naam:M.naam||D.naam||tk,sector:M.sector||D.sector||"Onbekend",land:M.land||D.land||"",munt:M.munt||"EUR",qty:0,waarde:0,inkoop:0,dag,eps,fcf,roic,pe,peh,nd,pos,yld,watch:w,epsF,D,M,eigenaar:M.eigenaar||null};
+ o.peg=D.peg>0?D.peg:(pe&&eps>0?pe/eps:99);o.peg=Math.round(o.peg*100)/100;
+ let s=0;if(eps!=null&&eps>=12)s++;if(roic!=null&&roic>=15)s++;if(fcf!=null&&fcf>=12)s++;if(o.peg<=1.5||(pe!=null&&peh!=null&&pe<peh))s++;if(nd==null||nd<=2.5)s++;
+ ['eps','fcf','roic','pe','peh','nd','pos','yld'].forEach(k=>o[k]=r1x(o[k]));o.dag=Math.round(o.dag*100)/100;
+ o.score=s;o.licht=s>=4?"g":s>=2?"a":"r";
+ o.h=[...tk].reduce((t,c)=>t+c.charCodeAt(0),0);
+ const r1=v=>v==null?null:+(v*100).toFixed(1);
+ o.p={d:+dag.toFixed(1),m:r1(D.r1m),y:r1(D.r1y),f:r1(D.r5y)};
+ o.p.ytd=o.p.y;o.p.v=null;o.p.h=null;{const E=D.px_e;if(E&&E.length>=53){const e=E.slice(-53),z=e[52];o.p.ytd=+((z/(D.px_ye||e[KY])-1)*100).toFixed(1);o.p.y=+((z/e[0]-1)*100).toFixed(1);o.p.m=+((z/e[48]-1)*100).toFixed(1);o.p.h=+((z/e[26]-1)*100).toFixed(1);if(E.length>=261)o.p.f=+((E[E.length-1]/E[E.length-261]-1)*100).toFixed(1)}
+  const P=D.px_d;if(P&&P.length>=6&&D.px_d[P.length-1][1]&&P[P.length-6][1])o.p.v=+((P[P.length-1][1]/P[P.length-6][1]-1)*100).toFixed(1)}
+ o.epsF=D.eps_fwd==null||!isFinite(D.eps_fwd)?null:+(D.eps_fwd*100).toFixed(1);
+ o.v50=r1(D.v50);o.v200=r1(D.v200);
+ if(o.v50==null||o.v200==null){o.trend="Onbekend";o.tc="n"}
+ else{o.trend=o.v50>0&&o.v200>0?"Uptrend":o.v50<=0&&o.v200>0?"Pullback":o.v50>0?"Herstel":"Downtrend";o.tc=o.trend==="Uptrend"?"g":o.trend==="Downtrend"?"r":"a"}
+ o.kd=D.kd==null?null:Math.round(D.kd*100);
+ const a=AI[tk];o.ai=a||(M.ai?[M.ai[0],M.ai[1]||"Nog te beoordelen","Hier heb ik nog geen uitleg voor.",""]:[0,"Nog te beoordelen","Hier heb ik nog geen beoordeling voor.",""]);
+ if(!w){const h=PRIVE&&PRIVE.hold[tk],kp=D.koers_eur;
+  const RD=PRIVE&&PRIVE.rend&&PRIVE.rend[tk]!=null?PRIVE.rend[tk]:M.rend;
+  if(h&&kp){o.qty=h.qty;o.waarde=h.qty*kp;o.inkoop=RD!=null?o.waarde/(1+RD/100):h.ink}
+  else{o.waarde=(M.weging||0)/100*TOTBASE;o.inkoop=RD!=null?o.waarde/(1+RD/100):o.waarde}}
+ return o}
+const rows=[...Object.keys(PF.posities).map(t=>mk(t,PF.posities[t],false)),...Object.keys(PF.watchlist||{}).map(t=>mk(t,PF.watchlist[t],true))];
+const own=rows.filter(r=>!r.watch);
+const sumPos=own.reduce((s,r)=>s+r.waarde,0);
+if(PRIVE){CASH=PRIVE.cash;PUT=PRIVE.put}else{CASH=((PF.overig&&PF.overig.cash)||0)/100*TOTBASE;PUT=((PF.overig&&PF.overig.short_put)||0)/100*TOTBASE}
+const TOT=sumPos+CASH+PUT;
+own.forEach(r=>r.w=r.waarde/TOT*100);
+const secW={};own.forEach(r=>secW[r.sector]=(secW[r.sector]||0)+r.w);
+const sumInk=own.reduce((s,r)=>s+r.inkoop,0), ONR=sumPos-sumInk;
+BROKER_WV=ONR;
+const HIST={};
+if(PRIVE)Object.keys(PRIVE.hold).forEach(tk=>{const h=PRIVE.hold[tk],r=own.find(x=>x.tk===tk);if(!r||!h.buy)return;
+ let xi=null;try{xi=xirrOf(h.flows,new Date(),r.waarde)}catch(e){}
+ HIST[tk]={eerste:h.eerste,xirr:xi==null||!isFinite(xi)?null:+xi.toFixed(1),totaal:+((r.waarde+h.sell-h.buy)/h.buy*100).toFixed(1),n:h.n}});
+const REAL={xirr:0,netto:0,start:"jan 2016",kosten:0,divbel:0,jaar:{}};
+const daysTo=iso=>Math.round((new Date(iso.slice(0,10)+"T12:00:00")-new Date())/864e5);
+const earn=r=>{const e=r.D&&r.D.earnings?new Date(r.D.earnings.slice(0,10)+"T12:00:00"):null;return e&&e>=new Date(Date.now()-864e5)?e:new Date(Date.now()+400*864e5)};
+
+let hide=false,TOTAAL=0;try{hide=localStorage.getItem("pf_hide")==="1";TOTAAL=+localStorage.getItem("pf_totaal")||0}catch(e){}
+const eur=(n,d=0)=>n==null?"€ –":hide?"€ •••":(n<0?"−":"")+"€ "+Math.abs(n).toLocaleString("nl-NL",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pc=(n,d=1)=>n==null?"–":(n>0?"+":n<0?"−":"")+Math.abs(n).toLocaleString("nl-NL",{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
+const f1=n=>n==null?"–":n.toLocaleString("nl-NL",{minimumFractionDigits:1,maximumFractionDigits:1});
+const cls=n=>n>0?"pos":n<0?"neg":"";
+const dstr=d=>d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+const lichtTxt={g:"Sterk",a:"Gemengd",r:"Zwak"};
+let per="ytd";
+const perLbl={d:"vandaag",v:"5 dagen",m:"1 maand",h:"6 maanden",ytd:"yield dit jaar",y:"1 jaar",f:"5 jaar",t:"totaal incl. verkopen"};
+const perChip={d:"1D",v:"5D",m:"1M",h:"6M",ytd:"YTD",y:"1J",f:"5J",t:"Max"};
+const pv=r=>per==="t"?(r.watch||!HIST[r.tk]?r.p.f:HIST[r.tk].totaal):r.p[per];
+function portPerf(){
+ if(per==="t"){return {e:BROKER_WV,p:REAL.xirr}}
+ if(per==="ytd"&&PRIVE){const y=YRS.find(z=>z.lopend);if(y&&y.begin)return {e:y.res,p:y.res/y.begin*100}}
+ if(PRIVE&&["v","m","h","ytd","y","f"].includes(per)){const x=perMe(per);if(x!=null)return {e:null,p:x}}
+ const g=own.reduce((t,r)=>t+r.waarde*(r.p[per]||0)/(100+(r.p[per]||0)),0);return {e:g,p:g/(sumPos-g)*100}}
+const perChips=()=>`<div class="chips" style="padding-bottom:4px">${Object.keys(perChip).map(k=>`<button class="chip" data-p="${k}" aria-pressed="${per===k}">${perChip[k]}</button>`).join("")}</div>`;
+let PAR={weg:10,sec:35,tech:50,overn:25,ai:15,nd:2.5,pe:1.3,peg:1.5,doel:15,sl_add:4,sl_rem:2,sl_wk:2,sl_max:20,sl_new:2};try{const o=JSON.parse(localStorage.getItem('pf_par')||'null');if(o)PAR=Object.assign(PAR,o)}catch(e){}
+let MUTE=[];try{MUTE=JSON.parse(localStorage.getItem('pf_mute')||'[]')}catch(e){}
+const savePar=()=>{try{localStorage.setItem('pf_par',JSON.stringify(PAR))}catch(e){}};
+const mel={zone:1,vk:1,sl_nieuw:1,sl_weg:1,oordeel_koop:1,oordeel_verkoop:1,oordeel_niet:0,koersdoel:1,aankond:1,cijfers:1,insider:1,nieuws:1,dag5:1,trend:1,div:0,weging:1,maand:0};
+// kandidaten
+function kandidaten(){
+ const out=rows.map(r=>{let v=0,why=[],warn=[];
+  if(r.peg<=1){v+=3;why.push(`PEG van ${f1(r.peg)}: je betaalt weinig voor de groei`)}
+  else if(r.peg<=1.5){v+=2;why.push(`PEG van ${f1(r.peg)}, redelijk voor de groei`)}
+  else if(r.peg<=2){v+=1}
+  if(r.pe<r.peh*.9){v+=2;why.push(`PE ${f1(r.pe)} ligt ${Math.round((1-r.pe/r.peh)*100)}% onder het eigen historische gemiddelde (${f1(r.peh)})`)}
+  else if(r.pe<r.peh){v+=1;why.push(`PE ${f1(r.pe)} iets onder het historische ${f1(r.peh)}`)}
+  if(r.pos<40){v+=1;why.push(`koers staat in het onderste deel van de 52-wekenrange (${r.pos}%)`)}
+  let q=0;
+  if(r.roic!=null&&r.roic>=15){q+=2;why.push(`ROIC ${r.roic}%`)}
+  if(r.eps>=12){q+=2;why.push(`EPS-groei ${r.eps}% per jaar`)}
+  if(r.fcf!=null&&r.fcf>=12){q+=1}
+  if(r.nd==null||r.nd<=2){q+=1}
+  if(r.nd!=null&&r.nd>2)warn.push("schuld boven 2× EBITDA");
+  let v2=v;
+  if(r.trend==="Uptrend"){v2+=1;why.push(`uptrend: koers ${f1(r.v200)}% boven het 200-daags gemiddelde`)}
+  else if(r.trend==="Pullback"){why.push(`tijdelijke terugval (${pc(r.v50)} t.o.v. 50-daags) binnen een langere uptrend`)}
+  else if(r.trend==="Downtrend"){v2-=2;warn.push("downtrend: koers onder zowel het 50- als 200-daags gemiddelde; wachten tot de koers stabiliseert kan slimmer")}
+  if(r.ai[0]<=-1){v2-=1;warn.push("AI kan het bedrijfsmodel onder druk zetten")}
+  else if(r.ai[0]>=2){v2+=1;why.push("profiteert direct van AI-investeringen")}
+  if(r.ai[0]>=1&&aiProfitW()>45)warn.push(`je portefeuille leunt al voor ${Math.round(aiProfitW())}% op bedrijven die van AI profiteren`);
+  let s=v2+q,max=0;
+  if(!r.watch&&r.w>=PAR.weg){return {r,s:-1,out:`Weging al ${f1(r.w)}%`}}
+  if(!r.watch){const vv=verdict(r);if(vv&&vv.k==="structureel")return {r,s:-1,out:"Staat op Heroverwegen"}}
+  const sw=secW[r.sector]||0;
+  if(sw>PAR.sec){s-=3;warn.push(`sector ${r.sector} is al ${f1(sw)}% van je portefeuille`)}
+  if(r.pe>r.peh*1.2)warn.push(`PE ${f1(r.pe)} ligt ver boven historisch ${f1(r.peh)}`);
+  if(r.munt!=="EUR")warn.push(`valutarisico ${r.munt}`);
+  return {r,s,why,warn,v,q}}).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s);
+ return out}
+function analyse(x,a){const r=x.r;const sec=secW[r.sector]||0;
+ const wNu=r.watch?0:r.w,wNa=(r.watch?a:r.waarde+a)/(TOT+budget)*100;
+ const secNa=(sec*TOT/100+a)/(TOT+budget)*100;
+ const kw=[];
+ kw.push(`${r.naam} groeit de winst per aandeel met ${r.eps}% per jaar${r.eps>=DOEL?`, sneller dan je doel van ${DOEL}%`:`, onder je doel van ${DOEL}%`}.`);
+ if(r.roic!=null)kw.push(`Elke euro die het bedrijf investeert levert ${r.roic}% op (ROIC)${r.roic>=20?", dat is hoog":r.roic<10?", dat is laag":""}.`);
+ if(r.fcf!=null)kw.push(`De vrije kasstroom groeit ${r.fcf}% per jaar${r.fcf>=r.eps?", minstens zo snel als de winst, dus de winst is van goede kwaliteit":", langzamer dan de winst, dus even in de gaten houden"}.`);
+ kw.push(r.nd==null?"Schuldratio is voor dit type bedrijf niet relevant.":`Schuld is ${f1(r.nd)}× EBITDA${r.nd<=0?" (netto-cash)":r.nd<=2?", beheersbaar":", aan de hoge kant"}.`);
+ const wd=[`PE ${f1(r.pe)} tegenover ${f1(r.peh)} historisch (${r.pe<r.peh?Math.round((1-r.pe/r.peh)*100)+"% korting":Math.round((r.pe/r.peh-1)*100)+"% premie"}).`,
+  `PEG ${f1(r.peg)}: ${r.peg<=1?"je betaalt minder dan 1 PE-punt per procent groei":r.peg<=1.5?"redelijk voor de groei":"duur voor de groei"}.`,
+  `De koers staat op ${r.pos}% van de 52-wekenrange.`,
+  `Analisten zien gemiddeld ${r.kd>=0?"+":"−"}${Math.abs(r.kd)}% naar hun koersdoel.`];
+ const tr=`${r.trend}. De koers zit ${pc(r.v50)} van het 50-daags en ${pc(r.v200)} van het 200-daags gemiddelde. Afgelopen maand ${pc(r.p.m)}, afgelopen jaar ${pc(r.p.y)}. ${r.trend==="Uptrend"?"De trend ondersteunt een aankoop nu.":r.trend==="Pullback"?"Een terugval binnen een uptrend is vaak een beter instapmoment dan na een piek.":r.trend==="Herstel"?"De koers herstelt, maar de lange trend moet nog bevestigen.":"De trend is negatief. Je kunt overwegen het bedrag in twee delen te splitsen."}`;
+ const pf=`Weging gaat van ${f1(wNu)}% naar ${f1(wNa)}%. Sector ${r.sector} gaat van ${f1(sec)}% naar ${f1(secNa)}%${secNa>35?", boven je grens van 35%":""}. ${r.munt==="EUR"?"Geen valutarisico.":`Je krijgt er ${r.munt} blootstelling bij.`}`;
+ const risk=[...x.warn.map(t=>t[0].toUpperCase()+t.slice(1)+"."),`Heroverweeg als PEG boven 2 komt, de EPS-groei onder 10% zakt, of de koers onder het 200-daags gemiddelde sluit.`].join(" ");
+ return `<details><summary>Volledige analyse</summary><div class="an"><h4>Waarom nu</h4><p>Score ${f1(x.s)}: ${x.why.slice(0,2).join("; ")||"gemengd beeld"}.</p><h4>Kwaliteit</h4><p>${kw.join(" ")}</p><h4>Waardering</h4><p>${wd.join(" ")}</p><h4>Trend</h4><p>${tr}</p><h4>AI-impact</h4><p>${r.ai[1]}: ${r.ai[2]}</p><h4>Jouw portefeuille</h4><p>${pf}</p><h4>Risico's en wanneer heroverwegen</h4><p>${risk}</p></div></details>`}
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function spark(r){const a=r.D&&r.D.px_w;if(!a||a.length<8)return '<div class="note">De koersreeks komt na de eerstvolgende dagelijkse update.</div>';
+ const mn=Math.min(...a),mx=Math.max(...a),n=a.length-1;const d=a.map((v,i)=>`${(i/n*296+2).toFixed(1)},${(76-(v-mn)/(mx-mn||1)*70).toFixed(1)}`).join(" ");
+ return `<svg class="sp" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="Koersverloop 12 maanden"><polyline points="${d}" fill="none" stroke="var(--acc)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`}
+const cpt=v=>{const a=Math.abs(v);return (v<0?"−":"")+(a>=1000?(a/1000).toFixed(1).replace(".",",")+"k":a>=100?String(Math.round(a)):a.toFixed(1).replace(".",","))};
+function barsR(a,y){if(!a||a.length<2)return "";const mx=Math.max(...a.map(v=>Math.abs(v)),1e-9);
+ return `<div class="bars">${a.map(v=>`<div><span class="num">${cpt(v)}</span><i style="height:${Math.max(6,Math.abs(v)/mx*72)}px;${v<0?"background:var(--bad)":""}"></i></div>`).join("")}</div><div class="axis">${(y||[]).map(x=>`<span>${x}</span>`).join("")}</div>`}
+// grafiek
+function bars(cagr,label,base){const n=5;const arr=[];let e=100;for(let i=n-1;i>=0;i--){arr[i]=e;e=e/(1+cagr/100)}
+ const noise=[0,.03,-.04,.02,0];const v=arr.map((x,i)=>x*(1+noise[i]));const mx=Math.max(...v);
+ const yrs=[2021,2022,2023,2024,2025];
+ return `<div class="bars">${v.map((x,i)=>`<div><span class="num">${Math.round(x)}</span><i style="height:${Math.max(6,x/mx*72)}px"></i></div>`).join("")}</div><div class="axis">${yrs.map(y=>`<span>${y}</span>`).join("")}</div>`}
+// state
+let sub=null,tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
+const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
+const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
+function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
+function head(t){const n=unread();return `<div class="top"><h1>${t}</h1>${t==="Nieuws"||t==="Inzichten"?'<button class="chip" data-t="start">Klaar</button>':`<button class="chip" data-t="inz">Inzichten</button><button class="chip bell" data-t="nws" aria-label="Nieuws${n?", "+n+" nieuw":""}"><svg viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4"/></svg>${n?`<i class="bd">${n}</i>`:""}</button>`}</div>`}
+const demo="";
+function weekBlok(){return ""}
+function vStart(){
+ const wCagr=own.reduce((s,r)=>s+r.eps*r.w,0)/own.reduce((s,r)=>s+r.w,0);
+ const aandacht=[];
+ own.filter(r=>(earn(r)-new Date())/864e5<=7).forEach(r=>aandacht.push([r,`Cijfers op ${dstr(earn(r))}`,"n"]));
+ own.filter(r=>r.licht==="r").forEach(r=>aandacht.push([r,"Kwaliteitscheck zwak","r"]));
+ own.filter(r=>Math.abs(r.dag)>=2).forEach(r=>aandacht.push([r,`Vandaag ${pc(r.dag)}`,r.dag>0?"g":"a"]));
+ own.filter(r=>r.w>=PAR.weg).forEach(r=>aandacht.push([r,`Weging ${f1(r.w)}%, boven ${PAR.weg}%`,"a"]));
+ const kl={Technologie:"#13705c",Financieel:"#3b6ea5",Industrie:"#b07d2b",Communicatie:"#7a5aa6",Consument:"#c0584a",Zorg:"#4d9a8a",Halfgeleiders:"#2e8b3d",Overig:"#8aa0a8"};
+ const secs=Object.entries(secW).sort((a,b)=>b[1]-a[1]);
+ const top=kandidaten().filter(x=>x.r.w==null||true).slice(0,3);
+ return head("Portefeuille")+`<div class="tile hero2" style="margin-top:8px"><div class="lbl">Totale waarde</div><div class="big num">${eur(TOT)}</div>
+ <div class="split"><i style="flex:${REAL.netto};background:var(--c1)" title="Gestort"></i><i style="flex:${BROKER_WV};background:var(--c3)" title="Winst"></i></div>
+ <div class="s" style="display:flex;gap:14px;flex-wrap:wrap"><span><span class="sw3" style="background:var(--c1)"></span>Gestort ${f1(REAL.netto/(REAL.netto+BROKER_WV)*100)}%</span><span><span class="sw3" style="background:var(--c3)"></span>Winst ${f1(BROKER_WV/(REAL.netto+BROKER_WV)*100)}%</span></div>
+ <div class="stat3"><div><small>Totaal gestort</small><b class="num">${eur(REAL.netto)}</b></div><div><small>Totale winst</small><b class="num pos">${eur(BROKER_WV)}</b></div><div><small>Per jaar (2016)</small><b class="num pos">${pc(REAL.xirr)}</b></div></div>
+ <div class="s" style="margin-top:10px">De winst is het Totaal W/V van je broker, inclusief verkopen, dividend en kosten. Doel ${DOEL}% per jaar.</div></div>
+ <div class="tile" style="margin-top:10px"><div class="lbl">Rendement</div><div class="seg">${Object.keys(perChip).map(k=>`<button data-p="${k}" aria-pressed="${per===k}">${perChip[k]}</button>`).join("")}</div><div class="v num ${cls(portPerf().p)}">${pc(portPerf().p)} ${portPerf().e==null?"":`<span style="font-size:14px;font-weight:500">${eur(portPerf().e)}</span>`}</div>${cmp()}<div class="s">${per==="t"?"Per jaar sinds januari 2016, berekend op al je stortingen en opnames (XIRR). Echte gegevens uit je DeGiro-export.":(["v","m","h","ytd","y","f"].includes(per)&&PRIVE?"Jouw lijn telt je echte aan- en verkopen, dividend en kosten mee (tijdgewogen, zoals de yield bij DeGiro). Een klein verschil met DeGiro kan door koerstijdstip en wisselkoers. Indexen in euro, bij de S&P 500 staat het dollarcijfer erbij. De S&P telt alleen de koers; Wereld herbelegt dividend en lijkt daardoor iets beter. Bij YTD staat bovenaan de yield zoals DeGiro hem rekent (resultaat gedeeld door je beginvermogen). De lijn en de cijfers eronder zijn tijdgewogen, zodat ze eerlijk naast de index staan.":"Dit zijn je huidige aandelen in euro's, zonder wat je in deze periode kocht of verkocht.")}</div><button class="row go" data-s="rend" style="margin:12px -12px -12px;width:calc(100% + 24px);border-top:1px solid var(--line);border-bottom:0;border-radius:0 0 12px 12px"><span class="grow"><div class="t">Per aandeel</div><div class="m">${own.filter(r=>pv(r)>0).length} van ${own.length} in de plus, ${perLbl[per]}</div></span></button></div>
+ ${yearCard(YRS[YRS.length-1])}
+ ${stortCard()}
+ ${weekBlok()}
+ ${nieuwStrip()}${actieBlok()}
+ <div class="sec"><h2>Kandidaten voor ${eur(INLEG)}</h2><div class="list">${top.map(x=>`<button class="row" data-t="kand"><span class="dot g"></span><span class="grow"><div class="t">${x.r.naam}${x.r.watch?' <span class="pill n">watchlist</span>':''}</div><div class="m">PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`).join("")}</div></div>
+ `+demo}
+const SLM={"ANET":{w:"scan",d:"2 nov"},"RMS.PA":{w:"scan",d:"28 okt"},"FICO":{w:"scan",d:"20 okt"}};
+const SLOG=[{t:"add",n:"Arista Networks",tk:"ANET",d:"2 nov",m:"Score 5 van 5: winstgroei 26%, ROIC 28%, PEG 1,3. Buiten je overlapgroepen."},{t:"rm",n:"Estée Lauder",d:"3 nov",m:"Winstgroei 4% en ROIC 9% zaten twee weken onder je grenzen."},{t:"add",n:"Hermès",tk:"RMS.PA",d:"28 okt",m:"Score 4 van 5, PE onder het eigen gemiddelde en een sector waar je weinig hebt."},{t:"rm",n:"Nike",d:"26 okt",m:"Winstgroei onder 8% en PEG 3,2, twee weken achter elkaar."},{t:"add",n:"Fair Isaac",tk:"FICO",d:"20 okt",m:"Score 4 van 5, ROIC boven 15% en een zwakke correlatie met je tech-bedrijven."}];
+let PINS=[];try{PINS=JSON.parse(localStorage.getItem("pf_pin")||"[]")}catch(e){}
+const slRisk=r=>r.watch&&!PINS.includes(r.tk)&&r.score<=PAR.sl_rem;
+function slBlok(){const w=rows.filter(r=>r.watch),risk=w.filter(slRisk),ad=SLOG.filter(x=>x.t==="add").length,rm=SLOG.filter(x=>x.t==="rm").length;
+ return `<div class="tile" style="margin-top:4px">${kvs([["Op de lijst",String(w.length)],["Nieuw, 30 dagen",String(ad)],["Verwijderd, 30 dagen",String(rm)]])}<div class="note" style="margin-top:8px">Elke zondag ververs ik je shortlist. Een bedrijf komt erbij als de score ${PAR.sl_add} of 5 haalt, buiten je volle overlapgroepen valt en er nog ruimte is (maximaal ${PAR.sl_new} per week, ${PAR.sl_max} op de lijst). Het gaat eraf als de score ${PAR.sl_wk} weken achter elkaar ${PAR.sl_rem} of lager is. Bedrijven die je vastzet blijven staan. Je grenzen pas je aan bij Nieuws, Instellingen.</div></div>
+ ${risk.length?`<div class="sec"><h2>Valt binnenkort af</h2><div class="list">${risk.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot a"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">Score ${r.score} van 5, week 1 van ${PAR.sl_wk} onder je grens. Verdwijnt bij de volgende update als dat zo blijft.</div></span><span class="m">›</span></button>`).join("")}</div></div>`:""}
+ <details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span style="font-weight:600">Wat is er veranderd</span><span class="m">${SLOG.length} wijzigingen ›</span></summary><div class="list" style="border:0">${SLOG.map(x=>`<div class="row" style="align-items:flex-start"><span class="dot ${x.t==="add"?"g":"r"}" style="margin-top:6px"></span><span class="grow"><div class="t" style="white-space:normal">${x.t==="add"?"Erbij":"Eraf"}: ${x.n} <span class="m">· ${x.d}</span></div><div class="m" style="white-space:normal">${x.m}</div></span></div>`).join("")}</div></details>`}
+function vPos(){
+ if(filter==="closed")return vClosed();
+ if(filter==="opties")return vOpt();
+ let l=rows.filter(r=>filter==="watch"?r.watch:!r.watch);
+ if(filter==="g"||filter==="r")l=l.filter(r=>r.licht===filter);
+ const srt={weging:(a,b)=>b.waarde-a.waarde,periode:(a,b)=>pv(b)-pv(a),peg:(a,b)=>a.peg-b.peg};
+ l.sort(srt[sort]||srt.weging);
+ const fl=POSFL;
+ return head("Posities")+(filter==="watch"?"":vlakBlok())+perChips()+`<div class="chips">${fl.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:10px"><span class="note" style="margin:0">${l.length} bedrijven</span><label class="note" style="margin:0">Sorteer <select id="sort">${["weging","periode","peg"].map(s=>`<option ${s===sort?"selected":""}>${s}</option>`).join("")}</select></label></div>`+
+ l.map(r=>`<button class="card" data-d="${r.tk}"><div class="h"><span class="dot ${r.licht}"></span><div class="nm">${r.naam}<span>${r.tk} · ${r.sector} · ${r.land}</span></div><div style="text-align:right"><div class="num" style="font-weight:600">${r.watch?"watchlist":eur(r.waarde)}</div><div class="num ${cls(pv(r))}" style="font-size:12.5px">${pc(pv(r))} ${({d:"vandaag",m:"1 mnd",y:"1 jr",f:"5 jr",t:"totaal"})[per]}</div></div></div>
+ <div class="kv"><div><small>EPS-groei</small><b class="num">${r.eps}%</b></div><div><small>ROIC</small><b class="num">${r.roic==null?"–":r.roic+"%"}</b></div><div><small>PEG</small><b class="num">${f1(r.peg)}</b></div></div><div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span class="pill ${r.tc}">${r.trend}</span><span class="pill ${aiC(r.ai[0])}">AI: ${aiL(r.ai[0])}</span><span class="note num" style="margin:0">50d ${pc(r.v50)} · 200d ${pc(r.v200)}</span>${r.watch?`<span class="pill n">${SLM[r.tk]?"ontdekt door mij":"van jou"}</span>`:""}${PINS.includes(r.tk)?`<span class="pill n">vastgezet</span>`:""}${slRisk(r)?`<span class="pill a">valt binnenkort af</span>`:""}</div></button>`).join("")+demo}
+let kTab="maand",slF="alles",slS="s";
+function slTable(){const kd=kandidaten(),sc={};kd.forEach(x=>sc[x.r.tk]=x.s);
+ const w=rows.filter(r=>r.watch).map(r=>({r,s:sc[r.tk]||0,o:oordeelR(r),nw:!!SLM[r.tk]&&["2 nov","28 okt"].includes(SLM[r.tk].d),risk:slRisk(r)}));
+ const ok=x=>slF==="alles"||(slF==="kopen"&&x.o.hc==="g")||(slF==="wacht"&&x.o.hc!=="g")||(slF==="nieuw"&&x.nw)||(slF==="af"&&x.risk)||(slF==="zone"&&zone(x.r).inz);
+ const cnt=f=>w.filter(x=>f==="alles"||(f==="kopen"&&x.o.hc==="g")||(f==="wacht"&&x.o.hc!=="g")||(f==="nieuw"&&x.nw)||(f==="af"&&x.risk)||(f==="zone"&&zone(x.r).inz)).length;
+ const K={s:x=>-x.s,sc:x=>-x.r.score,eps:x=>-x.r.eps,peg:x=>x.r.peg,pe:x=>wrp(x.r)};
+ const l=w.filter(ok).sort((a,b)=>K[slS](a)-K[slS](b));
+ const cE=r=>r.eps>=DOEL?"g":r.eps>=12?"a":"r",cP=r=>r.peg<=PAR.peg?"g":r.peg<=PAR.peg+1?"a":"r",cW=r=>wrp(r)<=.9?"g":wrp(r)<=1.1?"n":wrp(r)<=PAR.pe?"a":"r",cS=r=>r.score>=4?"g":r.score>=3?"a":"r";
+ return `<div class="chips" style="padding:0 0 8px">${[["alles","Alles"],["kopen","Kopen"],["wacht","Wachten"],["zone","Koopzone"],["nieuw","Nieuw"],["af","Valt af"]].map(([k,t])=>`<button class="chip" data-sf="${k}" aria-pressed="${slF===k}">${t} (${cnt(k)})</button>`).join("")}</div>
+ <div class="tile" style="padding:8px 8px 4px"><div class="scg scgh">${[["s","Kandidaat"],["sc","Score"],["eps","Winst"],["peg","PEG"],["pe","PE/hist."]].map(([k,t])=>`<button data-ss="${k}" class="${slS===k?"on":""}">${t}${slS===k?" ▾":""}</button>`).join("")}</div>
+ ${l.map(x=>{const r=x.r,d=(wrp(r)-1)*100;return `<button class="scg scr ${x.o.hc}" data-d="${r.tk}"><span class="nm"><b>${r.naam}</b><small>${x.nw?"★ ":x.risk?"↓ ":""}${x.o.head}</small><small>Koopzone: ${zt(r)}</small></span><span class="cl ${cS(r)}"><b>${r.score}/5</b></span><span class="cl ${cE(r)}"><b>${r.eps}%</b></span><span class="cl ${cP(r)}"><b>${f1(r.peg)}</b></span><span class="cl ${cW(r)}"><b>${sgn(d)}%</b><small>${Math.round(r.pe)}/${Math.round(r.peh)}</small></span></button>`}).join("")||'<div class="note">Niets in deze groep.</div>'}
+ <div class="note" style="margin:8px 4px 4px">Tik op een kolomkop om te sorteren en op een bedrijf voor de analyse. <b>Kandidaat</b> sorteert op mijn kandidaatscore (waardering plus kwaliteit). <b>Score</b> is Doelcheck, 5 is sterkst. De streep links toont mijn oordeel: groen is kopen overwegen, grijs afwachten, oranje nog niet kopen. ★ is nieuw op de lijst, ↓ valt binnenkort af.</div></div>`}
+function slGaten(){const sw={};rows.filter(r=>r.watch).forEach(r=>{(sw[r.sector]=sw[r.sector]||[]).push(r)});
+ const al=[...new Set([...Object.keys(secW),...Object.keys(sw)])].map(k=>({k,p:secW[k]||0,n:(sw[k]||[]).length,names:(sw[k]||[]).map(r=>r.naam)})).sort((a,b)=>a.p-b.p),mx=Math.max(...al.map(x=>x.p),1);
+ return `<div class="tile">${al.map(x=>`<div style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;font-size:14px;gap:8px"><b>${x.k}</b><span class="num" style="text-align:right">${f1(x.p)}% in bezit · ${x.n} op lijst</span></div><div style="margin-top:4px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${x.p/mx*100}%;background:var(--acc)"></i></div>${x.n&&x.p<8?`<div class="m" style="font-size:13px;color:var(--mut);margin-top:3px">Weinig in bezit, ruimte om te spreiden: ${x.names.slice(0,4).join(", ")}.</div>`:""}</div>`).join("")}<div class="note">Sectoren met weinig in bezit en kandidaten op de shortlist zijn de plekken waar een nieuwe aankoop je spreiding verbetert.</div></div>`}
+function vShort(){return `<p style="margin:8px 0 0;color:var(--mut)">Mijn lijst met bedrijven die je volgt voor een volgende aankoop. Ik beheer hem zelf, volgens jouw grenzen.</p>${slBlok()}
+ <div class="sec"><h2>Welke sectoren vullen je aan</h2>${slGaten()}</div>
+ <div class="sec"><h2>Alle bedrijven op de shortlist</h2>${slTable()}</div>
+ <div class="note">De shortlist wordt elke zondag ververst. Wat erbij komt of eraf gaat, zie je hierboven onder Wat is er veranderd en krijg je als pushmelding. Voorbeeldcijfers.</div>`+demo}
+function vKand(){
+ const kseg=`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div>`;
+ if(kTab==="short")return head("Kandidaten")+kseg+vShort();
+ const k=kandidaten();const nP=Math.max(1,Math.min(3,Math.floor(budget/1500))),perP=budget/nP;const top=k.slice(0,10).map(x=>Object.assign({},x,{s2:x.s-feeEst(x.r,perP).t/perP*150})).sort((a,b)=>b.s2-a.s2).slice(0,nP);
+ const hierna=(r,a)=>(r.watch?a:r.waarde+a)/(TOT+budget)*100;
+ let rest=budget;const alloc=top.map((x,i)=>{const deel=budget/top.length;const cap=Math.max(0,.10*(TOT+budget)-(x.r.watch?0:x.r.waarde));return Math.round(Math.min(deel,cap)/50)*50});
+ return head("Kandidaten")+kseg+`<p style="margin:8px 0 0;color:var(--mut)">Welke bedrijven zijn nu mooi geprijsd voor je maandelijkse inleg? Dit is een screening op je eigen regels, geen beleggingsadvies.</p>
+ <div class="field"><label for="bud" style="flex:1">Inleg deze maand</label><span class="num">€</span><input id="bud" type="number" inputmode="numeric" value="${budget}" step="250" style="max-width:110px"></div>
+ <div class="sec"><h2>Top ${top.length} deze maand</h2>`+top.map((x,i)=>`<div class="cand"><div class="top2"><div><button class="back" data-d="${x.r.tk}" style="margin-bottom:6px">${x.r.naam} ›</button><div class="note" style="margin:0">${x.r.tk} · ${x.r.sector}${x.r.ontdekt?" · ontdekt door scan":x.r.watch?" · mijn shortlist":""}</div></div><div style="text-align:right"><div class="amt num">${eur(alloc[i])}</div><div class="note num" style="margin:0">weging na koop ${f1(hierna(x.r,alloc[i]))}%</div></div></div>
+ <div class="note" style="margin:0 0 6px">${feeTxt(x,alloc[i])}</div><ul>${x.why.slice(0,4).map(t=>`<li>${t}</li>`).join("")}${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul>${analyse(x,alloc[i])}</div>`).join("")+`</div>
+ <div class="sec"><h2>Ontdekt door de scan</h2><div class="note" style="margin:0 0 8px">Elke zondag loop ik een groot aantal beursgenoteerde bedrijven langs (bijvoorbeeld S&amp;P 500, Nasdaq-100, AEX/AMX en Stoxx 600) op jouw regels: winstgroei vanaf 12%, ROIC vanaf 15%, PEG onder 2 en geen zware schuld. De beste die nog niet in je lijst staan, komen hier. Voorbeeldcijfers.</div><div class="list">${k.filter(x=>x.r.ontdekt).map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam} <span class="pill n">nieuw</span></div><div class="m">Winst ${x.r.eps}%/jr · ROIC ${x.r.roic}% · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="pill n num">${f1(x.s)}</span></button>`).join("")}</div></div>
+ <div class="sec"><h2>Overige, op volgorde</h2><div class="list">${k.slice(3,9).map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}${secW[x.r.sector]>35?" · sector vol":""}</div></span><span class="pill n num">${f1(x.s)}</span></button>`).join("")}</div></div>
+ <div class="sec"><h2>Afgevallen</h2><div class="list">${rows.filter(r=>!r.watch&&r.w>=PAR.weg).map(r=>`<div class="row"><span class="grow"><div class="t">${r.naam}</div><div class="m">Weging al ${f1(r.w)}%, grens is 10%</div></span></div>`).join("")}</div></div>
+ <div class="note">Score = waardering (PEG, PE t.o.v. historie, 52-wekenpositie) plus kwaliteit (ROIC, EPS-groei, FCF-groei, schuld). Een sector boven 35% krijgt 3 punten aftrek. De uitleg per bedrijf is een samenvatting van de cijfers.</div>`+demo}
+function vDiv(){
+ const d=own.filter(r=>r.yld>0).map((r,i)=>({r,inc:r.waarde*r.yld/100,g:r.D&&r.D.div_cagr!=null?Math.round(r.D.div_cagr*100):0,dt:r.D&&r.D.ex_div&&daysTo(r.D.ex_div)>=0?new Date(r.D.ex_div.slice(0,10)+"T12:00:00"):null})).filter(x=>x.dt).sort((a,b)=>a.dt-b.dt);
+ const tot=d.reduce((s,x)=>s+x.inc,0);
+ const mm={};d.forEach(x=>{const k=x.dt.getFullYear()*12+x.dt.getMonth();mm[k]=(mm[k]||0)+x.inc/4});
+ const mk2=Object.keys(mm).map(Number).sort((a,b)=>a-b);
+ const mn=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+ const dchart=cols(mk2.map(k=>({l:mn[k%12],v:mm[k]})),"Ontvangen per maand (schatting)");
+ return head("Dividend")+`<div class="pair"><div class="tile"><div class="lbl">Verwacht per jaar (bruto)</div><div class="v num">${eur(tot)}</div></div><div class="tile"><div class="lbl">Dividendrendement</div><div class="v num">${f1(tot/sumPos*100)}%</div></div></div>
+ ${dchart}<div class="sec"><h2>Komende uitbetalingen</h2><div class="list">${d.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${dstr(x.dt)} · rendement ${f1(x.r.yld)}%</div></span><span style="text-align:right"><div class="num">${eur(x.inc/4,0)}</div><div class="m num ${cls(x.g)}">${pc(x.g,0)} groei/jr</div></span></button>`).join("")}</div></div>`+
+ `<div class="note">Bedragen zijn een schatting: aantal × dividend per aandeel van het laatste jaar. Groei is de gemiddelde jaarlijkse stijging over de afgelopen jaren.</div>`+demo}
+function oordeelR(r){
+ const ow=!r.watch,w=ow?r.w:0,v=verdict(r),cl=CLU.filter(c=>c.f(r)),clHit=ow||true?cl.filter(c=>cluW(c)+(ow?0:0)>=c.lim*.9):[],secHit=ow&&secW[r.sector]>PAR.sec;
+ const aiTot=aiW(x=>x.ai[0]<=-1),aiProf=aiProfitW(),dn=Math.round((earn(r)-new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()))/864e5),t=TR[r.tk]||{};
+ const plus=[],min=[],soft=[];
+ const P=(t,m)=>plus.push({t,m}),M=(t,m,c)=>min.push({t,m,c:c||"a"});
+ if(r.peg<=PAR.peg)P("Gunstig geprijsd voor de groei",`PEG ${f1(r.peg)}: je betaalt weinig voor ${r.eps}% winstgroei per jaar.`);
+ if(r.pe<r.peh*.9)P("Goedkoper dan normaal",`PE ${f1(r.pe)} ligt ${Math.round((1-r.pe/r.peh)*100)}% onder het eigen gemiddelde van ${f1(r.peh)}.`);
+ if(r.pos<40)P("Koers laag in de jaarrange",`De koers zit op ${r.pos}% van de 52-wekenrange.`);
+ if(r.eps>=DOEL&&(r.roic==null||r.roic>=15))P("Kwaliteit voldoet",`Winstgroei ${r.eps}% (doel ${DOEL}%)${r.roic!=null?`, ROIC ${r.roic}%`:""}${r.nd!=null&&r.nd<=2?`, schuld ${f1(r.nd)}× EBITDA`:""}.`);
+ if(r.trend==="Uptrend")P("Trend werkt mee","De koers staat boven het 50- en 200-daags gemiddelde.");
+ else if(r.trend==="Pullback")P("Terugval in een uptrend",`${pc(r.v50)} t.o.v. het 50-daags gemiddelde, nog ${pc(r.v200)} boven het 200-daags.`);
+ if(r.kd>=10)P("Analisten zien ruimte",`Het gemiddelde koersdoel ligt ${pc(r.kd,0)} boven de koers.`);
+ const buyPts=plus.length;
+ if(r.ai[0]>=1)P("Profiteert van AI",r.ai[1]+". "+r.ai[2]);
+ if(r.yld>=2)P("Dividend",`Rendement ${f1(r.yld)}% per jaar.`);
+ {const xx=xd(r);if(xx.f&&xx.ins>=10)P("Oprichter of familie heeft veel eigen geld erin",skinTxt(r));if(xx.buy!=null&&xx.buy>=3&&xx.sell===0)P("Insiders kopen bij",`${xx.buy} insiderkopen en geen verkopen in de laatste 180 dagen.`)}
+ if(ow&&w>=PAR.weg)M("Te groot belang",`${f1(w)}% van je portefeuille, je grens is ${PAR.weg}%. Bijkopen maakt het groter.`,"r");
+ else if(ow&&w>=PAR.weg*.7)M("Weging loopt op",`${f1(w)}% van je portefeuille, dichtbij je grens van ${PAR.weg}%.`,"a");
+ clHit.forEach(c=>M(c.n+" zit aan de limiet",`${c.n} is ${f1(cluW(c))}% van je portefeuille, je limiet is ${c.lim}%. ${r.naam} hoort erbij en voegt weinig spreiding toe.`,cluW(c)>c.lim?"r":"a"));
+ if(secHit)M("Sector te zwaar",`${r.sector} is ${f1(secW[r.sector])}% van je portefeuille, grens is ${PAR.sec}%.`,"r");
+ if(r.peh>0&&r.pe>r.peh*PAR.pe)M("Duur ten opzichte van het eigen verleden",`PE ${f1(r.pe)} is ${Math.round((r.pe/r.peh-1)*100)}% boven het eigen gemiddelde van ${f1(r.peh)}.`,"r");
+ else if(r.peg>PAR.peg+1)M("Prijzig voor de groei",`PEG ${f1(r.peg)}, ruim boven ${f1(PAR.peg)}.`,"a");
+ if(r.ai[0]<=-1)M("AI-risico",`${r.ai[1]}. ${r.ai[3]||r.ai[2]}`,aiTot>AI_LIM?"r":"a");
+ else if(r.ai[0]>=1&&aiProf>35)M("Veel AI in je portefeuille",`Samen met de andere AI-profiteerders is dat ${f1(aiProf)}% van je portefeuille. Ze delen dezelfde bron van groei.`,"a");
+ if(AI_PREV[r.tk]!=null&&r.ai[0]<AI_PREV[r.tk])M("AI-beoordeling verslechterd",`Van ${AI_NM[AI_PREV[r.tk]]} naar ${AI_NM[r.ai[0]]}.`,"r");
+ if(r.nd!=null&&r.nd>PAR.nd)M("Hoge schuld",`${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×.`,"r");
+ if(r.trend==="Downtrend")M("Koers in downtrend","De koers staat onder zowel het 50- als 200-daags gemiddelde.","r");
+ if(r.eps<DOEL)M("Winstgroei onder je doel",`${r.eps}% per jaar tegen een doel van ${DOEL}%.`,r.eps<12?"r":"a");
+ if(t.rev<=-10)M("Winstverwachting omlaag",`De verwachting voor volgend jaar is ${Math.abs(t.rev)}% omlaag in een maand.`,"r");
+ if(t.dd<=-25)M("Ver onder de jaartop",`${Math.abs(t.dd)}% onder de hoogste koers van het afgelopen jaar.`,"a");
+ if(t.divcut)M("Dividend verlaagd","Het dividend is verlaagd of geschrapt. Kijk of dat een eenmalige keuze of een structureel signaal is.","a");
+ if(t.ins>=3)M("Insiders verkopen",`${t.ins} insiders verkochten kort na elkaar.`,"a");
+ if(dn>=0&&dn<=14)soft.push(`Cijfers over ${dn===0?"vandaag":dn+" dagen"} (${dstr(earn(r)).toLowerCase()}). Wacht liever tot daarna met kopen.`);
+ const vkh=vkHit(r);vkh.forEach(h=>M("Eigen criterium: "+h.t.toLowerCase(),h.m,"r"));
+ const hard=min.some(m=>m.c==="r"),dash=[["Kwaliteit",r.licht==="g"?"g":r.licht==="a"?"a":"r",lichtTxt[r.licht]],["Waardering",(r.peg<=PAR.peg||r.pe<r.peh*.9)?"g":(r.pe>r.peh*PAR.pe||r.peg>PAR.peg+1)?"r":"a",(r.peg<=PAR.peg||r.pe<r.peh*.9)?"Gunstig":(r.pe>r.peh*PAR.pe||r.peg>PAR.peg+1)?"Duur":"Redelijk"],["Trend",r.tc,r.trend],["Weging",!ow?"n":(w>=PAR.weg||clHit.some(c=>cluW(c)>c.lim)||secHit)?"r":(w>=PAR.weg*.7||clHit.length)?"a":"g",!ow?"Nog geen":(w>=PAR.weg||secHit)?"Te groot":clHit.length?"Cluster vol":"Ruimte"],["AI",aiC(r.ai[0]),aiL(r.ai[0])]];
+ let head,hc;
+ if(ow&&(v.k==="structureel"||vkh.length)){head="Verkoop overwegen";hc="r"}
+ else if(hard){head=ow?"Niet bijkopen":"Nog niet kopen";hc="a"}
+ else if(buyPts>=4){head=ow?"Bijkopen aantrekkelijk":"Kopen overwegen";hc="g"}
+ else if(buyPts>=3){head=ow?"Bijkopen kan":"Kopen overwegen";hc="g"}
+ else{head=ow?"Houden":"Afwachten";hc="n"}
+ const top=m=>m.slice(0,2).map(x=>x.t.toLowerCase()).join(" en ");
+ let adv;
+ if(head==="Verkoop overwegen"&&vkh.length&&v.k!=="structureel")adv=`Een van je eigen verkoopcriteria is geraakt: ${vkh.map(h=>h.t.toLowerCase()).join(" en ")}. Je schreef die op toen je nuchter was. Kijk of de reden voor het criterium nog klopt, en beslis dan.`;
+ else if(head==="Verkoop overwegen")adv=`${v.wat} ${min.length?"Daarnaast: "+top(min)+".":""}`;
+ else if(head==="Niet bijkopen"||head==="Nog niet kopen")adv=`${ow?"Bijkopen":"Kopen"} past nu niet: ${top(min.filter(m=>m.c==="r").length?min.filter(m=>m.c==="r"):min)}. ${plus.length?`De bedrijfskant is prima (${top(plus)}), dus dit gaat over de verhouding in je portefeuille en niet over de kwaliteit.`:""} ${ow?"Stuur je nieuwe storting liever naar een bedrijf dat spreiding toevoegt.":"Zet hem op je shortlist en kijk opnieuw als er ruimte is."}`;
+ else if(hc==="g")adv=`${ow?"Bijkopen":"Kopen"} is verdedigbaar: ${top(plus)}.${min.length?" Let wel op "+top(min)+".":""} Houd rekening met aankoopkosten en koop liever één flinke portie dan kleine plukjes.`;
+ else adv=`${ow?"Houden":"Afwachten"}. ${plus.length?"Voor: "+top(plus)+". ":""}${min.length?"Tegen: "+top(min)+". ":""}Er is geen duidelijke reden om nu bij te kopen${ow?" of te verkopen":""}.`;
+ const when=[];
+ if(ow&&w>=PAR.weg)when.push(`De weging zakt onder ${f1(PAR.weg*.8)}% (door groei van de rest van je portefeuille of verkoop).`);
+ if(clHit.length)when.push(`${clHit[0].n} zakt onder ${Math.round(clHit[0].lim*.9)}%.`);
+ if(r.peh>0&&r.pe>r.peh*1.1&&!hard)when.push(`PE zakt onder ${f1(r.peh*1.1)}, dan wordt bijkopen interessanter.`);
+ if(hc==="g")when.push(`PEG komt boven 2 of de winstgroei zakt onder ${DOEL}%.`);
+ if(r.ai[0]<=-1)when.push("Er verschijnt concurrentie met AI, of de AI-beoordeling verslechtert.");
+ if(dn>=0&&dn<=14)when.push(`Na de cijfers op ${dstr(earn(r))}.`);
+ if(!when.length)when.push("Bij nieuwe cijfers, of als weging, waardering of trend verandert.");
+ return {head,hc,dash,plus,min,soft,adv,when}}
+function melTile(r,a){const pin=r.watch?`<label class="sw2" style="margin-top:8px"><span class="grow"><div class="t" style="font-weight:600">Vastzetten op de shortlist</div><div class="m" style="font-size:13px;color:var(--mut)">Dan haal ik dit bedrijf er niet automatisch af, ook niet als het onder je grenzen zakt.</div></span><input type="checkbox" data-pin="${r.tk}" ${PINS.includes(r.tk)?"checked":""}></label>`:"";const muted=MUTE.includes(r.tk),kans=a.head.startsWith("Bijkopen aantrekkelijk")||a.head==="Kopen overwegen",verk=a.head==="Verkoop overwegen";
+ return `<div class="sec"><h2>Melding</h2><div class="list"><label class="sw2"><span class="grow"><div class="t" style="font-weight:600">Push bij wijziging van het oordeel</div><div class="m" style="font-size:13px;color:var(--mut)">Je krijgt één melding als het oordeel voor ${r.naam} verandert naar Bijkopen aantrekkelijk of Verkoop overwegen. Verandert het daarna niet, dan blijft het stil.</div></span><input type="checkbox" data-mu="${r.tk}" ${muted?"":"checked"}></label></div>${pin}
+ <div class="push" style="margin-top:8px"><div style="font-size:22px;line-height:1">🔔</div><div><b>${r.naam}: ${a.head.toLowerCase()}</b><span>${kans?`${a.plus.slice(0,2).map((x,i)=>i?x.t.toLowerCase():x.t).join(" en ")}. Voorbeeld van de melding, tik voor de analyse.`:verk?`${a.min.slice(0,2).map((x,i)=>i?x.t.toLowerCase():x.t).join(" en ")}. Voorbeeld van de melding, tik voor de analyse.`:`Zo ziet de melding eruit als dit oordeel verandert (voorbeeld).`}</span></div></div></div>`}
+function analyseTab(r){const a=oordeelR(r),row=(x,c)=>`<div class="row" style="align-items:flex-start"><span class="dot ${c}" style="margin-top:6px"></span><span class="grow"><div class="t" style="white-space:normal">${x.t}</div><div class="m" style="white-space:normal">${x.m}</div></span></div>`;
+ return `<div class="tile" style="margin-top:12px"><div class="lbl">Mijn oordeel</div><div style="margin-top:6px"><span class="pill ${a.hc}" style="font-size:15px;padding:6px 12px">${a.head}</span></div><div style="margin-top:10px;font-size:15px;line-height:1.45;white-space:normal">${a.adv}</div>
+ <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px">${a.dash.map(([l,c,t])=>`<div style="text-align:center;min-width:0"><div class="m" style="font-size:11.5px">${l}</div><div class="pill ${c}" style="display:block;margin-top:3px;padding:4px 2px;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t}</div></div>`).join("")}</div></div>
+ ${a.min.length?`<div class="sec"><h2>Let op</h2><div class="list">${a.min.map(x=>row(x,x.c)).join("")}${a.soft.map(t=>row({t:"Timing",m:t},"a")).join("")}</div></div>`:a.soft.length?`<div class="sec"><h2>Let op</h2><div class="list">${a.soft.map(t=>row({t:"Timing",m:t},"a")).join("")}</div></div>`:""}
+ ${a.plus.length?`<div class="sec"><h2>Wat ervoor pleit</h2><div class="list">${a.plus.map(x=>row(x,"g")).join("")}</div></div>`:""}
+ ${zoneTile(r)}${vkTile(r)}
+ ${melTile(r,a)}
+ <div class="sec"><h2>Wanneer ik opnieuw kijk</h2><div class="tile">${a.when.map(t=>`<div class="m" style="font-size:14px;color:var(--fg);margin:0 0 6px;white-space:normal">• ${t}</div>`).join("")}</div></div>
+ <details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span style="font-weight:600">Gebruikte grenzen</span><span class="m">›</span></summary><div style="padding:0 12px 12px"><div class="note" style="margin:0">Dit zijn de parameters achter dit oordeel. Dezelfde grenzen sturen Actie nodig en de pushmeldingen.</div>${kvs([["Weging per bedrijf","max "+PAR.weg+"%"],["Sector","max "+PAR.sec+"%"],["Tech-cluster","max "+PAR.tech+"%"],["Overnemers","max "+PAR.overn+"%"],["AI-kwetsbaar","max "+PAR.ai+"%"],["Schuld/EBITDA","max "+f1(PAR.nd)+"×"],["PE boven eigen gemiddelde","max "+f1(PAR.pe)+"×"],["PEG gunstig","tot "+f1(PAR.peg)],["Winstgroei doel",PAR.doel+"%"]],3)}<button class="chip" data-go="par" style="margin-top:10px;font-weight:600">Grenzen aanpassen ›</button></div></details>
+ <div class="note">Mijn analyse is een rekenvoorbeeld op basis van deze cijfers en je grenzen, geen persoonlijk beleggingsadvies.</div>`}
+function vDet(){
+ const r=rows.find(x=>x.tk===det);const t=dtab;
+ const tabs=[["analyse","Analyse"],["kwaliteit","Kwaliteit"],["trend","Trend"],["ai","AI"],["waardering","Waardering"],["dividend","Dividend"],["nieuws","Nieuws & insiders"],["positie","Positie"]];
+ let body="";
+ if(t==="analyse")body=analyseTab(r);
+ if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${r.eps}%</b><em>${r.epsF?"kasstroomgroei, overnames vertekenen de winst":"doel: 12% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?"–":r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
+ ${((r.D||{}).eps||[]).length>1?`<div class="chart"><h3>Winst per aandeel (EPS)</h3><p>Per jaar, in de munt van het bedrijf</p>${barsR(r.D.eps,r.D.jaren)}</div>`:""}${((r.D||{}).fcf||[]).length>1?`<div class="chart"><h3>Vrije kasstroom (FCF)</h3><p>Per jaar, in miljoenen</p>${barsR(r.D.fcf,r.D.fjaren)}</div>`:""}${kwExtra(r)}`;
+ if(t==="trend")body=`<div class="facts"><div class="fact"><small>Trend</small><b><span class="pill ${r.tc}">${r.trend}</span></b><em>50- en 200-daags gemiddelde</em></div><div class="fact"><small>Analisten koersdoel</small><b class="num ${cls(r.kd)}">${pc(r.kd,0)}</b><em>gemiddelde verwachting</em></div><div class="fact"><small>T.o.v. 50-daags</small><b class="num ${cls(r.v50)}">${pc(r.v50)}</b></div><div class="fact"><small>T.o.v. 200-daags</small><b class="num ${cls(r.v200)}">${pc(r.v200)}</b></div></div>
+ <div class="chart"><h3>Koers, 12 maanden</h3><p>Van 12 maanden geleden tot nu</p>${spark(r)}</div>
+ <div class="chart"><h3>Rendement per periode</h3><div class="kv" style="grid-template-columns:repeat(4,1fr)">${[["Dag",r.p.d],["Maand",r.p.m],["Jaar",r.p.y],["5 jaar",r.p.f]].map(([n,v])=>`<div><small>${n}</small><b class="num ${cls(v)}">${pc(v,0===0&&n==="Dag"?1:0)}</b></div>`).join("")}</div>${r.watch?"":`<div class="note">Sinds aankoop: <b class="num ${cls(r.waarde-r.inkoop)}">${pc((r.waarde/r.inkoop-1)*100)}</b> (${eur(r.waarde-r.inkoop)})</div>`}</div>`;
+ if(t==="ai")body=`<div class="facts"><div class="fact"><small>Impact van AI</small><b><span class="pill ${aiC(r.ai[0])}">${aiL(r.ai[0])}</span></b></div><div class="fact"><small>Type</small><b style="font-size:14px">${r.ai[1]}</b></div></div><div class="chart"><h3>Waarom</h3><p style="font-size:14px;color:var(--fg)">${r.ai[2]}</p>${r.ai[3]?`<h3 style="margin-top:10px">Waar ik op let</h3><p style="font-size:14px;color:var(--fg)">${r.ai[3]}</p>`:""}</div><div class="note">Dit is mijn inschatting op basis van wat ik van het bedrijfsmodel weet. Het zijn geen meetgegevens. Ik herzie het elk kwartaal en je kunt het aanpassen.</div>`;
+ if(t==="waardering")body=`<div class="facts"><div class="fact"><small>PE nu</small><b class="num">${f1(r.pe)}</b><em>historisch ${f1(r.peh)}</em></div><div class="fact"><small>PEG</small><b class="num">${f1(r.peg)}</b><em>${r.peg<=1?"goedkoop voor de groei":r.peg<=1.5?"redelijk":"prijzig"}</em></div><div class="fact"><small>52-wekenrange</small><b class="num">${r.pos}%</b><em>0% = laagste, 100% = hoogste</em></div><div class="fact"><small>Koers vandaag</small><b class="num ${cls(r.dag)}">${pc(r.dag)}</b></div></div>
+ <div class="chart"><h3>PE nu t.o.v. historisch</h3><p>${r.pe<r.peh?`${Math.round((1-r.pe/r.peh)*100)}% onder`:`${Math.round((r.pe/r.peh-1)*100)}% boven`} het eigen gemiddelde</p><div class="prog"><i style="width:${Math.min(100,r.pe/Math.max(r.pe,r.peh)*100)}%"></i><u style="left:${Math.min(100,r.peh/Math.max(r.pe,r.peh)*100)}%"></u></div><div class="note">De streep is het historische gemiddelde.</div></div>${peerTbl(r)}`;
+ if(t==="dividend"){const D=r.D||{},y=r.yld;body=y>0?`<div class="facts"><div class="fact"><small>Rendement</small><b class="num">${f1(y)}%</b></div><div class="fact"><small>Groei per jaar</small><b class="num ${cls(D.div_cagr)}">${D.div_cagr==null?"–":pc(D.div_cagr*100)}</b><em>gemiddeld over de reeks</em></div><div class="fact"><small>Volgende ex-datum</small><b class="num">${D.ex_div&&daysTo(D.ex_div)>=0?dstr(new Date(D.ex_div.slice(0,10)+"T12:00:00")):"nog niet bekend"}</b></div><div class="fact"><small>Per aandeel, laatste 12 mnd</small><b class="num">${D.div_ttm==null?"–":d2(D.div_ttm)}</b><em>${esc(r.munt)}</em></div></div>${(D.div_reeks||[]).length>1?`<div class="chart"><h3>Dividend per aandeel</h3><p>Per jaar</p>${barsR(D.div_reeks,D.div_jaren)}</div>`:""}`:`<div class="chart"><p>${esc(r.naam)} keert geen dividend uit.</p></div>`}
+ if(t==="nieuws"){const D=r.D||{},N=(D.nieuws||[]).slice(0,8),I=(D.insiders||[]).slice(0,6),ago=iso=>{const n=Math.floor((Date.now()-new Date(iso))/864e5);return n<=0?"vandaag":n===1?"gisteren":n+" dagen geleden"};body=`<div class="sec"><h2>Nieuws</h2><div class="list">${N.length?N.map(n=>`<a class="row" href="${esc(n.url||"#")}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="grow"><div class="t" style="white-space:normal">${esc(n.titel)}</div><div class="m">${ago(n.tijd)} · ${esc(n.bron||"")}</div></span></a>`).join(""):'<div class="row"><span class="grow"><div class="t">Geen recent nieuws van Yahoo</div></span></div>'}</div></div>${I.length?`<div class="sec"><h2>Insiders</h2><div class="list">${I.map(i=>`<div class="row"><span class="grow"><div class="t" style="white-space:normal">${esc(i.wie)}: ${i.type==="koop"?"koopt":"verkoopt"} ${(i.aandelen||0).toLocaleString("nl-NL")} aandelen</div><div class="m">${esc(i.functie||"")} · ${esc(i.datum)}</div></span></div>`).join("")}</div></div>`:""}<div class="sec"><h2>Cijfers</h2><div class="list"><div class="row"><span class="grow"><div class="t">Volgende cijfers</div><div class="m">${r.D&&r.D.earnings&&daysTo(r.D.earnings)>=0?dstr(earn(r)):"nog niet bekend"}</div></span></div><div class="row"><span class="grow"><div class="t">Insiders, laatste 180 dagen</div><div class="m">${r.land==="VS"&&xd(r).buy!=null?xd(r).buy+" kopen, "+xd(r).sell+" verkopen":"Geen insiderdata van Yahoo voor "+esc(r.land)}</div></span></div></div></div>${erTbl(r)}`}
+ if(t==="positie")body=r.watch?`<div class="chart"><p>Nog geen positie. Staat op je watchlist.</p></div>${logTile(r)}`:`<div class="facts"><div class="fact"><small>Waarde</small><b class="num">${eur(r.waarde)}</b></div><div class="fact"><small>Weging</small><b class="num">${f1(r.w)}%</b><em>sector ${r.sector}: ${f1(secW[r.sector])}%</em></div>${histFacts(r)}<div class="fact"><small>Aantal</small><b class="num">${r.qty.toLocaleString("nl-NL")}</b></div><div class="fact"><small>Valuta</small><b class="num">${r.munt}</b></div></div>${winTile(r)}<div class="chart"><h3>Mijn reden van aankoop</h3><p>Alleen op dit toestel bewaard.</p><textarea id="note" data-tk="${r.tk}" placeholder="Waarom heb je dit gekocht en wanneer verkoop je?">${noteGet(r.tk)}</textarea></div>${logTile(r)}`;
+ return `<div class="bar"><button class="back" id="bk">‹ Terug</button><span class="pill ${r.licht}">${lichtTxt[r.licht]} · ${r.score}/5</span></div>
+ <h1 style="font-size:26px;letter-spacing:-.01em">${r.naam}</h1><div class="note" style="margin-top:2px">${r.tk} · ${r.sector} · ${r.land}</div>
+ <div class="tabs" role="tablist">${tabs.map(([k,n])=>`<button role="tab" data-dt="${k}" aria-selected="${k===t}">${n}</button>`).join("")}</div>${body}${demo}`}
+function xd(r){if(r.x)return r.x;const D=r.D||{},x={},e=r.eigenaar;
+ x.f=e==="oprichter"||e==="familie";x.fl=e==="familie"?"Familie":e==="oprichter"?"Oprichter":"";
+ x.ins=pct(D.ins_pct);
+ x.buy=r.land==="VS"&&D.ins_koop!=null?D.ins_koop:null;x.sell=r.land==="VS"&&D.ins_verkoop!=null?D.ins_verkoop:null;
+ x.dil=pct(D.dil);x.opm=pct(D.om);const o0=(D.om_reeks||[])[0];x.opm5=o0==null?null:o0*100;
+ x.fy=pct(D.fcf_yield);x.ev=D.ev_ebitda==null?null:Math.round(D.ev_ebitda);
+ x.beta=D.beta==null?null:+D.beta.toFixed(2);x.vol=pct(D.vol);x.dd=pct(D.dd5);x.cor=null;
+ x.er=(D.er||[]).slice(0,4).map(q=>({s:q.s,k:q.k==null?0:q.k*100}));
+ x.erS=x.er.length?x.er.reduce((t,q)=>t+q.s,0)/x.er.length:null;x.erK=x.er.length?x.er.reduce((t,q)=>t+q.k,0)/x.er.length:null;
+ return r.x=x}
+function buildNws(){const L=[],now=new Date(),fmt=d=>d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+ const ago=d=>{const n=Math.floor((now-d)/864e5);return n<=0?"Vandaag":n===1?"Gisteren":fmt(d)};
+ rows.forEach(r=>{const D=r.D||{};
+  if(!r.watch&&D.earnings){const dn=daysTo(D.earnings);if(dn>=0&&dn<=14)L.push({s:+now,id:"c-"+r.tk+"-"+D.earnings,w:dn===0?"Vandaag":"Over "+dn+" dagen",tk:r.tk,t:"cijfers",h:"Cijfers op "+fmt(new Date(D.earnings.slice(0,10)+"T12:00:00")),x:"De volgende kwartaalcijfers komen eraan. Na afloop kijk ik of winst en omzet boven of onder de verwachting liggen.",b:"Yahoo",n:dn<=7?1:0})}
+  if(!r.watch&&D.ex_div){const dn=daysTo(D.ex_div);if(dn>=0&&dn<=14)L.push({s:+now-1,id:"d-"+r.tk+"-"+D.ex_div,w:dn===0?"Vandaag":"Over "+dn+" dagen",tk:r.tk,t:"dividend",h:"Dividend: ex-datum "+fmt(new Date(D.ex_div.slice(0,10)+"T12:00:00")),x:"Wie het aandeel vóór deze datum heeft, krijgt het volgende dividend.",b:"Yahoo",n:0})}
+  (D.insiders||[]).filter(i=>i.datum&&daysTo(i.datum)>=-30).slice(0,2).forEach(i=>{const d=new Date(i.datum+"T12:00:00"),k=i.type==="koop";L.push({s:+d,id:"i-"+r.tk+"-"+i.wie+"-"+i.datum+"-"+i.type,w:ago(d),tk:r.tk,t:"insider",h:(k?"Insider koopt":"Insider verkoopt")+(i.functie?" ("+i.functie+")":""),x:(i.wie?i.wie+": ":"")+(i.aandelen?i.aandelen.toLocaleString("nl-NL")+" aandelen":"")+(i.waarde?" ter waarde van ca. "+(r.munt==="EUR"?"€":"$")+Math.round(i.waarde).toLocaleString("nl-NL"):"")+". "+(k?"Kopen op de open markt is een positief signaal.":"Verkopen kan privé redenen hebben."),b:"SEC-melding",n:k&&daysTo(i.datum)>=-3?1:0})});
+  const nw=(D.nieuws||[])[0];if(nw&&!r.watch){const d=new Date(nw.tijd);L.push({s:+d,id:"n-"+nw.id,w:ago(d),tk:r.tk,t:"nieuws",h:nw.titel,x:"Bron: "+(nw.bron||"Yahoo")+".",b:"Nieuws",n:(now-d)<864e5?1:0,u:nw.url})}
+  if(!r.watch&&r.w>(PF.grenzen&&PF.grenzen.weg||10))L.push({s:+now-2,id:"w-"+r.tk,w:"Nu",tk:r.tk,t:"weging",h:"Weging boven "+(PF.grenzen&&PF.grenzen.weg||10)+"%",x:r.naam+" is "+f1(r.w)+"% van je portefeuille.",b:"Berekend",n:0});
+  if(!r.watch&&r.v200!=null&&r.v200<0)L.push({s:+now-3,id:"t-"+r.tk,w:"Nu",tk:r.tk,t:"trend",h:"Koers onder 200-daags gemiddelde",x:"De koers staat "+f1(Math.abs(r.v200))+"% onder het langjarig gemiddelde.",b:"Berekend",n:0})});
+ L.sort((a,b)=>b.s-a.s);return L}
+function buildTR(){const T={};own.forEach(r=>{const D=r.D||{},t={},d=D.div_reeks||[];if(d.length>=2&&d[d.length-1]<d[d.length-2]*.9)t.divcut=1;if(r.land==="VS"&&(D.ins_verkoop||0)>=3)t.ins=D.ins_verkoop;T[r.tk]=t});return T}
+function cleanDom(){for(const id of ["app","sheet"]){const w=document.createTreeWalker(document.getElementById(id),NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){let t=n.nodeValue;
+ if(/NaN|undefined|Infinity|null/.test(t))t=t.replace(/[+−-]?(?:Infinity|NaN|null|undefined)/g,"–").replace(/–[%×]/g,"–");
+ if(/\d\.\d{4,}/.test(t))t=t.replace(/\d+\.\d{4,}/g,m=>(Math.round(parseFloat(m)*10)/10).toString().replace(".",","));
+ if(t!==n.nodeValue)n.nodeValue=t}}}
+
+const FEEMAP={NL:"EUR",DE:"EUR",FR:"EUR",BE:"EUR",IT:"EUR",ES:"EUR",FI:"EUR",IE:"EUR",LU:"EUR",US:"USD",KY:"USD",GB:"GBP",JE:"GBP",SE:"SEK",CA:"CAD",DK:"DKK",PL:"PLN",CH:"CHF",NO:"NOK"};
+let _FEE=null;
+function feeTab(){if(_FEE)return _FEE;const t={EUR:3,USD:8.2,GBP:9.9,SEK:4.1,CAD:3.9,DKK:4.9};try{const a={};PRIVE.imp.trx.x.forEach(r=>{if(r[5]>0&&r[0]>="2025-01-01"){const c=FEEMAP[r[4].slice(0,2)];if(c)(a[c]=a[c]||[]).push(r[2]+r[3])}});Object.keys(a).forEach(c=>{if(a[c].length>=3){const s=a[c].sort((p,q)=>p-q);t[c]=s[Math.floor(s.length/2)]}})}catch(e){}_FEE=t;return t}
+function feeEst(r,amt){const t=feeTab(),f=t[r.munt]!=null?t[r.munt]:5,st=r.munt==="GBP"?0.005*amt:0;return {f:f,st:st,t:f+st}}
+function feeTxt(x,amt){if(!(amt>0))return "";const c=feeEst(x.r,amt);return `Aankoopkosten ongeveer ${eur(Math.round(c.t))} (${(c.t/amt*100).toFixed(1).replace(".",",")}%)${c.st?", inclusief 0,5% Britse zegelbelasting":""}`}
+
+let cSort="laatste",_CL=null;
+const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"]];
+function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL;
+ const fl={};((PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[]).forEach(x=>{(fl[x[4]]=fl[x[4]]||[]).push([x[0],x[6]])});
+ PRIVE.sold.forEach(s=>{if(!(s.buy>0))return;if(/\s[CP]\d+(\.\d+)?\s\d{2}[A-Z]{3}\d{2}$/.test((PRIVE.names&&PRIVE.names[s.isin])||""))return;const res=s.sell-s.buy;let xi=null;
+  try{const f=(fl[s.isin]||[]).slice().sort((a,b)=>a[0]<b[0]?-1:1);const e=new Date(new Date(s.laatste).getTime()+864e5);xi=xirrOf(f,e,0.01)}catch(e){}
+  _CL.push({isin:s.isin,naam:(PRIVE.names&&PRIVE.names[s.isin])||s.isin,eerste:s.eerste,laatste:s.laatste,n:s.n,buy:s.buy,sell:s.sell,res:res,pct:res/s.buy*100,xirr:xi==null||!isFinite(xi)||Math.abs(xi)>1000?null:xi})});
+ return _CL}
+function vClosed(){const L=closedList().slice(),tot=L.reduce((s,x)=>s+x.res,0),inv=L.reduce((s,x)=>s+x.buy,0),w=L.filter(x=>x.res>0).length;
+ const srt={laatste:(a,b)=>a.laatste<b.laatste?1:-1,res:(a,b)=>b.res-a.res,slecht:(a,b)=>a.res-b.res,pct:(a,b)=>b.pct-a.pct}[cSort];L.sort(srt);
+ const md=d=>d.slice(5,7)+"-"+d.slice(0,4),nm=s=>s.toLowerCase().replace(/(^|[\s(-])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(Ab|Nv|Plc|Ag|Sa|Se|Asa|Spa|Bv|Kgaa|Ltd|Adr|Etf)\b/g,m=>m.length<=3||m==="Plc"?m.toUpperCase():m);
+ return head("Posities")+`<div class="chips">${POSFL.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ <div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Resultaat</small><b class="num ${cls(tot)}">${eur(tot)}</b></div><div><small>Op aankopen</small><b class="num ${cls(tot)}">${pc(inv?tot/inv*100:0)}</b></div><div><small>In de plus</small><b class="num">${w} van ${L.length}</b></div></div>
+ <div class="note">Aandelen die je helemaal verkocht hebt: verkoop min aankoop, zonder dividend. "Per jaar" houdt rekening met wanneer je kocht en verkocht.</div></div>
+ <div class="chips" style="padding-top:10px">${[["laatste","Recent"],["res","Beste"],["slecht","Slechtste"],["pct","Hoogste %"]].map(([k,t])=>`<button class="chip" data-cs="${k}" aria-pressed="${cSort===k}">${t}</button>`).join("")}</div>`+
+ L.map(x=>`<div class="card"><div class="h"><div class="nm">${nm(x.naam)}<span>${md(x.eerste)} tot ${md(x.laatste)}</span></div><div style="text-align:right"><div class="num ${cls(x.res)}" style="font-weight:600">${eur(x.res)}</div><div class="num ${cls(x.res)}" style="font-size:12.5px">${pc(x.pct)}${x.xirr!=null?" · "+pc(x.xirr)+" per jaar":""}</div></div></div></div>`).join("")}
+
+function vOpt(){const A=(PRIVE&&PRIVE.opts)||[],L=A.filter(o=>!o.open),op=A.filter(o=>o.open);
+ const sm=(l,f)=>l.reduce((t,x)=>t+x[f],0),pr=(r,p)=>p>0?r/p*100:0;
+ const G=L.filter(o=>o.kant==="gekocht"),V=L.filter(o=>o.kant==="verkocht"),tot=sm(L,"res"),prem=sm(L,"prem");
+ const srt={laatste:(a,b)=>a.laatste<b.laatste?1:-1,res:(a,b)=>b.res-a.res,slecht:(a,b)=>a.res-b.res,pct:(a,b)=>pr(b.res,b.prem)-pr(a.res,a.prem)}[cSort];L.sort(srt);
+ const md=d=>d.slice(5,7)+"-"+d.slice(0,4),blok=(t,l)=>`<div><small>${t}</small><b class="num ${cls(sm(l,"res"))}">${eur(sm(l,"res"))}</b><small>${pc(pr(sm(l,"res"),sm(l,"prem")))} van premie</small></div>`;
+ return head("Posities")+`<div class="chips">${POSFL.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ <div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Totaal resultaat</small><b class="num ${cls(tot)}">${eur(tot)}</b><small>${pc(pr(tot,prem))} van premie</small></div>${blok("Verkocht",V)}${blok("Gekocht",G)}</div>
+ <div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Gesloten</small><b class="num">${L.length}</b></div><div><small>In de plus</small><b class="num">${L.filter(o=>o.res>0).length}</b></div><div><small>Nog open</small><b class="num">${op.length}</b></div></div>
+ <div class="note">Resultaat is alle ontvangen en betaalde premie samen, inclusief kosten. Het rendement is het resultaat gedeeld door de premie (bij verkocht opties de ontvangen premie, bij gekocht opties de betaalde premie). Wordt een verkochte optie uitgeoefend, dan zit dat resultaat bij het aandeel en niet hier.</div></div>
+ <div class="chips" style="padding-top:10px">${[["laatste","Recent"],["res","Beste"],["slecht","Slechtste"],["pct","Hoogste %"]].map(([k,t])=>`<button class="chip" data-cs="${k}" aria-pressed="${cSort===k}">${t}</button>`).join("")}</div>`+
+ L.map(x=>`<div class="card"><div class="h"><div class="nm">${x.n}<span>${x.kant} · ${md(x.eerste)} tot ${md(x.laatste)}</span></div><div style="text-align:right"><div class="num ${cls(x.res)}" style="font-weight:600">${eur(x.res)}</div><div class="num ${cls(x.res)}" style="font-size:12.5px">${pc(pr(x.res,x.prem))} van premie</div></div></div></div>`).join("")}
+const NWS=buildNws();
+const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
+let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
+const unread=()=>NWS.filter(x=>x.n&&!READ.includes(x.id)).length;
+let wSec="Alles";try{wSec=localStorage.getItem("pf_wsec")||"Alles"}catch(e){}
+let nwsTab="feed",agTab="alles",posView="bedrijf";
+const nameOf=tk=>(rows.find(r=>r.tk===tk)||{naam:tk}).naam;
+function nwsRow(x){const u=x.n&&!READ.includes(x.id);return `<button class="row" data-d="${x.tk}" style="align-items:flex-start"><span class="nd" style="margin-top:7px;${u?"":"visibility:hidden"}"></span><span class="grow"><div class="t" style="white-space:normal">${nameOf(x.tk)}: ${x.h}</div><div class="m" style="margin-top:2px">${x.x}</div><div class="m" style="margin-top:4px"><span class="pill ${TYP[x.t][1]}">${TYP[x.t][0]}</span> ${x.w} · ${x.b}</div></span></button>`}
+function vNws(){
+ const seg=`<div class="seg seg2" style="margin-top:12px"><button data-nt="feed" aria-pressed="${nwsTab==="feed"}">Nieuws</button><button data-nt="inst" aria-pressed="${nwsTab==="inst"}">Instellingen</button></div>`;
+ if(nwsTab==="inst")return head("Nieuws")+seg+vMeld();
+ const nw=NWS.filter(x=>x.n),ev=NWS.filter(x=>!x.n);
+ return head("Nieuws")+seg+`<div class="sh" style="margin-top:12px"><span class="note" style="margin:0">${unread()?unread()+" nieuw":"Alles gelezen"}</span>${unread()?'<button class="chip" id="readAll">Alles als gelezen</button>':""}</div><div class="list">${nw.map(nwsRow).join("")}</div><div class="sec"><h2>Eerder</h2><div class="list">${ev.map(nwsRow).join("")}</div></div><div class="note">Voor Europese bedrijven komt dit vooral uit nieuwsbronnen en is het minder volledig dan voor Amerikaanse. De bron staat bij elk bericht. Voorbeeldberichten.</div>`+demo}
+function nieuwStrip(){const l=NWS.filter(x=>x.n&&!READ.includes(x.id)).slice(0,3);if(!l.length)return "";
+ return `<div class="sec"><div class="sh"><h2>Nieuw</h2><button class="chip" data-t="nws">Alles ›</button></div><div class="list">${l.map(x=>`<button class="row" data-d="${x.tk}"><span class="grow"><div class="t" style="white-space:normal">${nameOf(x.tk)}: ${x.h}</div><div class="m"><span class="pill ${TYP[x.t][1]}">${TYP[x.t][0]}</span> ${x.w}</div></span><span class="m">›</span></button>`).join("")}</div></div>`}
+const TR=buildTR();
+const CLU=[{n:"Tech-cluster",lim:50,u:"Technologie en Halfgeleiders. Deze bewegen meestal samen mee met de markt voor tech en AI.",f:r=>r.sector==="Technologie"||r.sector==="Halfgeleiders"},{n:"Overnemers",lim:25,u:"Bedrijven die steeds kleine bedrijven kopen en houden: Constellation, Topicus, Lumine, Chapters Group, Teqnion en Roko. Zelfde verdienmodel, dus ze doen vaak tegelijk goed of slecht.",f:r=>["CSU.TO","TOI.V","LMN.V","CHG.DE","TEQ.ST","ROKO-B.ST"].includes(r.tk)}];
+const cluW=c=>own.filter(c.f).reduce((t,r)=>t+r.w,0);
+function applyPar(){DOEL=PAR.doel;AI_LIM=PAR.ai;CLU[0].lim=PAR.tech;CLU[1].lim=PAR.overn}
+let AI_LIM=PAR.ai;const AI_NM={2:"Profiteert sterk",1:"Profiteert",0:"Neutraal","-1":"Kwetsbaar"};applyPar();
+const AI_PREV={"FTNT":1}; /* voorbeeld: vorige beoordeling per bedrijf */
+const AI_DATUM="2026-11-08";
+function actieLijst(){const a=[];
+ own.filter(r=>r.w>=PAR.weg).forEach(r=>a.push([`${r.naam} staat op ${f1(r.w)}%, grens is ${PAR.weg}%`,'data-d="'+r.tk+'"']));
+ own.filter(r=>verdict(r).k==="structureel").forEach(r=>a.push([`${r.naam}: verkoop overwegen volgens Doelcheck`,'data-t="doel"']));
+ own.filter(r=>r.peh>0&&r.pe>r.peh*PAR.pe).sort((x,y)=>y.pe/y.peh-x.pe/x.peh).forEach(r=>a.push([`${r.naam}: PE ${f1(r.pe)} staat ${Math.round((r.pe/r.peh-1)*100)}% boven het eigen gemiddelde (${f1(r.peh)})`,'data-d="'+r.tk+'"']));
+const D=r=>'data-d="'+r.tk+'"';
+ own.filter(r=>(TR[r.tk]||{}).rev<=-10).forEach(r=>a.push([`${r.naam}: winstverwachting volgend jaar ${Math.abs(TR[r.tk].rev)}% omlaag in een maand`,D(r)]));
+ own.filter(r=>(TR[r.tk]||{}).dd<=-25).forEach(r=>a.push([`${r.naam} staat ${Math.abs(TR[r.tk].dd)}% onder de top van het afgelopen jaar`,D(r)]));
+ own.filter(r=>(TR[r.tk]||{}).divcut).forEach(r=>a.push([`${r.naam}: dividend verlaagd of geschrapt`,D(r)]));
+ own.filter(r=>r.nd!=null&&r.nd>PAR.nd).forEach(r=>a.push([`${r.naam}: schuld is ${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×`,D(r)]));
+ own.filter(r=>(TR[r.tk]||{}).ins>=3).forEach(r=>a.push([`${r.naam}: ${TR[r.tk].ins} insiders verkochten kort na elkaar`,D(r)]));
+ own.forEach(r=>vkHit(r).forEach(h=>a.push([`${r.naam}: eigen verkoopcriterium geraakt (${h.t.toLowerCase()})`,D(r)])));
+ {const kw=aiW(r=>r.ai[0]<=-1);if(kw>AI_LIM)a.push([`AI-kwetsbare bedrijven zijn ${f1(kw)}% van je portefeuille, grens is ${AI_LIM}%`,'data-s="ai"'])}
+ own.filter(r=>AI_PREV[r.tk]!=null&&r.ai[0]<AI_PREV[r.tk]).forEach(r=>a.push([`${r.naam}: AI-beoordeling verslechterd van ${AI_NM[AI_PREV[r.tk]]} naar ${AI_NM[r.ai[0]]}`,'data-d="'+r.tk+'"']));
+ CLU.filter(c=>cluW(c)>c.lim).forEach(c=>a.push([`${c.n} is ${f1(cluW(c))}% van je portefeuille, grens is ${c.lim}%`,'data-s="cluster"']));
+ const sw=Object.entries(secW).sort((x,y)=>y[1]-x[1])[0];if(sw[1]>PAR.sec)a.push([`${sw[0]} is ${f1(sw[1])}% van je portefeuille, grens is ${PAR.sec}%`,'data-s="sector"']);
+ return a}
+const actieRij=([t,at])=>`<button class="row" ${at}><span class="dot a"></span><span class="grow"><div class="t" style="white-space:normal">${t}</div></span><span class="m">›</span></button>`;
+function actieBlok(){const a=actieLijst();if(!a.length)return "";
+ return `<div class="sec"><div class="sh"><h2>Actie nodig</h2>${a.length>3?`<button class="chip" data-s="acties">Alles (${a.length}) ›</button>`:""}</div><div class="list">${a.slice(0,3).map(actieRij).join("")}</div></div>`}
+function vlakBlok(){const l=[...own].sort((a,b)=>b.w-a.w);
+ let items,go;
+ if(posView==="valuta"){const cur={};own.forEach(r=>cur[r.munt]=(cur[r.munt]||0)+r.w);const cv={EUR:"--c1",USD:"--c2",GBP:"--c3",CAD:"--c4",SEK:"--c5"};items=Object.entries(cur).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v,c:cv[n]||"--cx"}));go="valuta"}
+ else if(posView==="sector"){items=Object.entries(secW).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v,c:secVar[n]||"--cx"}));go="sector"}
+ else if(posView==="cluster"){items=[];go="cluster"}
+ else{const top=l.slice(0,7),rest=l.slice(7);items=top.map((r,i)=>({n:r.naam,v:r.w,c:"--c"+(i+1)}));items.push({n:`Overig (${rest.length} bedrijven)`,v:rest.reduce((t,r)=>t+r.w,0),c:"--cx"});go="bedrijven"}
+ const nonEur=items.length?items.filter(i=>i.n!=="EUR").reduce((t,i)=>t+i.v,0)/items.reduce((t,i)=>t+i.v,0)*100:0;
+ const warn=posView==="valuta"?`<div class="note">${f1(nonEur)}% van je portefeuille staat in valuta buiten de euro.</div>`:posView==="sector"&&items[0].v>35?`<div class="note" style="color:var(--warn)">${items[0].n} is meer dan 35% van je portefeuille.</div>`:"";
+ return `<div class="seg" style="margin-top:6px;grid-template-columns:repeat(4,1fr)"><button data-pv="bedrijf" aria-pressed="${posView==="bedrijf"}">Bedrijf</button><button data-pv="sector" aria-pressed="${posView==="sector"}">Sector</button><button data-pv="valuta" aria-pressed="${posView==="valuta"}">Valuta</button><button data-pv="cluster" aria-pressed="${posView==="cluster"}">Cluster</button></div><button class="tile go" data-s="${go}" style="margin-bottom:12px">${posView==="cluster"?cluBars():donut(items)}${warn}</button>`}
+function cluBars(){return CLU.map(c=>{const w=cluW(c),n=own.filter(c.f).length;return `<div style="margin:2px 0 12px"><div style="display:flex;justify-content:space-between;font-size:14px"><b>${c.n}</b><span class="m">${n} bedrijven · grens ${c.lim}%</span></div>${hbars([{n:"",v:w,k:w>c.lim?"a":"n"}],c.lim,"%")}</div>`}).join("")+`<div class="note">Clusters overlappen: de softwareovernemers tellen mee bij beide. Je ziet daarom geen taart. De streep is je grens.</div>`}
+function secSec(){const secs=Object.entries(secW).sort((a,b)=>b[1]-a[1]);return `<div class="sec"><h2>Spreiding per sector</h2><button class="tile go" data-s="sector">${donut(secs.map(([n,v])=>({n,v,c:secVar[n]||'--cx'})))}${secs[0][1]>35?`<div class="note" style="color:var(--warn)">${secs[0][0]} is meer dan 35% van je portefeuille.</div>`:""}</button></div>`}
+function vAgenda(){
+ const T0=new Date();
+ const seg=`<div class="seg seg3" style="margin-top:4px"><button data-ag="alles" aria-pressed="${agTab==="alles"}">Alles</button><button data-ag="cijfers" aria-pressed="${agTab==="cijfers"}">Cijfers</button><button data-ag="dividend" aria-pressed="${agTab==="dividend"}">Dividend</button></div>`;
+ if(agTab==="dividend"){const o=vDiv();return head("Agenda")+seg+o.slice(head("Dividend").length)}
+ const ev=[];
+ if(agTab!=="dividend")own.forEach(r=>{const d=earn(r);if(d-new Date()<150*864e5)ev.push({d,r,t:"cijfers"})});
+ if(agTab==="alles")own.filter(r=>r.D&&r.D.ex_div&&daysTo(r.D.ex_div)>=0).forEach(r=>ev.push({d:new Date(r.D.ex_div.slice(0,10)+"T12:00:00"),r,t:"dividend",inc:r.qty*(r.D.div_laatste_bedrag||0)/(r.D.rate||1)}));
+ ev.sort((a,b)=>a.d-b.d);for(let i=ev.length-1;i>=0;i--)if(ev[i].d<T0)ev.splice(i,1);
+ const groups={};ev.forEach(e=>{const w=Math.max(0,Math.floor((e.d-T0)/(7*864e5)));(groups[w]=groups[w]||[]).push(e)});
+ const wl=w=>w===0?"Deze week":w===1?"Volgende week":"Over "+w+" weken";
+ return head("Agenda")+seg+Object.keys(groups).slice(0,6).map(w=>`<div class="wk">${wl(+w)}</div><div class="list">${groups[w].map(e=>`<button class="row" data-d="${e.r.tk}"><span class="dt">${dstr(e.d)}</span><span class="grow"><div class="t">${e.r.naam}</div></span>${e.t==="dividend"?`<span class="num m" style="margin-right:6px">${eur(e.inc)}</span>`:""}<span class="pill ${e.t==="dividend"?"g":"n"}">${e.t==="dividend"?"Dividend":"Cijfers"}</span></button>`).join("")}</div>`).join("")+`<div class="note">Cijferdata en dividendbedragen zijn schattingen tot het bedrijf ze bevestigt. Voorbeeldcijfers.</div>`+demo}
+function vMeld(){
+ const it=[["zone","Shortlist: koopzone bereikt","Een bedrijf op je shortlist komt in de koopzone (goede waardering volgens je grenzen), of zit er binnen 3% van. Eén melding per bedrijf.",1],["vk","Eigen verkoopcriterium geraakt","Een bedrijf raakt een grens die je zelf bij Analyse opschreef, zoals een maximale PE of minimale winstgroei.",1],["sl_nieuw","Shortlist: nieuwe kandidaat","Ik zet een bedrijf op je shortlist omdat het aan je grenzen voldoet. Je ziet waarom, en je kunt hem vastzetten of weghalen.",1],["sl_weg","Shortlist: bedrijf verwijderd","Een bedrijf voldoet niet meer aan je grenzen en ik heb hem van de shortlist gehaald. Met de reden.",1],["oordeel_koop","Kans: oordeel wordt Bijkopen aantrekkelijk","Mijn analyse van een bedrijf springt naar Bijkopen aantrekkelijk: goede waardering, kwaliteit en trend, en er is ruimte in je weging en clusters. Eén melding per wijziging.",1],["oordeel_verkoop","Waarschuwing: oordeel wordt Verkoop overwegen","Mijn analyse van een bedrijf springt naar Verkoop overwegen, bijvoorbeeld door structureel achterblijvende winst.",1],["oordeel_niet","Oordeel wordt Niet bijkopen","Een positie raakt een grens (weging, sector of cluster). Staat standaard uit, want dit staat ook in Actie nodig.",1],["koersdoel","Koersdoel gewijzigd","Een analist verhoogt of verlaagt het koersdoel, of geeft een nieuwe rating.",1],["aankond","Grote aankondigingen","Overname, nieuwe guidance, CEO-wissel, aandelenuitgifte. Voor VS-bedrijven via de officiële beursmeldingen, elders via nieuws.",1],["cijfers","Cijfers","3 dagen van tevoren, en de uitslag tegenover de verwachting zodra die er is.",0],["insider","Insiders","Directeuren kopen of verkopen. Nu vooral VS-bedrijven.",0],["nieuws","Belangrijk nieuws","Nieuws met sleutelwoorden als overname, onderzoek, waarschuwing.",0],["dag5","Grote dagbeweging","Een aandeel beweegt meer dan 5% op één dag.",0],["ai","AI-nieuws","Grote AI-aankondigingen die een van je bedrijven raken, zoals een nieuw model, een partnerschap of een nieuwe concurrent.",1],["trend","Trendomslag","De koers kruist het 200-daags gemiddelde, omhoog of omlaag.",1],["div","Dividend","Aangekondigd, verhoogd of verlaagd.",1],["weging","Weging te hoog",`Een aandeel boven ${PAR.weg}% of een sector boven ${PAR.sec}%.`,1],["maand","Maandoverzicht","Op de 1e van de maand: je top 3 kandidaten voor de inleg.",1]];
+ return `<p style="margin:8px 0 0;color:var(--mut)">Kies waarover je een push wilt. Wat uit staat, zie je alleen in de app.</p><div class="sec"><div class="list">${it.map(([k,t,d,n])=>`<label class="sw2"><span class="grow"><div class="t" style="font-weight:600">${t}${n?' <span class="pill n">nieuw</span>':''}</div><div class="m" style="font-size:13px;color:var(--mut)">${d}</div></span><input type="checkbox" data-m="${k}" ${mel[k]?"checked":""}></label>`).join("")}</div></div>
+ <div class="sec"><h2>Mijn grenzen</h2><div class="tile">${[["weg","Weging per bedrijf, max","%"],["sec","Weging per sector, max","%"],["tech","Tech-cluster, max","%"],["overn","Overnemers-cluster, max","%"],["ai","AI-kwetsbaar, max","%"],["nd","Schuld/EBITDA, max","×"],["pe","PE boven eigen gemiddelde, max","×"],["peg","PEG gunstig tot","" ],["doel","Winstgroei doel","%"],["sl_add","Shortlist: toevoegen vanaf score","/5"],["sl_rem","Shortlist: verwijderen bij score tot en met","/5"],["sl_wk","Shortlist: weken onder de grens voor verwijderen",""],["sl_max","Shortlist: maximaal aantal bedrijven",""],["sl_new","Shortlist: nieuwe bedrijven per week, max",""]].map(([k,l,u])=>`<div class="field" style="margin:0 0 8px"><label for="par_${k}" style="flex:1">${l}</label><input id="par_${k}" type="number" inputmode="decimal" step="${k==="nd"||k==="pe"||k==="peg"?"0.1":"1"}" style="max-width:90px" value="${PAR[k]}"><span class="num" style="width:16px">${u}</span></div>`).join("")}<div class="note">Deze grenzen sturen Actie nodig, mijn analyse per bedrijf en de pushmeldingen. Wijzigingen worden direct bewaard. Ze gelden bij de volgende keer dat je een scherm opent.</div></div></div>
+ <div class="sec"><h2>Privacy</h2><div class="list"><label class="sw2"><span class="grow"><div class="t" style="font-weight:600">Verberg bedragen</div><div class="m" style="font-size:13px;color:var(--mut)">Toont alleen percentages. Handig als iemand meekijkt.</div></span><input type="checkbox" id="hide" ${hide?"checked":""}></label></div><div class="field"><label for="tot" style="flex:1">Mijn totale vermogen</label><span class="num">€</span><input id="tot" type="number" inputmode="numeric" value="${TOTAAL||""}" placeholder="285000" style="max-width:120px"></div><div class="note">In de echte versie staan er geen bedragen op de openbare pagina. Dit getal blijft op je telefoon en daarmee reken ik je bedragen uit de percentages uit. In dit voorbeeld zie je nog de echte bedragen.</div></div>
+ <div class="sec"><h2>Zo ziet een melding eruit</h2><div class="push"><div style="font-size:22px;line-height:1">🔔</div><div><b>ASML: koersdoel omhoog</b><span>Morgan Stanley verhoogt van €780 naar €850 (voorbeeld). Koers nu 9% onder dat doel.</span></div></div><div class="push" style="margin-top:8px"><div style="font-size:22px;line-height:1">🔔</div><div><b>Nieuw op je shortlist: Arista Networks</b><span>Score 5 van 5: winstgroei 26%, ROIC 28%, PEG 1,3 (voorbeeld). Tik voor de analyse.</span></div></div><div class="push" style="margin-top:8px"><div style="font-size:22px;line-height:1">🔔</div><div><b>Van je shortlist gehaald: Estée Lauder</b><span>Winstgroei 4% en ROIC 9% zaten twee weken onder je grenzen (voorbeeld).</span></div></div></div>`+demo}
+const cg5=r=>(Math.pow(1+r.p.f/100,1/5)-1)*100;
+function verdict(r){
+ const c=cg5(r),dl=HIST[r.tk]?HIST[r.tk].totaal:null;
+ const slechtR=r.roic!=null&&r.roic<10,slechtF=r.fcf!=null&&r.fcf<8;
+ const zwakPts=[];
+ if(slechtR)zwakPts.push(`het rendement op geïnvesteerd kapitaal is maar ${r.roic}% (ROIC)`);
+ if(slechtF)zwakPts.push(`de vrije kasstroom groeit slechts ${r.fcf}% per jaar`);
+ if(r.trend==="Downtrend")zwakPts.push("de koers staat onder zowel het 50- als 200-daags gemiddelde");
+ if(r.nd!=null&&r.nd>2)zwakPts.push(`de schuld is ${f1(r.nd)}× EBITDA`);
+ const verl=dl!=null&&dl<-10?` Je staat ${f1(Math.abs(dl))}% onder je inleg (inclusief wat je verkocht), maar dat is geen reden om te blijven: alleen de toekomst telt.`:"";
+ let k,lab,cl,wat,uitleg;
+ if(r.eps<12&&(zwakPts.length>=1||r.eps<10)){
+  k="structureel";lab="Verkoop overwegen";cl="r";
+  uitleg=`De winst per aandeel groeit ${r.eps}% per jaar, ver onder je doel van ${DOEL}%. ${zwakPts.length?"Daarbij komt dat "+zwakPts.join(" en ")+". ":""}De oorzaak zit in het bedrijf zelf (groei en rendement op kapitaal) en niet alleen in de koers. Daarom noem ik dit structureel.${verl}`;
+  wat=`Ik zou verkopen overwegen en het geld naar een kandidaat met meer groei laten gaan. Heroverweeg dit als de winstgroei weer boven ${DOEL}% komt of de ROIC boven 15% stijgt. Reken belasting en kosten mee voordat je wisselt.`;
+ }else if(r.eps<DOEL){
+  k="licht";lab="Volgen";cl="a";
+  uitleg=`De winst groeit ${r.eps}% per jaar, net onder je doel van ${DOEL}%. ${zwakPts.length?"Let op: "+zwakPts.join(" en ")+". ":"Kwaliteit en schuld zijn verder in orde. "}Dat is nog geen structureel probleem, maar het bedrijf draagt nu minder bij aan je gemiddelde dan je wilt.${verl}`;
+  wat=`Niet bijkopen, wel volgen. Het wordt een verkoopkandidaat als de winstgroei twee kwartalen onder 10% zakt of de trend naar een downtrend gaat.`;
+ }else if(c<12){
+  k="tijdelijk";lab=r.peg<=1.5?"Behouden of bijkopen":"Behouden";cl=r.peg<=1.5?"n":"g";
+  uitleg=`De winst groeit ${r.eps}% per jaar, maar de koers deed over 5 jaar maar ${f1(c)}% per jaar. ${r.pe<r.peh?`Het verschil komt doordat de waardering is gezakt: PE ${f1(r.pe)} tegenover ${f1(r.peh)} historisch.`:"De koers heeft de winst nog niet ingehaald."} Zolang de winst blijft groeien is zo'n achterstand meestal tijdelijk.${verl}`;
+  wat=r.peg<=1.5?`PEG ${f1(r.peg)} is gunstig, dus bijkopen kan, zeker als de trend (${r.trend.toLowerCase()}) meewerkt.`:`Houden. Bijkopen heeft minder haast omdat PEG ${f1(r.peg)} niet bijzonder laag is.`;
+ }else if(r.pe>r.peh*1.2&&r.peg>2){
+  k="duur";lab="Winst nemen overwegen";cl="a";
+  uitleg=`Het bedrijf voldoet aan je doel (winstgroei ${r.eps}%, koers ${f1(c)}% per jaar), maar de waardering is hoog: PE ${f1(r.pe)} tegenover ${f1(r.peh)} historisch en PEG ${f1(r.peg)}. Het verwachte rendement is daardoor lager dan het verleden.`;
+  wat=`Houden is verdedigbaar. Als de weging ${f1(r.w)}% groter wordt, kan een deel verkopen het risico verlagen.`;
+ }else{
+  k="voldoet";lab="Behouden";cl="g";
+  uitleg=`Het bedrijf voldoet aan je doel: winstgroei ${r.eps}% per jaar en een koers die ${f1(c)}% per jaar deed over 5 jaar.${r.roic!=null?` ROIC ${r.roic}%.`:""} ${r.trend==="Uptrend"?"De trend is positief.":"De trend is "+r.trend.toLowerCase()+"."}`;
+  wat=r.w>=10?`Houden, maar de weging van ${f1(r.w)}% is al boven je grens van 10%. Niet bijkopen.`:`Houden. ${r.peg<=1.5&&r.w<8?"De waardering maakt bijkopen mogelijk.":"Bijkopen heeft geen haast."}`;
+ }
+ return {k,lab,cl,uitleg,wat,c}}
+let docF="aandacht",docS="v",docC="basis";
+const scCl=(c)=>`cl ${c}`;
+const wrp=r=>r.pe/r.peh;
+const sgn=n=>(n>0?"+":n<0?"−":"")+Math.abs(Math.round(n));
+const SCOLS={
+ basis:[["eps","Winst",r=>({t:r.eps+"%",c:r.eps>=DOEL?"g":r.eps>=12?"a":"r"}),r=>-r.eps],["roic","ROIC",r=>({t:r.roic==null?"–":r.roic+"%",c:r.roic==null?"n":r.roic>=15?"g":r.roic>=10?"a":"r"}),r=>-(r.roic==null?-1:r.roic)],["waard","PE/hist.",r=>({t:sgn((wrp(r)-1)*100)+"%",sub:Math.round(r.pe)+"/"+Math.round(r.peh),c:wrp(r)<=.9?"g":wrp(r)<=1.1?"n":wrp(r)<=PAR.pe?"a":"r"}),r=>wrp(r)],["nd","Schuld",r=>({t:r.nd==null?"–":f1(r.nd)+"×",c:r.nd==null?"n":r.nd<=2?"g":r.nd<=PAR.nd?"a":"r"}),r=>r.nd==null?-1:r.nd]],
+ groei:[["eps","Winst",r=>({t:r.eps+"%",c:r.eps>=DOEL?"g":r.eps>=12?"a":"r"}),r=>-r.eps],["fcf","FCF",r=>({t:r.fcf==null?"–":r.fcf+"%",c:r.fcf==null?"n":r.fcf>=12?"g":r.fcf>=8?"a":"r"}),r=>-(r.fcf==null?-99:r.fcf)],["koers","Koers 5j",r=>{const c=cg5(r);return {t:f1(c)+"%",c:c>=DOEL?"g":c>=10?"a":"r"}},r=>-cg5(r)],["gap","Verwacht",r=>{const f=r.epsF;return f==null?{t:"–",c:"n"}:{t:f+"%",sub:"analisten",c:f>=DOEL?"g":f>=12?"a":"r"}},r=>-(r.epsF==null?-99:r.epsF)]],
+ kwal:[["skin","Eigenbel.",r=>({t:f1(xd(r).ins)+"%",sub:xd(r).fl==="Familie"?"familie":xd(r).fl?"opricht.":"",c:XM.skin.c(r)}),r=>-xd(r).ins],["verw","Verwater.",r=>({t:sg(xd(r).dil)+"%",sub:"per jaar",c:XM.verw.c(r)}),r=>xd(r).dil],["marge","Marge",r=>{const x=xd(r),d=x.opm-x.opm5;return {t:x.opm+"%",sub:(d>=0?"+":"−")+Math.abs(d)+" pt",c:XM.marge.c(r)}},r=>-xd(r).opm],["cash","FCF-rend.",r=>({t:f1(xd(r).fy)+"%",sub:"EV "+xd(r).ev+"×",c:XM.cash.c(r)}),r=>-xd(r).fy]],
+ risico:[["beta","Beta",r=>({t:d2(xd(r).beta),c:XM.beta.c(r)}),r=>xd(r).beta],["vol","Schomm.",r=>({t:xd(r).vol+"%",sub:"per jaar",c:XM.vol.c(r)}),r=>xd(r).vol],["dd","Daling",r=>({t:XM.dd.fmt(xd(r).dd),sub:"5 jaar",c:XM.dd.c(r)}),r=>-xd(r).dd],["cor","Corr.",r=>({t:d2(xd(r).cor),sub:"met rest",c:xd(r).cor>=.75?"a":xd(r).cor>=.55?"n":"g"}),r=>-xd(r).cor]],
+ waard:[["pe","PE nu",r=>({t:f1(r.pe),sub:"hist. "+Math.round(r.peh),c:wrp(r)<=.9?"g":wrp(r)<=1.1?"n":wrp(r)<=PAR.pe?"a":"r"}),r=>r.pe],["waard","PE/hist.",r=>({t:sgn((wrp(r)-1)*100)+"%",c:wrp(r)<=.9?"g":wrp(r)<=1.1?"n":wrp(r)<=PAR.pe?"a":"r"}),r=>wrp(r)],["peg","PEG",r=>({t:f1(r.peg),c:r.peg<=PAR.peg?"g":r.peg<=PAR.peg+1?"a":"r"}),r=>r.peg],["pos","52 weken",r=>({t:r.pos+"%",sub:r.pos<40?"laag":r.pos>80?"hoog":"midden",c:r.pos<40?"g":r.pos>80?"a":"n"}),r=>r.pos]]};
+const SNOTE={basis:"<b>Winst</b> is groei van de winst per aandeel per jaar (groen vanaf het doel). <b>ROIC</b> groen vanaf 15%. <b>PE/hist.</b> is de PE nu tegenover het eigen historische gemiddelde, met onder het procent PE nu / historisch. Min is goedkoper dan normaal, plus duurder. <b>Schuld</b> is schuld/EBITDA, groen tot 2×.",groei:"<b>Winst</b> en <b>FCF</b> zijn de groei per jaar van de winst per aandeel en de vrije kasstroom. <b>Koers 5j</b> is de gemiddelde koersstijging per jaar over 5 jaar. <b>Verwacht</b> is de winstgroei die analisten voor komend jaar verwachten. Winst en FCF kijken terug (maximaal 4 jaar) en zeggen bij cyclische bedrijven of banken en verzekeraars weinig. Kijk dan vooral naar Verwacht.",kwal:"<b>Eigenbel.</b> is het belang van bestuur en oprichters, groen vanaf 10%. <b>Verwater.</b> is de verandering van het aantal aandelen per jaar: min is goed, het bedrijf koopt terug. <b>Marge</b> is de winstmarge met eronder de verandering in vijf jaar. <b>FCF-rend.</b> is de vrije kasstroom tegenover de beurswaarde, hoger is goedkoper.",risico:"<b>Beta</b> is hoe sterk het aandeel met de wereldindex meebeweegt. <b>Schomm.</b> is de verwachte beweging per jaar. <b>Daling</b> is de diepste daling van top naar dal in vijf jaar. <b>Corr.</b> is hoe sterk het aandeel meebeweegt met de rest van je portefeuille: hoog betekent weinig spreiding.",waard:"<b>PE nu</b> met eronder het historische gemiddelde. <b>PE/hist.</b> is het verschil in procent. <b>PEG</b> is de PE gedeeld door de winstgroei, groen tot "+"het ingestelde maximum. <b>52 weken</b> is waar de koers in de jaarrange staat: 0% is het laagste, 100% het hoogste punt."};
+function scoreCard(v){const ordv={structureel:0,duur:1,licht:2,tijdelijk:3,voldoet:4};
+ const att=x=>["structureel","duur","licht"].includes(x.v.k),cols=SCOLS[docC];
+ if(docS!=="v"&&!cols.some(c=>c[0]===docS))docS="v";
+ let l=v.filter(x=>docF==="alles"||(docF==="aandacht"?att(x):!att(x)));
+ const kf=docS==="v"?(x=>ordv[x.v.k]*1000-x.r.w):(x=>cols.find(c=>c[0]===docS)[3](x.r));
+ l=[...l].sort((a,b)=>kf(a)-kf(b));
+ const cnt=k=>v.filter(x=>k==="alles"||(k==="aandacht"?att(x):!att(x))).length;
+ const H=[["v","Bedrijf"],...cols.map(c=>[c[0],c[1]])];
+ return `<div class="chips" style="padding:0 0 8px">${[["aandacht","Aandacht"],["voldoet","Voldoet"],["alles","Alles"]].map(([k,t])=>`<button class="chip" data-dc="${k}" aria-pressed="${docF===k}">${t} (${cnt(k)})</button>`).join("")}</div>
+ <div class="seg segi" style="margin-bottom:8px">${[["basis","Overzicht"],["groei","Groei"],["waard","Waarde"],["kwal","Kwaliteit"],["risico","Risico"]].map(([k,t])=>`<button data-dk="${k}" aria-pressed="${docC===k}">${t}</button>`).join("")}</div>
+ <div class="tile" style="padding:8px 8px 4px"><div class="scg scgh">${H.map(([k,t])=>`<button data-ds="${k}" class="${docS===k?"on":""}">${t}${docS===k?" ▾":""}</button>`).join("")}</div>
+ ${l.map(x=>{const r=x.r;return `<button class="scg scr ${x.v.cl}" data-d="${r.tk}"><span class="nm"><b>${r.naam}</b><small>${({structureel:"Heroverwegen",duur:"Duur",licht:"Volgen",tijdelijk:"Voldoet",voldoet:"Voldoet"})[x.v.k]} · ${f1(r.w)}%</small></span>${cols.map(c=>{const o=c[2](r);return `<span class="${scCl(o.c)}"><b>${o.t}</b>${o.sub?`<small>${o.sub}</small>`:""}</span>`}).join("")}</button>`}).join("")||'<div class="note">Niets in deze groep.</div>'}
+ <div class="note" style="margin:8px 4px 4px">Tik op een kolomkop om te sorteren en op een bedrijf voor de analyse. ${SNOTE[docC]} De streep links toont het oordeel.</div></div>`}
+function vDoel(){
+ const v=own.map(r=>({r,v:verdict(r)}));
+ const boven=own.filter(r=>r.eps>=DOEL).reduce((t,r)=>t+r.w,0)/own.reduce((t,r)=>t+r.w,0)*100;
+ const ord={structureel:0,duur:1,licht:2,tijdelijk:3,voldoet:4};
+ v.sort((a,b)=>ord[a.v.k]-ord[b.v.k]||b.r.w-a.r.w);
+ const verk=v.filter(x=>x.v.k==="structureel");
+ const vrij=verk.reduce((t,x)=>t+x.r.waarde,0);
+ const kd=kandidaten().filter(x=>!verk.some(y=>y.r.tk===x.r.tk)).slice(0,3);
+ const item=x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><div class="note" style="margin:6px 0 0">Winst ${x.r.eps}%/jr · koers 5 jr ${f1(cg5(x.r))}%/jr · weging ${f1(x.r.w)}%</div><div class="note num" style="margin:2px 0 0">PE ${f1(x.r.pe)} vs ${f1(x.r.peh)} historisch · PEG ${f1(x.r.peg)}</div></div><span class="pill ${x.v.cl}">${x.v.lab}</span></div><details ${x.v.k==="structureel"?"open":""}><summary>Analyse</summary><div class="an"><h4>Waarom</h4><p>${x.v.uitleg}</p><h4>Wat ik zou doen</h4><p>${x.v.wat}</p></div></details></div>`;
+
+ const gr=[["Voldoet","g",v.filter(x=>["voldoet","tijdelijk"].includes(x.v.k))],["Volgen","a",v.filter(x=>["duur","licht"].includes(x.v.k))],["Heroverwegen","r",verk]].map(([n,c,l])=>({n,c,l,w:l.reduce((t,x)=>t+x.r.w,0)}));
+ const tw=gr.reduce((t,g)=>t+g.w,0);
+ return head("Doelcheck")+`<div class="tile" style="margin-top:8px"><div class="lbl">Jouw doel: ${DOEL}% winstgroei per jaar</div><div class="v num">${gr[0].l.length} van ${own.length} <span style="font-size:14px;font-weight:500">voldoen</span></div>
+ <div class="split">${gr.map(g=>g.w>0?`<i style="flex:${g.w};background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></i>`:"").join("")}</div>
+ <div class="s" style="display:flex;flex-wrap:wrap;gap:4px 14px">${gr.map(g=>`<span><span class="sw3" style="background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></span>${g.n} ${g.l.length} · ${f1(g.w/tw*100)}%</span>`).join("")}</div>
+ <div class="s" style="margin-top:8px">${f1(boven)}% van je portefeuille groeit zelf ${DOEL}% of meer.${verk.length?` ${verk.length} aandelen om te heroverwegen${vrij?`, samen ${eur(vrij)}`:""}.`:" Niets om direct te heroverwegen."}</div></div>
+ <div class="sec"><h2>Alle bedrijven in één overzicht</h2>${scoreCard(v)}</div>
+ <div class="sec"><h2>Advies per aandeel</h2>${v.filter(x=>["structureel","duur","licht","tijdelijk"].includes(x.v.k)).map(item).join("")}</div>
+ ${verk.length?`<div class="sec"><h2>Mogelijke vervangers</h2>${kd.map((x,i)=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><span class="pill n">Kopen overwegen</span></div><ul><li>${x.why.slice(0,3).join("</li><li>")}</li>${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul></div>`).join("")}<div class="note">Met ${eur(vrij+INLEG)} (opbrengst plus de inleg van deze maand) kun je de bovenste twee of drie kopen en blijft elk aandeel onder 10%.</div></div>`:""}
+ <div class="note">Dit is een screening die jouw eigen regels toepast op de cijfers. De uitleg is een samenvatting van die cijfers, geen persoonlijk beleggingsadvies. Jij beslist, en belasting en kosten tellen mee bij elke wissel.</div>`+demo}
+function bedrijvenSec(){const l=[...own].sort((a,b)=>b.w-a.w);const top=l.slice(0,7),rest=l.slice(7);
+ const items=top.map((r,i)=>({n:r.naam,v:r.w,c:"--c"+(i+1)}));items.push({n:`Overig (${rest.length} bedrijven)`,v:rest.reduce((t,r)=>t+r.w,0),c:"--cx"});
+ return `<div class="sec"><h2>Weging per bedrijf</h2><button class="tile go" data-s="bedrijven">${donut(items)}</button></div>`}
+const secVar={Technologie:"--c1",Financieel:"--c2",Consument:"--c3",Industrie:"--c4",Zorg:"--c5",Halfgeleiders:"--c6",Communicatie:"--c7",Overig:"--cx"};
+function donut(items){const tot=items.reduce((t,x)=>t+x.v,0);let off=0;
+ const seg=items.map(x=>{const len=x.v/tot*100;const o=`<circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(${x.c})" stroke-width="7" stroke-dasharray="${Math.max(0,len-.9).toFixed(2)} ${(100-len+.9).toFixed(2)}" stroke-dashoffset="${(25-off).toFixed(2)}"><title>${x.n} ${f1(x.v/tot*100)}%</title></circle>`;off+=len;return o}).join("");
+ return `<div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Verdeling">${seg}</svg><div class="dleg">${items.map(x=>`<div><i style="background:var(${x.c})"></i><span>${x.n}</span><b class="num">${f1(x.v/tot*100)}%</b></div>`).join("")}</div></div>`}
+function hbars(items,ref=DOEL,unit="%"){const mx=Math.max(...items.map(i=>i.v),ref||0)*1.05;
+ return items.map(i=>`<div class="hb"><span class="nm">${i.n}</span><div class="tr"><i style="width:${i.v/mx*100}%;background:var(--${i.k==="g"?"good":i.k==="a"?"warn":i.k==="r"?"bad":"acc"})"></i>${ref?`<u style="left:${ref/mx*100}%"></u>`:""}</div><b class="num">${f1(i.v)}${unit}</b></div>`).join("")}
+function cols(items,titel,fmt,go){const mx=Math.max(...items.map(i=>Math.abs(i.v)),1),mn=Math.min(0,...items.map(i=>i.v));
+ const W=320,H=148,top=16,bot=H-34,range=mx-mn||1,y=v=>top+(mx-v)/range*(bot-top),y0=y(0),bw=W/items.length;
+ const f=fmt||(v=>hide?"":((v<0?"−":"")+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(0)+"k":Math.abs(v).toFixed(0))));
+ const big=Math.max(...items.map(i=>Math.abs(i.v)));
+ return `<div class="sec"><h2>${titel}</h2><${go?`button class="tile go" data-s="${go}"`:"div class=\"tile\""}><svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="${titel}"><line class="g" x1="0" x2="${W}" y1="${y0}" y2="${y0}"/>${items.map((i,k)=>{const x=k*bw+bw*.18,w=bw*.64,yy=y(Math.max(i.v,0)),h=Math.max(2,Math.abs(y(i.v)-y0));const lab=Math.abs(i.v)>=big*.5?`<text x="${x+w/2}" y="${i.v>=0?yy-3:yy+h+9}" text-anchor="middle">${f(i.v)}</text>`:"";return `<rect x="${x}" y="${i.v>=0?yy:y0}" width="${w}" height="${h}" rx="3" fill="${i.v>=0?"var(--c1)":"var(--c2)"}"><title>${i.l}: ${hide?"":f(i.v)}</title></rect>${lab}<text x="${x+w/2}" y="${H-4}" text-anchor="middle">${i.l}</text>`}).join("")}</svg></${go?"button":"div"}></div>`}
+function inlegChart(){const it=Object.entries(REAL.jaar).map(([l,v])=>({l:l.slice(2),v}));
+ return cols(it,"Netto inleg per jaar",null,"jaren")+`<div class="note">Blauw is gestort, oranje is opgenomen. Tik voor alle jaren.</div>`}
+function histFacts(r){const h=HIST[r.tk];if(!h)return "";
+ const jaren=(new Date(2026,10,6)-new Date(h.eerste))/(365.25*864e5);
+ return `<div class="fact"><small>Eerste aankoop</small><b class="num">${new Date(h.eerste).toLocaleDateString("nl-NL",{month:"short",year:"numeric"})}</b><em>${h.n} transacties</em></div><div class="fact"><small>Totaalrendement</small><b class="num ${cls(h.totaal)}">${pc(h.totaal)}</b><em>inclusief wat je verkocht</em></div>${jaren>=1&&h.xirr!=null?`<div class="fact"><small>Per jaar sinds aankoop</small><b class="num ${cls(h.xirr)}">${pc(h.xirr)}</b></div>`:`<div class="fact"><small>Per jaar</small><b class="num">–</b><em>nog geen jaar vastgehouden</em></div>`}`}
+function noteGet(tk){try{return localStorage.getItem("note_"+tk)||""}catch(e){return ""}}
+function noteSet(tk,v){try{localStorage.setItem("note_"+tk,v)}catch(e){}}
+const prj={r:15,m:3000,y:20};try{Object.assign(prj,JSON.parse(localStorage.getItem("pf_prj")||"{}"))}catch(e){}
+const savePrj=()=>{try{localStorage.setItem("pf_prj",JSON.stringify(prj))}catch(e){}};
+function fv(rate,m,yrs){const g=Math.pow(1+rate/100,1/12);let v=TOT;const out=[v];for(let i=1;i<=yrs*12;i++){v=v*g+m;if(i%12===0)out.push(v)}return out}
+const mln=v=>v<1e6?"€ "+Math.round(v/1000)+"k":"€ "+(v/1e6).toFixed(2).replace(".",",")+" mln";
+function drawPrj(){const el=document.getElementById("prjOut");if(!el)return;const N=prj.y;
+ const sets=[[8,"var(--cx)"],[prj.r,"var(--c3)"],[REAL.xirr,"var(--c1)"]].map(([r,c])=>({r,c,d:fv(r,prj.m,N)}));
+ const mx=Math.max(...sets.map(x=>x.d[N])),W=320,H=170,L=6,R=44,T=10,B=22;
+ const X=i=>L+i/N*(W-L-R),Y=v=>T+(1-v/mx)*(H-T-B);
+ const st=N<=10?2:N<=25?5:10;const ticks=[];for(let t=0;t<N;t+=st)ticks.push(t);if(N-ticks[ticks.length-1]<st*.6)ticks.pop();ticks.push(N);
+ const half=Math.round(N/2);
+ el.innerHTML=`<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Vermogen over ${N} jaar">${[0,.5,1].map(f=>`<line class="g" x1="${L}" x2="${W-R}" y1="${Y(mx*f)}" y2="${Y(mx*f)}"/>`).join("")}${hide?"":[.5,1].map(f=>`<text x="${L+2}" y="${Y(mx*f)-3}">${mln(mx*f).replace("€ ","")}</text>`).join("")}${ticks.map(t=>`<text x="${X(t)}" y="${H-6}" text-anchor="${t===0?"start":t===N?"end":"middle"}">${t===0?"nu":t+" jr"}</text>`).join("")}${sets.map(x=>`<polyline fill="none" stroke="${x.c}" stroke-width="2" stroke-linejoin="round" points="${x.d.map((v,i)=>X(i)+","+Y(v)).join(" ")}"/><circle cx="${X(N)}" cy="${Y(x.d[N])}" r="3.5" fill="${x.c}" stroke="var(--card)" stroke-width="2"/><text x="${X(N)+6}" y="${Y(x.d[N])+3}">${f1(x.r)}%</text>`).join("")}</svg>
+ <div class="two" style="margin-top:8px">${sets.map(x=>`<div class="kv" style="display:block;margin:0 0 4px"><div><small>${f1(x.r)}% per jaar</small>${half>0&&half<N?`<b class="num">${hide?"€ •••":mln(x.d[half])+" na "+half+" jr"}</b>`:""}<b class="num" style="display:block">${hide?"":mln(x.d[N])+" na "+N+" jr"}</b></div></div>`).join("")}</div>
+ <div class="note">Je stort in totaal ${hide?"":eur(prj.m*12*N)} (${N} jaar × 12 maanden). Het vermogen van nu (${hide?"•••":eur(TOT)}) is het startpunt.</div>`}
+function drawAi(){const el=document.getElementById("aiOut");if(!el)return;
+ const a=Math.max(-100,Math.min(100,parseFloat(document.getElementById("aiA").value)||0)),b=Math.max(-100,Math.min(100,parseFloat(document.getElementById("aiB").value)||0));
+ const wa=aiProfitW(),wb=aiW(r=>r.ai[0]<=-1),imp=-(wa*a+wb*b)/100;
+ el.innerHTML=`<div class="tile" style="margin-top:10px"><div class="lbl">Profiteerders ${a>=0?"-":"+"}${Math.abs(a)}% en kwetsbaren ${b>=0?"-":"+"}${Math.abs(b)}%, de rest blijft gelijk</div><div class="v num ${imp<0?"neg":"pos"}">${pc(imp)} <span style="font-size:14px;font-weight:500">${hide?"":eur(TOT*imp/100)}</span></div><div class="s">${f1(wa)}% van je portefeuille profiteert van AI en ${f1(wb)}% is kwetsbaar. Vereenvoudigd: neutrale bedrijven bewegen in werkelijkheid vaak mee.</div></div>`}
+function drawStress(){const el=document.getElementById("stOut");if(!el)return;
+ const sec=document.getElementById("stS").value,p=Math.max(-100,Math.min(100,parseFloat(document.getElementById("stP").value)||0));
+ const wS=secW[sec]||0,imp=-wS*p/100;
+ const cur={};own.forEach(r=>cur[r.munt]=(cur[r.munt]||0)+r.w);const cl=Object.entries(cur).filter(x=>x[0]!=="EUR").sort((a,b)=>b[1]-a[1]);
+ el.innerHTML=`<div class="tile" style="margin-top:10px"><div class="lbl">${sec} ${p>=0?"daalt":"stijgt"} ${Math.abs(p)}%, de rest blijft gelijk</div><div class="v num ${imp<0?"neg":"pos"}">${pc(imp)} <span style="font-size:14px;font-weight:500">${hide?"":eur(TOT*imp/100)}</span></div><div class="s">${sec} is ${f1(wS)}% van je portefeuille. Dit is een vereenvoudigde som: andere aandelen bewegen in werkelijkheid vaak mee.</div></div>`}
+function drawVal(){const el=document.getElementById("vOut");if(!el)return;
+ const k=document.getElementById("vS").value,p=Math.max(-100,Math.min(100,parseFloat(document.getElementById("vP").value)||0));
+ const cur={};own.forEach(r=>cur[r.munt]=(cur[r.munt]||0)+r.w);
+ const w=k==="all"?Object.entries(cur).filter(x=>x[0]!=="EUR").reduce((t,x)=>t+x[1],0):k==="ov"?Object.entries(cur).filter(x=>!["EUR","USD","GBP"].includes(x[0])).reduce((t,x)=>t+x[1],0):(cur[k]||0);
+ const nm={USD:"De dollar",GBP:"Het pond",ov:"De overige valuta",all:"Alle valuta buiten de euro"}[k],imp=-w*p/100;
+ const ov=Object.entries(cur).filter(x=>!["EUR","USD","GBP"].includes(x[0])).map(x=>x[0]).join(", ");
+ el.innerHTML=`<div class="tile" style="margin-top:10px"><div class="lbl">${nm} ${p>=0?"daalt":"stijgt"} ${Math.abs(p)}% tegenover de euro</div><div class="v num ${imp<0?"neg":"pos"}">${pc(imp)} <span style="font-size:14px;font-weight:500">${hide?"":eur(TOT*imp/100)}</span></div><div class="s">${f1(w)}% van je portefeuille staat in ${k==="all"?"valuta buiten de euro":k==="ov"?"overige valuta ("+ov+")":k==="GBP"?"pond":"dollar"}. Dit gaat over de valuta waarin het aandeel noteert. Heeft een bedrijf ook omzet in andere valuta's, dan weegt dat niet mee.</div></div>`}
+
+const wOwn=()=>own.filter(r=>wSec==="Alles"||r.sector===wSec);
+function secChips(){if(wSec!=="Alles"&&!secW[wSec])wSec="Alles";return `<div class="seg" style="margin:0 0 10px;display:flex;overflow-x:auto;white-space:nowrap;scrollbar-width:none">${["Alles",...Object.keys(secW).sort((a,b)=>secW[b]-secW[a])].map(n=>`<button data-ws="${n}" style="flex:none;padding:7px 12px" aria-pressed="${wSec===n}">${n}</button>`).join("")}</div>`}
+function bubble(){const W=320,H=230,L=30,R=8,T=8,B=24,xm=.5,xM=1.7,ym=0,yM=65;
+ const X=v=>L+(v-xm)/(xM-xm)*(W-L-R),Y=v=>T+(1-(v-ym)/(yM-ym))*(H-T-B);
+ const pts=wOwn().map(r=>({r,x:r.pe/r.peh,y:r.eps,k:verdict(r).cl})).filter(p=>isFinite(p.x)&&p.y!=null&&isFinite(p.y));
+ const rad=p=>Math.max(3,Math.sqrt(p.r.w)*2.1);const boxes=[];const lab=[];
+ [...pts].sort((a,b)=>((b.r.w>=5||b.y>=45||b.x>1.3||b.y<8)-(a.r.w>=5||a.y>=45||a.x>1.3||a.y<8))||b.r.w-a.r.w).forEach(p=>{const t=p.r.tk.replace(/\..*/,""),w=t.length*5.6+2,x0=X(p.x)+rad(p)+2,y0=Y(p.y)-6;const hit=boxes.some(b=>x0<b[0]+b[2]&&x0+w>b[0]&&y0<b[1]+b[3]&&y0+11>b[1])||pts.some(q=>q!==p&&Math.hypot(X(q.x)-(x0+w/2),Y(q.y)-(y0+6))<rad(q)+w/2-2);if(!hit&&lab.length<10){boxes.push([x0,y0,w,11]);lab.push([t,x0,y0+9])}});
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Waardering tegenover winstgroei"><line class="g" x1="${X(1)}" x2="${X(1)}" y1="${T}" y2="${H-B}"/><line class="g" x1="${L}" x2="${W-R}" y1="${Y(DOEL)}" y2="${Y(DOEL)}" stroke-dasharray="3 3"/>${[.6,1,1.4].map(t=>`<text x="${X(t)}" y="${H-8}" text-anchor="middle">${t===1?"gelijk aan historisch":t<1?"goedkoper":"duurder"}</text>`).join("")}${[0,15,30,60].map(t=>`<text x="${L-4}" y="${Y(t)+3}" text-anchor="end">${t}%</text>`).join("")}${pts.map(p=>`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${Math.max(3,Math.sqrt(p.r.w)*2.1)}" fill="var(--${p.k==="g"?"good":p.k==="a"?"warn":p.k==="r"?"bad":"acc"})" fill-opacity=".72" stroke="var(--card)" stroke-width="1.5"><title>${p.r.naam}: winst ${p.r.eps}%, PE ${f1(p.r.pe)} vs ${f1(p.r.peh)}</title></circle>`).join("")}${lab.map(l=>`<text x="${l[1]}" y="${l[2]}">${l[0]}</text>`).join("")}</svg>`}
+let YRS=PRIVE&&PRIVE.yrs?PRIVE.yrs:[];
+let JR={};
+function ffill(arr,ds){const m=new Map(arr);let last=null;const first=arr.length?arr[0][1]:null;return ds.map(d=>{if(m.has(d))last=m.get(d);else{let b=null;for(const [k,v] of arr){if(k<=d)b=v;else break}last=b!=null?b:last!=null?last:first}return last})}
+function pfDay(ds){const rs=own.filter(r=>r.D&&r.D.px_d&&r.D.px_d.length>=2&&r.waarde>0);if(rs.length<10)return null;
+ const cols=rs.map(r=>({w:r.waarde,p:ffill(r.D.px_d,ds),l:r.D.px_d[r.D.px_d.length-1][1]})).filter(c=>c.p.every(v=>v!=null)&&c.l);
+ const v=ds.map((d,i)=>cols.reduce((s,c)=>s+c.w*c.p[i]/c.l,0));return v.map(x=>x/v[0]*100)}
+function perData(p){const I=DATA.indices||{},DG=I.dagen||{};
+ const rb=a=>a?a.map(v=>v/a[0]*100):null;
+ if(p==="d"){const g=I.dag||{};return {num:true,me:portPerf().p,sp:g.sp500!=null?g.sp500*100:null,wr:g.wereld!=null?g.wereld*100:null,spu:null,lab:"vandaag"}}
+ if(p==="t"){const g=I.lang;if(!g||!g.sp500)return null;const cg=z=>z&&z.length>2&&g.start?(Math.pow(z[z.length-1]/z[0],365.25/((Date.now()-Date.parse(g.start))/864e5))-1)*100:null;
+  const py={me:REAL.xirr,sp:cg(g.sp500),wr:cg(g.wereld)},n=g.sp500.length;pfTWR(n);const k0=window._K0,L=k0==null?0:n-k0;
+  const me=L>20?pfIdx(L):null;
+  if(!me)return {num:true,per:true,me:py.me,sp:py.sp,wr:py.wr,lab:"per jaar"};
+  const yr=new Date(Date.now()-L*6048e5).getFullYear();
+  return {ser:{me,sp:rb(g.sp500.slice(-L)),wr:g.wereld?rb(g.wereld.slice(-L)):null,spu:null},lab:"sinds "+yr,py}}
+ if(p==="v"||p==="m"){const L=p==="v"?6:22,s=DG.sp500;if(!s||s.length<L)return null;const sl=s.slice(-L),ds=sl.map(x=>x[0]);
+  const me=pfDay(ds);if(!me)return null;
+  const o={ser:{me,sp:rb(sl.map(x=>x[1])),wr:DG.wereld?rb(ffill(DG.wereld,ds)):null,spu:DG.sp500_usd?rb(ffill(DG.sp500_usd,ds)):null},lab:p==="v"?"5 dagen geleden":"1 maand geleden"};return o}
+const n=p==="f"?261:p==="y"?53:p==="h"?27:p==="ytd"?53-KY:0;if(!n)return null;
+ let me=pfIdx(n);if(!me)return null;
+ const YE=p==="ytd"&&I.ye&&window._F0?I.ye:null;
+ if(YE)me=[100,...me.map(v=>v*window._F0)];
+ const mk=(a,y)=>{if(!a||a.length<n)return null;const t=a.slice(-n);if(YE){if(!y)return null;return rb([y,...t])}return rb(t)};
+ return {ser:{me,sp:mk(I.sp500,YE&&YE.sp500),wr:mk(I.wereld,YE&&YE.wereld),spu:mk(I.sp500_usd,YE&&YE.sp500_usd)},lab:p==="f"?"5 jaar geleden":p==="y"?"1 jaar geleden":p==="h"?"6 maanden geleden":"begin dit jaar"}}
+function perMe(p){const d=perData(p);if(!d)return null;if(d.num)return d.me;if(p==="t")return d.py.me;return d.ser.me[d.ser.me.length-1]-100}
+function cmp(){const d=perData(per);const lastv=a=>a?a[a.length-1]-100:null;
+ const item=(c,l,v,x)=>v==null||!isFinite(v)?"":`<span><span class="sw3" style="background:var(${c})"></span>${l} <b class="num">${pc(v)}</b>${x||""}</span>`;
+ const wrap=h=>`<div class="s" style="margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px 14px">${h}</div>`;
+ if(!d)return wrap(item("--c1","Jij",portPerf().p));
+ if(d.num){const u=d.per?" per jaar":"";return wrap(item("--c1","Jij"+u,d.me)+item("--c2","S&P 500"+u,d.sp)+item("--c3","Wereld"+u,d.wr))+(d.per?`<div class="note">Max: jouw rendement per jaar sinds 2016 (inclusief stortingen en verkopen) naast het jaargemiddelde van de index in euro's.</div>`:"")}
+ const S=d.ser,spu=S.spu?` <small>(in $: ${pc(lastv(S.spu))})</small>`:"";
+ const ser=[[S.me,"--c1","Jij"],[S.sp,"--c2","S&P 500"],[S.wr,"--c3","Wereld"]].filter(x=>x[0]);
+ const leg=wrap(item("--c1","Jij",lastv(S.me))+item("--c2","S&P 500",lastv(S.sp),spu)+item("--c3","Wereld",lastv(S.wr)));
+ const L=S.me.length,all=ser.flatMap(x=>x[0]),mx=Math.max(...all),mn=Math.min(...all,100),W=320,H=130,Lm=4,R=34,T=8,B=20,nn=L-1;
+ const X=i=>Lm+i/nn*(W-Lm-R),Y=v=>T+(1-(v-mn)/(mx-mn||1))*(H-T-B);
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px" role="img" aria-label="Groei van 100 euro, jij tegenover de index"><line class="g" x1="${Lm}" x2="${W-R}" y1="${Y(100)}" y2="${Y(100)}" stroke-dasharray="3 3"/>${ser.map(([a,c])=>`<polyline fill="none" stroke="var(${c})" stroke-width="2" stroke-linejoin="round" points="${a.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1)).join(" ")}"/><circle cx="${X(nn)}" cy="${Y(a[nn])}" r="3.5" fill="var(${c})" stroke="var(--card)" stroke-width="2"/><text x="${X(nn)+6}" y="${Y(a[nn])+3}">${Math.round(a[nn])}</text>`).join("")}<text x="${Lm}" y="${H-5}">${d.lab}</text><text x="${W-R}" y="${H-5}" text-anchor="end">nu</text></svg>`+leg+(d.py?wrap(item("--c1","Jij per jaar",d.py.me)+item("--c2","S&P 500 per jaar",d.py.sp)+item("--c3","Wereld per jaar",d.py.wr))+`<div class="note">Per jaar telt je stortingen en verkopen mee (zoals bij DeGiro). De lijnen starten zodra je portefeuille meer dan € 25.000 waard was, want daarvoor geven kleine bedragen een vertekend beeld. Ze tonen de groei van 100 euro, zonder stortingen.</div>`:"")}
+
+function breadth(){const it=own.map(r=>({r,v:pv(r)})).sort((a,b)=>b.v-a.v);const mx=Math.max(...it.map(i=>Math.abs(i.v)),.1),W=320,H=76,mid=38,bw=W/it.length;
+ const up=it.filter(i=>i.v>0).length;
+ const bars=it.map((i,k)=>{const h=Math.max(1.5,Math.abs(i.v)/mx*(mid-4));return `<rect x="${k*bw+bw*.12}" y="${i.v>=0?mid-h:mid}" width="${bw*.76}" height="${h}" rx="1.5" fill="var(--${i.v>=0?"good":"bad"})"><title>${i.r.naam} ${pc(i.v)}</title></rect>`}).join("");
+ const b=it[0],w=it[it.length-1];
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin:10px 0 4px" role="img" aria-label="Rendement per aandeel"><line class="g" x1="0" x2="${W}" y1="${mid}" y2="${mid}"/>${bars}</svg><div class="s"><b>${up} van ${it.length}</b> aandelen in de plus. Beste: ${b.r.naam} <span class="num pos">${pc(b.v)}</span>. Zwakste: ${w.r.naam} <span class="num neg">${pc(w.v)}</span>.</div>`}
+let STORT=[],SDOEL=PRIVE&&PRIVE.sdoel?PRIVE.sdoel:1000;
+try{const v=JSON.parse(localStorage.getItem("pf_stort")||"null");if(Array.isArray(v))STORT=v;const d=+localStorage.getItem("pf_sdoel");if(d>0)SDOEL=d}catch(e){}
+INLEG=SDOEL;budget=SDOEL;
+const saveS=()=>{try{localStorage.setItem("pf_stort",JSON.stringify(STORT));localStorage.setItem("pf_sdoel",String(SDOEL))}catch(e){}};
+const MND=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+const NOW=new Date();
+const sumM=(y,m)=>STORT.filter(x=>+x[0].slice(0,4)===y&&+x[0].slice(5,7)===m+1).reduce((t,x)=>t+x[1],0);
+const sumY=y=>STORT.filter(x=>+x[0].slice(0,4)===y).reduce((t,x)=>t+x[1],0);
+function stortCard(){const y=NOW.getFullYear(),m=NOW.getMonth(),g=sumM(y,m),ytd=sumY(y),doel=SDOEL*12,pct=ytd/doel*100;
+ let bereikt=null,c=0;for(let i=0;i<12;i++){c+=sumM(y,i);if(c>=doel){bereikt=i;break}}
+ const rest=Math.max(0,doel-ytd),mnd=11-m+1;
+ const tekst=ytd>=doel?`Doel gehaald${bereikt!=null?" in "+MND[bereikt]:""}. Dit is ${eur(ytd-doel)} boven je doel.`:`Nog ${eur(rest)} te gaan, ongeveer ${eur(rest/mnd)} per maand tot en met december.`;
+ return `<div class="tile" style="margin-top:10px"><div class="lbl">Stortdoel ${y}</div><div class="v num">${eur(ytd)} <span style="font-size:13px;color:var(--mut);font-weight:400">van ${eur(doel)}</span> <span class="pill ${ytd>=doel?"g":"n"}" style="float:right">${Math.round(pct)}%</span></div><div class="prog"><i style="width:${Math.min(100,pct)}%;background:${ytd>=doel?"var(--good)":"var(--acc)"}"></i></div>
+ <div class="s">${tekst}</div><div class="s">Deze maand (${MND[m]}): ${eur(g)} van ${eur(SDOEL)}.</div>
+ <button class="row go" data-s="storten" style="margin:12px -12px 0;width:calc(100% + 24px);border-top:1px solid var(--line);border-bottom:0;border-radius:0 0 12px 12px"><span class="grow"><div class="t">Storting toevoegen</div><div class="m">En je stortingen per maand bekijken</div></span></button>
+ <button class="row go" data-s="import" style="margin:0 -12px -12px;width:calc(100% + 24px);border-top:1px solid var(--line);border-bottom:0;border-radius:0 0 12px 12px"><span class="grow"><div class="t">DeGiro-export laden</div><div class="m">${impAge()==null?"Nog niet geladen":(impAge()>31?"Laatste import "+impAge()+" dagen geleden, tijd voor een nieuwe":"Laatste import "+(impAge()===0?"vandaag":impAge()+" dagen geleden"))}</div></span></button></div>`}
+function stortGem(){const y=NOW.getFullYear(),m=NOW.getMonth(),n=m+1,ytd=sumY(y),g=ytd/n,v=g-SDOEL;return `<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Gemiddeld per maand</small><b class="num">${eur(g)}</b></div><div><small>Maanddoel</small><b class="num">${eur(SDOEL)}</b></div><div><small>Verschil</small><b class="num ${cls(v)}">${v>=0?"+":""}${eur(v)}</b></div></div><div class="note" style="margin-top:6px">Gemiddelde over ${n} maanden (${MND[0]} t/m ${MND[m]}), inclusief maanden zonder storting.</div>`}
+function stortChart(){const y=NOW.getFullYear(),v=MND.map((_,i)=>sumM(y,i)),W=320,H=140,L=4,B=20,T=14,mx=Math.max(...v,SDOEL)*1.1,Y=a=>T+(1-a/mx)*(H-T-B),bw=(W-L)/12;
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Stortingen per maand tegenover het doel"><line class="g" x1="${L}" x2="${W}" y1="${H-B}" y2="${H-B}"/>${v.map((a,i)=>{const x=L+i*bw+bw*.15,w=bw*.7,fut=i>NOW.getMonth();return `<rect x="${x}" y="${Y(a)}" width="${w}" height="${Math.max(0,H-B-Y(a))}" rx="3" fill="var(${a>=SDOEL?"--good":"--c1"})" fill-opacity="${fut?.25:1}"><title>${MND[i]} ${hide?"":a}</title></rect>${a>=SDOEL*1.8?`<text x="${x+w/2}" y="${Y(a)-3}" text-anchor="middle">${hide?"":(a/1000).toFixed(1).replace(".",",")+"k"}</text>`:""}<text x="${x+w/2}" y="${H-5}" text-anchor="middle">${MND[i].slice(0,1).toUpperCase()}</text>`}).join("")}<line x1="${L}" x2="${W}" y1="${Y(SDOEL)}" y2="${Y(SDOEL)}" stroke="var(--fg)" stroke-width="1.2" stroke-dasharray="4 3" opacity=".6"/></svg>`}
+function yearCard(y){const d=JR[y.y],netto=d.i-d.u;let cum=0;Object.keys(JR).forEach(k=>cum+=JR[k].i-JR[k].u);
+ return `<div class="sec"><h2>${y.y}${y.lopend?" (tot nu)":""}</h2><button class="tile go" data-s="jaren"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Gestort</small><b class="num">${eur(d.i)}</b></div><div><small>Opgenomen</small><b class="num">${eur(d.u)}</b></div><div><small>Netto</small><b class="num">${eur(netto)}</b></div><div><small>Totaal inleg tot nu</small><b class="num">${eur(cum)}</b></div><div><small>Kosten</small><b class="num">${eur(d.k)}</b><small>${f1(d.k/y.begin*100)}% yield</small></div><div><small>Transacties</small><b class="num">${d.t}</b></div></div><div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Vermogen begin</small><b class="num">${eur(y.begin)}</b></div><div><small>Vermogen eind</small><b class="num">${eur(y.eind)}</b></div><div><small>Resultaat</small><b class="num ${cls(y.res)}">${eur(y.res)}</b></div><div><small>Yield</small><b class="num ${cls(y.res)}">${pc(y.res/y.begin*100)}</b></div></div><div class="note">Tik voor alle jaren sinds 2016.</div></button></div>`}
+function yearSec(){return "";}
+function yearSecOud(){const y=YRS[YRS.length-1];
+ const W=320,H=120,L=10,B=22,T=14,mx=Math.max(y.res/y.begin*100,y.sp,y.wr)*1.2,Yy=v=>T+(1-v/mx)*(H-T-B);
+ const bars=[[y.res/y.begin*100,"--c1","Jij"],[y.sp,"--c2","S&P 500"],[y.wr,"--c3","Wereld"]].map(([v,c,n],k)=>{const bw=60,x=40+k*90;return `<rect x="${x}" y="${Yy(v)}" width="${bw}" height="${H-B-Yy(v)}" rx="4" fill="var(${c})"/><text x="${x+bw/2}" y="${Yy(v)-3}" text-anchor="middle">${f1(v)}%</text><text x="${x+bw/2}" y="${H-6}" text-anchor="middle">${n}</text>`}).join("");
+ const d=JR[y.y],netto=d.i-d.u;let cum=0;Object.keys(JR).forEach(k=>cum+=JR[k].i-JR[k].u);
+ return `<div class="sec"><h2>${y.y}${y.lopend?" (tot nu)":""} tegenover de index</h2><button class="tile go" data-s="jaren"><svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Rendement ${y.y} tegenover de index"><line class="g" x1="${L}" x2="${W-L}" y1="${H-B}" y2="${H-B}"/>${bars}</svg><div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px"><div><small>Gestort</small><b class="num">${eur(d.i)}</b></div><div><small>Opgenomen</small><b class="num">${eur(d.u)}</b></div><div><small>Netto</small><b class="num">${eur(netto)}</b></div><div><small>Totaal inleg</small><b class="num">${eur(cum)}</b></div><div><small>Kosten</small><b class="num">${eur(d.k)}</b><small>${f1(d.k/y.begin*100)}% yield</small></div><div><small>Transacties</small><b class="num">${d.t}</b></div></div><div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Vermogen begin</small><b class="num">${eur(y.begin)}</b></div><div><small>Vermogen eind</small><b class="num">${eur(y.eind)}</b></div><div><small>Resultaat</small><b class="num ${cls(y.res)}">${eur(y.res)}</b></div><div><small>Yield</small><b class="num ${cls(y.res)}">${pc(y.res/y.begin*100)}</b></div></div><div class="note">Indexcijfers zijn voorbeeldcijfers. Tik voor alle jaren sinds 2016.</div></button></div>`}
+const aiW=f=>own.filter(f).reduce((t,r)=>t+r.w,0);
+const aiProfitW=()=>own.filter(r=>r.ai[0]>=1).reduce((t,r)=>t+r.w,0);
+function aiSec(){const cats=[[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraal"],[-1,"Kwetsbaar"]];
+ const items=cats.map(([c,n])=>({n,v:own.filter(r=>r.ai[0]===c).reduce((t,r)=>t+r.w,0),k:c>=1?"g":c===0?"n":"a"}));
+ const kw=own.filter(r=>r.ai[0]<=-1).map(r=>r.naam).join(", ");
+ return `<div class="sec"><h2>AI-impact op je portefeuille</h2><button class="tile go" data-s="ai">${hbars(items,0,"%")}<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px"><div><small>Profiteert</small><b class="num pos">${f1(aiProfitW())}%</b></div><div><small>Kwetsbaar</small><b class="num neg">${f1(aiW(r=>r.ai[0]<=-1))}%</b></div><div><small>Netto</small><b class="num">${f1(aiProfitW()-aiW(r=>r.ai[0]<=-1))}%</b></div></div><div class="note">${f1(aiProfitW())}% van je portefeuille profiteert van AI. Die bedrijven delen dezelfde bron van groei, namelijk de investeringen in AI. ${kw?"Kwetsbaar: "+kw+".":""} Mijn inschatting, tik voor de uitleg per bedrijf.</div></button></div>`}
+// ===== Extra inzichten =====
+let OPT=PRIVE&&PRIVE.opt?Object.assign({},PRIVE.opt):{n:0,k:0,p:0,d:""};try{const o=JSON.parse(localStorage.getItem("pf_opt")||"null");if(o&&o.k>0)OPT=o}catch(e){}
+const saveOpt=()=>{try{localStorage.setItem("pf_opt",JSON.stringify(OPT))}catch(e){}};
+const wAvg=f=>{const l=own.filter(r=>f(r)!=null&&isFinite(f(r)));const s=l.reduce((t,r)=>t+r.w,0);return s?l.reduce((t,r)=>t+r.w*f(r),0)/s:null};
+const fold=(t,key,body,vk)=>`<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;gap:10px;color:var(--fg)"><span style="font-weight:600">${t}</span><span class="num ${vk||""}" style="color:${vk?"":"var(--mut)"};text-align:right">${key}</span></summary><div style="padding:0 12px 12px">${body}</div></details>`;
+const kvs=(a,c=3)=>`<div class="kv" style="grid-template-columns:repeat(${c},1fr)">${a.map(([l,v,k])=>`<div><small>${l}</small><b class="num ${k||""}">${v}</b></div>`).join("")}</div>`;
+const nt=t=>`<div class="note" style="margin-top:8px">${t}</div>`;
+const miniBars=(vals,labs,unit)=>{const W=320,H=100,B=16,T=12,mx=Math.max(...vals,1),bw=W/vals.length;return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img"><line class="g" x1="0" x2="${W}" y1="${H-B}" y2="${H-B}"/>${vals.map((v,i)=>{const h=v/mx*(H-B-T),x=i*bw+bw*.2;return `<rect x="${x}" y="${H-B-h}" width="${bw*.6}" height="${h}" rx="2" fill="var(--c1)"/><text x="${x+bw*.3}" y="${H-3}" text-anchor="middle">${labs[i]}</text>`}).join("")}</svg>`};
+function inzDiv(){const ys=Object.keys(JR).sort(),v=ys.map(y=>JR[y].dv||0),tot=v.reduce((a,b)=>a+b,0);
+ const ver=own.reduce((t,r)=>t+r.waarde*(r.yld||0)/100,0),yoc=ver/sumInk*100,yv=ver/sumPos*100;
+ const top=[...own].filter(r=>r.yld>0).sort((a,b)=>b.waarde*b.yld-a.waarde*a.yld).slice(0,5);
+ const mx=top.length?top[0].waarde*top[0].yld/100:1;
+ return fold("Dividend",eur(ver)+" verwacht",`<button data-s="divpa" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${miniBars(v,ys.map(y=>y.slice(2)),"€")}${nt("Dividend dat je per jaar binnenkreeg, bruto, uit je DeGiro-export. Totaal sinds 2016: "+eur(tot)+".")}
+ <div style="margin-top:10px">${kvs([["Verwacht, 12 maanden",eur(ver)],["Op je inleg",f1(yoc)+"%"],["Op waarde nu",f1(yv)+"%"]])}</div>
+ <div class="lbl" style="margin-top:12px">Wie betaalt het meeste</div>${top.map(r=>`<div class="hb"><span class="nm">${r.naam}</span><div class="tr"><i style="width:${r.waarde*r.yld/100/mx*100}%;background:var(--acc)"></i></div><b class="num">${eur(r.waarde*r.yld/100)}</b></div>`).join("")}${nt("Verwacht is je huidige bezit maal het dividendrendement van Yahoo. Een schatting, geen toezegging. Dividendbelasting gaat er nog af.")}<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Dividend per aandeel</span><span>›</span></div></button>`)}
+function inzBron(){const ink=sumPos-sumInk,g=sumJ("g"),dv=sumJ("dv"),k=-REAL.kosten,b=-REAL.divbel,rest=BROKER_WV-ink-g-dv-k-b;
+ const rows=[["Koerswinst nog open",ink],["Winst op verkochte aandelen",g],["Dividend",dv],["Kosten",k],["Dividendbelasting",b],["Overig, o.a. valuta, splitsingen en opties",rest]];
+ const mx=Math.max(...rows.map(r=>Math.abs(r[1])),1);
+ return fold("Waar je winst vandaan komt",eur(BROKER_WV)+" totaal",`${rows.map(([n,v])=>`<div style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;font-size:14px;gap:8px"><span>${n}</span><b class="num ${cls(v)}" style="white-space:nowrap">${v<0?"−":"+"}${eur(Math.abs(v))}</b></div><div style="margin-top:4px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${Math.abs(v)/mx*100}%;background:var(${v>=0?"--good":"--bad"})"></i></div></div>`).join("")}
+ ${nt("Samen is dit je Totaal W/V van DeGiro. Het valuta-effect (dollar en pond) los van de koers kan ik pas netjes splitsen in de echte app, met de wisselkoers van elke aankoop uit je transacties.")}`)}
+const kwPrev=(r,k,m)=>{const d=(((r.h*(k.charCodeAt(0)%7+3))%9)-3.5)/4;const v=r[{e:"eps",r:"roic",f:"fcf",p:"pe",n:"nd"}[k]];return v==null?null:v-d*(k==="p"?3:k==="n"?.3:2.5)*m};
+const KWM=[["e","EPS-groei","eps","%",1],["r","ROIC","roic","%",1],["f","FCF-groei","fcf","%",1],["p","PE","pe","",-1],["n","Schuld/EBITDA","nd","×",-1]];
+const kwSer=(k,fld,n)=>{const out=[];for(let y=n;y>=0;y--){const l=own.filter(r=>kwPrev(r,k,y)!=null),s=l.reduce((t,r)=>t+r.w,0);out.push(l.reduce((t,r)=>t+r.w*Math.max(0,kwPrev(r,k,y)),0)/s)}return out};
+function lineSvg(ser,labs,ref){const W=320,H=96,mn=Math.min(...ser,ref??1e9)-.4,mx=Math.max(...ser,ref??-1e9)+.4,X=i=>26+i*(W-52)/(ser.length-1),Y=v=>10+(1-(v-mn)/(mx-mn))*(H-30);
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:6px" role="img">${ref!=null?`<line class="g" x1="0" x2="${W}" y1="${Y(ref)}" y2="${Y(ref)}" stroke-dasharray="3 3"/>`:""}<path d="${ser.map((v,i)=>(i?"L":"M")+X(i)+" "+Y(v)).join(" ")}" fill="none" stroke="var(--c1)" stroke-width="2"/>${ser.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="var(--c1)"/><text x="${X(i)}" y="${Y(v)-6}" text-anchor="middle">${f1(v)}</text>`).join("")}${labs.map((t,i)=>`<text x="${X(i)}" y="${H-3}" text-anchor="middle">${t}</text>`).join("")}</svg>`}
+function kwalSub(){const yr=NOW.getFullYear(),labs=[...Array(6)].map((_,i)=>String(yr-5+i).slice(2)),fl={e:"eps",r:"roic",f:"fcf",p:"pe",n:"nd"};
+ const blocks=KWM.map(([k,l,,u,dir])=>{const ser=kwSer(k,fl[k],5),d=ser[5]-ser[0],good=d*dir>0,sm=Math.abs(d)<.05;
+  const ch=own.filter(r=>kwPrev(r,k,5)!=null&&r[fl[k]]!=null).map(r=>({r,d:r[fl[k]]-kwPrev(r,k,5)})).sort((a,b)=>(b.d-a.d)*dir);
+  const row=x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">weging ${f1(x.r.w)}%</div></span><span class="num ${x.d*dir>0?"pos":"neg"}">${x.d>0?"▲ +":"▼ −"}${f1(Math.abs(x.d))}${u==="%"?" pt":u}</span></button>`;
+  return `<div class="sec"><h2>${l}${u==="%"?", gewogen":", gewogen"}</h2><div class="tile">${kvs([["Nu",f1(ser[5])+u],["5 jaar geleden",f1(ser[0])+u],["Verschil",`${sm?"gelijk":(d>0?"▲ +":"▼ −")+f1(Math.abs(d))+(u==="%"?" pt":u)}`,sm?"":good?"pos":"neg"]])}${lineSvg(ser,labs,k==="e"?DOEL:null)}<div class="note" style="margin-top:4px">${k==="e"?"Stippellijn is je doel van "+DOEL+"%. ":""}${good&&!sm?"Dit ontwikkelt zich in de goede richting.":sm?"Dit is stabiel gebleven.":"Dit ontwikkelt zich in de verkeerde richting."}</div></div>
+  <div class="list" style="margin-top:8px"><div class="row" style="background:none"><span class="grow m">Meest verbeterd</span></div>${ch.slice(0,3).map(row).join("")}<div class="row" style="background:none"><span class="grow m">Meest verslechterd</span></div>${ch.slice(-3).reverse().map(row).join("")}</div></div>`}).join("");
+ return `<div class="note" style="margin-top:12px">Gewogen gemiddelde van je huidige posities, met je huidige weging, over de laatste 5 jaar. Tik op een bedrijf voor de details. De historie is hier nog verzonnen. Later komt ze uit de jaarcijfers van Yahoo en uit mijn maandelijkse opslag.</div>${blocks}`}
+function inzKw(){return "";}
+function inzKwOud(){const M=[["e","EPS-groei","eps","%",1],["r","ROIC","roic","%",1],["f","FCF-groei","fcf","%",1],["p","PE nu","pe","",-1],["n","Schuld/EBITDA","nd","×",-1]];
+ const cur=k=>wAvg(r=>r[{e:"eps",r:"roic",f:"fcf",p:"pe",n:"nd"}[k]]);
+ const prv=(k,m)=>{const l=own.filter(r=>kwPrev(r,k,m)!=null),s=l.reduce((t,r)=>t+r.w,0);return l.reduce((t,r)=>t+r.w*kwPrev(r,k,m),0)/s};
+ const ph=wAvg(r=>r.peh),pg=wAvg(r=>r.peg),e=cur("e"),pe=cur("p"),pr=pe/ph*100-100;let beter=0;
+ const tiles=M.map(([k,l,,u,dir])=>{const c=cur(k),p=prv(k,1),d=c-p,good=d*dir>0;if(Math.abs(d)>=.05&&good)beter++;const sm=Math.abs(d)<.05;
+  return `<div><small>${l}</small><b class="num">${f1(c)}${u}</b><small class="${sm?"":good?"pos":"neg"}">${sm?"gelijk":(d>0?"▲ +":"▼ −")+f1(Math.abs(d))+(u==="%"?" pt":u)} in 12 mnd</small></div>`}).join("")+`<div><small>PE historisch</small><b class="num">${f1(ph)}</b><small>eigen gemiddelde</small></div>`;
+ const pts=[3,2,1,0].map(q=>prv("e",q/3.0*1)).concat([]);const ser=[prv("e",1),prv("e",.66),prv("e",.33),e];
+ const W=320,H=70,mn=Math.min(...ser)-.5,mx=Math.max(...ser)+.5,X=i=>28+i*(W-56)/3,Y=v=>8+(1-(v-mn)/(mx-mn))*(H-26);
+ const svg=`<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px" role="img" aria-label="EPS-groei gewogen, laatste 12 maanden"><line class="g" x1="0" x2="${W}" y1="${Y(DOEL)<H-18&&Y(DOEL)>4?Y(DOEL):H-18}" y2="${Y(DOEL)<H-18&&Y(DOEL)>4?Y(DOEL):H-18}" stroke-dasharray="3 3"/><path d="${ser.map((v,i)=>(i?"L":"M")+X(i)+" "+Y(v)).join(" ")}" fill="none" stroke="var(--c1)" stroke-width="2"/>${ser.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="var(--c1)"/><text x="${X(i)}" y="${Y(v)-6}" text-anchor="middle">${f1(v)}%</text>`).join("")}${["12 mnd","8 mnd","4 mnd","nu"].map((t,i)=>`<text x="${X(i)}" y="${H-3}" text-anchor="middle">${t}</text>`).join("")}</svg>`;
+ const ok=e>=DOEL,tr=beter>=4?"Het beeld verbetert":beter>=3?"Het beeld is licht beter":beter<=1?"Het beeld verslechtert":"Het beeld is gemengd";
+ return fold("Kwaliteit van de hele portefeuille",f1(e)+"% groei",`<button data-s="kwal" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"><div style="margin-bottom:8px"><span class="pill ${beter>=3?"g":beter<=1?"r":"n"}">${tr}</span> <span class="note" style="margin:0">${beter} van 5 cijfers beter dan een jaar geleden</span></div><div class="kv" style="grid-template-columns:1fr 1fr 1fr">${tiles}</div>${svg}
+ <div class="note" style="margin-top:4px">Gewogen EPS-groei, laatste 12 maanden. Stippellijn is je doel van ${DOEL}%.</div>
+ <div class="note" style="margin-top:8px">Gewogen gemiddelde van je posities. De winstgroei ${ok?"ligt boven":"ligt onder"} je doel van ${DOEL}% per jaar. Je betaalt gemiddeld ${Math.abs(Math.round(pr))}% ${pr>0?"meer":"minder"} dan het eigen historische PE van deze bedrijven, bij een PEG van ${f1(pg)}. Bij PE en schuld is een daling beter. De ontwikkeling is hier nog verzonnen. Later bewaar ik elke maand je cijfers, dan zie je hier echt de trend.</div><div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Ontwikkeling over 5 jaar</span><span>›</span></div></button>`)}
+const gtRow=y=>{const d=y.res/(y.begin+y.inleg/2)*100,s=y.res/y.begin*100,v=s-d;return `<div style="margin-bottom:10px"><div style="font-weight:600;font-size:14px">${y.y}${y.lopend?" (tot nu)":""}</div>${kvs([["Yield op beginvermogen",pc(s)],["Gecorrigeerd voor inleg",pc(d)],["Verschil",(v>=0?"−":"+")+f1(Math.abs(v))+" pt"]])}</div>`};
+function inzGT(){const y=YRS[YRS.length-1];
+ return fold("Geld- tegenover tijdgewogen",pc(REAL.xirr)+" per jaar",`<button data-s="gt" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${gtRow(y)}${nt("Je yield deelt het resultaat door het vermogen op 1 januari. Maar je stort het hele jaar door bij, en dat geld heeft maar een deel van het jaar gewerkt. Gecorrigeerd (Dietz) rekent die timing mee en is het eerlijke tijdgewogen rendement. Je "+pc(REAL.xirr)+" sinds 2016 is geldgewogen: het weegt zwaarder mee in jaren dat je veel had ingelegd.")}<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Voorgaande jaren</span><span>›</span></div></button>`)}
+function gtSub(){const ys=Object.keys(JR).sort().reverse();
+ return `<div class="note" style="margin-top:12px">Per jaar de yield zoals jij die berekent (resultaat gedeeld door het beginvermogen) en het tijdgewogen rendement, gecorrigeerd voor je stortingen. Je geldgewogen rendement sinds ${REAL.start} is ${pc(REAL.xirr)} per jaar.</div>`+ys.map(k=>{const y=YRS.find(x=>x.y===+k),d=JR[k];
+  return y?`<div class="sec"><div class="tile">${gtRow(y)}${kvs([["Gestort",eur(d.i)],["Opgenomen",eur(d.u)],["Resultaat",eur(y.res)]])}</div></div>`:`<div class="sec"><div class="tile"><div style="font-weight:600;font-size:14px">${k}</div><div class="note" style="margin-top:4px">Netto inleg ${eur(d.i-d.u)}. Het vermogen op 1 januari en 31 december van dit jaar heb ik nog niet. Later reconstrueer ik dat uit je transacties en de koersen van die dagen, en dan staat hier ook het rendement.</div></div></div>`}).join("")}
+const optK=()=>{const r=rows.find(x=>x.tk==="BESI.AS");return r?r.waarde/r.qty:0};
+const ncdf=x=>{const t=1/(1+.2316419*Math.abs(x)),d=.3989423*Math.exp(-x*x/2),q=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-q:q};
+function optHtml(){const k=OPT.k,n=OPT.n,p=OPT.p,koers=optK(),afn=k*100*n,prem=p*100*n,maxv=afn-prem,be=k-p,afst=(koers/k-1)*100,tot=TOT,pct=afn/tot*100;
+ const dg=Math.max(0,Math.round((new Date(OPT.d)-new Date())/864e5)),T=Math.max(dg,1)/365,sig=.45,dd2=(Math.log(koers/k)+(.025-sig*sig/2)*T)/(sig*Math.sqrt(T)),prob=ncdf(-dd2),ann=p/k*100*(365/Math.max(dg,1));
+ return `${kvs([["Afnamebedrag",eur(afn)],["Premie binnen",eur(prem)],["Maximaal verlies",eur(maxv)]])}<div style="margin-top:8px">${kvs([["Break-even",eur(be,0)+" per aandeel"],["Koers nu",eur(koers,0)],["Afstand tot strike",pc(afst)]])}</div><div style="margin-top:8px">${kvs([["Kans op afname*",f1(prob*100)+"%"],["Premie per jaar",f1(ann)+"%"],["Verloopt over",dg+" dagen"]])}</div>
+ <div class="note" style="margin-top:8px">Verloopt over ${dg} dagen. Zakt BESI onder ${eur(k)}, dan koop je ${n*100} aandelen voor ${eur(afn)}. Dat is ${f1(pct)}% van je portefeuille, bovenop wat je al hebt (${f1(own.find(r=>r.tk==="BESI.AS").w)}%). Het maximale verlies geldt als het aandeel naar nul gaat. *Kans met een eenvoudig model (schommeling van 45% per jaar), een schatting en geen belofte.</div>`}
+function drawOpt(){const el=document.getElementById("optOut");if(el)el.innerHTML=optHtml()}
+function inzOpt(){const inp=(id,l,v,st)=>`<label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">${l}<input id="${id}" type="${id==="oD"?"date":"number"}" inputmode="decimal" ${st||""} value="${v}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label>`;
+ return fold("Short put BESI",eur(OPT.k*100*OPT.n)+" afname",`<div class="two">${inp("oN","Contracten",OPT.n,'step="1"')}${inp("oK","Uitoefenprijs",OPT.k,'step="1"')}</div><div class="two" style="margin-top:8px">${inp("oP","Premie per aandeel",OPT.p,'step="0.5"')}${inp("oD","Einddatum",OPT.d)}</div><div id="optOut" style="margin-top:10px">${optHtml()}</div>`)}
+let TBP=30;
+const tbHit=(n,p)=>[...own].sort((a,b)=>b.w-a.w).slice(0,n).reduce((t,r)=>t+r.w,0)*p/100;
+function tbHtml(){const p=TBP,mx=tbHit(10,p)||1;return [[1,"Nummer 1"],[3,"Top 3"],[5,"Top 5"],[10,"Top 10"]].map(([n,t])=>`<div class="hb"><span class="nm">${t}</span><div class="tr"><i style="width:${tbHit(n,p)/mx*100}%;background:var(--bad)"></i></div><b class="num neg">−${f1(tbHit(n,p))}%</b></div>`).join("")+`<div class="note" style="margin-top:6px">Dit is het verlies op je totale portefeuille. Zakt je top 5 samen ${p}%, dan raakt dat je portefeuille voor ${f1(tbHit(5,p))}%, ongeveer ${eur(tbHit(5,p)/100*TOT)}.</div>`}
+function drawTb(){const o=document.getElementById("tbOut"),v=document.getElementById("tbV");if(o)o.innerHTML=tbHtml();if(v)v.textContent=TBP+"%"}
+const OVG=[{n:"Halfgeleiders",u:"Zelfde bedrijfsketen: ze verdienen aan dezelfde chipvraag.",f:r=>r.sector==="Halfgeleiders"},{n:"Tech-cluster",u:"Technologie en halfgeleiders bewegen vaak samen.",f:CLU[0].f},{n:"AI-profiteerders",u:"Zelfde bron van groei: de investeringen in AI.",f:r=>r.ai[0]>=1},{n:"Overnemers",u:"Zelfde verdienmodel: kleine bedrijven kopen en houden.",f:CLU[1].f}];
+function overlapRows(){return own.map(r=>({r,g:OVG.filter(x=>x.f(r))})).sort((a,b)=>b.g.length-a.g.length||a.r.score-b.r.score)}
+function overlapSec(){const rows=overlapRows(),zw=rows.filter(x=>x.g.length>=3&&x.r.licht!=="g"),hv=rows.filter(x=>x.g.length>=3);
+ const kern=[...hv].sort((a,b)=>b.r.score-a.r.score||b.r.w-a.r.w)[0];
+ const nieuw=kandidaten().filter(x=>!OVG.some(g=>g.f(x.r))&&(secW[x.r.sector]||0)<12&&x.r.peg<=2.5).slice(0,3);
+ return `<div class="sec"><h2>Mijn advies over overlap</h2><div class="tile"><div class="note" style="margin:0">Bedrijven die op dezelfde dingen reageren geven je minder spreiding dan het aantal posities doet denken. Ik tel per bedrijf in hoeveel overlapgroepen het zit.</div>
+ <div style="margin-top:10px">${OVG.map(g=>{const m=own.filter(g.f),w=m.reduce((t,r)=>t+r.w,0);return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:14px"><b>${g.n}</b><span class="num">${f1(w)}% · ${m.length} bedrijven</span></div><div class="m" style="font-size:13px;color:var(--mut)">${m.map(r=>r.naam).join(", ")}. ${g.u}</div></div>`}).join("")}</div>
+ <div class="lbl" style="margin-top:12px">Voegt het minst toe aan je spreiding</div>${hv.slice(0,4).map(x=>`<button class="row" data-d="${x.r.tk}" style="padding-left:0;padding-right:0"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">zit in ${x.g.length} van 4 overlapgroepen (${x.g.map(g=>g.n).join(", ")}) · Doelcheck: ${lichtTxt[x.r.licht]}</div></span><span class="num">${f1(x.r.w)}%</span></button>`).join("")||'<div class="note">Geen bedrijf zit in drie of meer overlapgroepen.</div>'}
+ <div class="note" style="margin-top:8px">${kern?`Binnen die groep is ${kern.r.naam} volgens Doelcheck het sterkst (score ${kern.r.score} van 5). `:""}${zw.length?`${zw.map(x=>x.r.naam).join(" en ")} ${zw.length>1?"scoren":"scoort"} bovendien niet op alle punten sterk. Wil je spreiden, dan is dat de plek waar je het eerst niets meer bijkoopt. `:"Wil je spreiden, dan hoef je niet af te bouwen, maar koop in deze groepen niet meer bij. "}Verkopen vraagt meer afwegingen (belasting, wat je er al aan verdiend hebt), dus zie dit als een reden om het bijkopen te verleggen.</div>
+ ${nieuw.length?`<div class="lbl" style="margin-top:12px">Voegt juist spreiding toe</div>${nieuw.map(x=>`<button class="row" data-d="${x.r.tk}" style="padding-left:0;padding-right:0"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.r.sector} · buiten alle overlapgroepen · PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`).join("")}`:""}
+ <div class="note" style="margin-top:8px">Dit is een rekenvoorbeeld uit sector, cluster en AI-score, geen persoonlijk beleggingsadvies. Echte samenhang tussen koersen (correlatie) komt in de echte app uit je koershistorie.</div></div></div>`}
+function sprSub(){const grp=(key,lab)=>{const m={};own.forEach(r=>{const k=key(r);(m[k]=m[k]||[]).push(r)});return Object.entries(m).map(([k,l])=>({k,l,w:l.reduce((t,r)=>t+r.w,0)})).sort((a,b)=>b.w-a.w)};
+ const blok=(t,g,note)=>{const mx=g[0].w;return `<div class="sec"><h2>${t}</h2>${g.map(x=>`<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:block;color:var(--fg)"><div style="display:flex;justify-content:space-between"><span style="font-weight:600">${lab(x.k)}</span><span class="num">${f1(x.w)}% · ${x.l.length} bedrijven</span></div><div style="margin-top:6px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${x.w/mx*100}%;background:var(--acc)"></i></div></summary><div class="list" style="border:0">${[...x.l].sort((a,b)=>b.w-a.w).map(r=>`<button class="row" data-d="${r.tk}"><span class="grow"><div class="t">${r.naam}</div></span><span class="num">${f1(r.w)}%</span></button>`).join("")}</div></details>`).join("")}<div class="note">${note}</div></div>`};
+ const lab=k=>k,secE=effN(Object.values(secW)),cur={};own.forEach(r=>cur[r.munt]=(cur[r.munt]||0)+r.w);const land={};own.forEach(r=>land[r.land]=(land[r.land]||0)+r.w);
+ const LN={NL:"Nederland",VS:"Verenigde Staten",VK:"Verenigd Koninkrijk",CA:"Canada",SE:"Zweden",DE:"Duitsland",FR:"Frankrijk",IT:"Italië",KZ:"Kazachstan",BR:"Brazilië",AR:"Argentinië",TW:"Taiwan"};
+ return `<div class="tile" style="margin-top:12px">${kvs([["Effectief sectoren",f1(secE)+" van "+Object.keys(secW).length],["Effectief valuta",f1(effN(Object.values(cur)))+" van "+Object.keys(cur).length],["Effectief landen",f1(effN(Object.values(land)))+" van "+Object.keys(land).length]])}<div class="note" style="margin-top:8px">Hoe lager het effectieve aantal ten opzichte van het echte aantal, hoe meer een paar sectoren, valuta's of landen het meeste bepalen. Tik op een rij voor de bedrijven erin.</div></div>
+ ${blok("Per sector",grp(r=>r.sector),"Je limiet per sector is 35%. Tech en halfgeleiders tellen samen als één cluster met een limiet van 50%.")}
+ ${blok("Per valuta",grp(r=>r.munt),"Een daling van de dollar of het pond raakt alle bedrijven in die valuta tegelijk. Test dat bij Stresstest valuta.")}
+ ${blok("Per land van het hoofdkantoor",grp(r=>LN[r.land]||r.land),"Het land van het hoofdkantoor zegt niet altijd waar het bedrijf zijn omzet haalt.")}
+ <div class="sec"><h2>Clusters</h2>${CLU.map(c=>{const w=cluW(c),n=own.filter(c.f);return `<div class="tile" style="margin-top:8px"><div style="display:flex;justify-content:space-between"><b>${c.n}</b><span class="num ${w>c.lim?"neg":""}">${f1(w)}% van max ${c.lim}%</span></div><div class="m" style="font-size:13px;color:var(--mut);margin-top:4px">${n.map(r=>r.naam).join(", ")}. ${c.u}</div></div>`}).join("")}</div>`}
+function inzConc(){const ws=own.map(r=>r.w).sort((a,b)=>b-a),s=ws.reduce((t,x)=>t+x,0),eff=1/ws.reduce((t,x)=>t+(x/s)*(x/s),0),t5=ws.slice(0,5).reduce((t,x)=>t+x,0)/s*100,t1=ws[0]/s*100;
+ const top=[...own].sort((a,b)=>b.w-a.w).slice(0,5);
+ return fold("Concentratie",f1(eff)+" effectieve posities",`<button data-s="conc" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${kvs([["Echte posities",String(own.length)],["Effectief aantal",f1(eff)],["Top 5",f1(t5)+"%"]])}${top.map(r=>`<div class="hb"><span class="nm">${r.naam}</span><div class="tr"><i style="width:${r.w/top[0].w*100}%;background:var(--acc)"></i></div><b class="num">${f1(r.w)}%</b></div>`).join("")}${nt("Effectief aantal is hoeveel gelijke posities je portefeuille ongeveer net zo gespreid zou zijn. Staat dat ver onder het echte aantal, dan doen een paar grote bedrijven het meeste werk.")}<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Alle posities en risico</span><span>›</span></div></button>`)}
+const effN=a=>{const s=a.reduce((t,x)=>t+x,0);return 1/a.reduce((t,x)=>t+(x/s)*(x/s),0)};
+function concSub(){const l=[...own].sort((a,b)=>b.w-a.w),s=l.reduce((t,r)=>t+r.w,0);let c=0;const cum=l.map(r=>c+=r.w/s*100),n50=cum.findIndex(x=>x>=50)+1,n80=cum.findIndex(x=>x>=80)+1,eff=effN(l.map(r=>r.w));
+ const secE=effN(Object.values(secW)),cur={};own.forEach(r=>cur[r.munt]=(cur[r.munt]||0)+r.w);const curE=effN(Object.values(cur)),cluT=CLU[0]?cluW(CLU[0]):0;
+ const hit=(n,p)=>{const w=l.slice(0,n).reduce((t,r)=>t+r.w,0);return w*p/100};
+ const yr=NOW.getFullYear(),ser=[eff-4.9,eff-3.6,eff-2.3,eff-1.2,eff-.5,eff],labs=[...Array(6)].map((_,i)=>String(yr-5+i).slice(2));
+ return `<div class="tile" style="margin-top:12px">${kvs([["Voor de helft",n50+" bedrijven"],["Voor 80%",n80+" bedrijven"],["Effectief",f1(eff)+" van "+own.length]])}<div class="note" style="margin-top:8px">${n50} bedrijven zijn samen de helft van je portefeuille, ${n80} zijn samen 80%. De overige ${own.length-n80} bedrijven zijn samen ${f1(100-cum[n80-1])}%.</div></div>
+ <div class="sec"><h2>Spreiding op andere manieren</h2><button class="tile go" data-s="spr" style="display:block;width:100%;text-align:left">${kvs([["Per sector",f1(secE)+" van "+Object.keys(secW).length],["Per valuta",f1(curE)+" van "+Object.keys(cur).length],["Tech-cluster",f1(cluT)+"%"]])}<div class="note" style="margin-top:8px">Effectief aantal sectoren en valuta's werkt zoals bij je bedrijven. Een laag getal betekent dat een paar sectoren of valuta's het meeste bepalen. Tik voor het volledige overzicht.</div></button></div>
+ <div class="sec"><h2>Wat kost een tegenvaller</h2><div class="tile"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="note" style="margin:0">Als dit alles zoveel daalt, de rest gelijk</span><b class="num" id="tbV" style="font-size:20px">${TBP}%</b></div><input id="tbP" class="rg" type="range" min="5" max="80" step="5" value="${TBP}" aria-label="Daling in procent" style="margin-top:8px"><div id="tbOut" style="margin-top:8px">${tbHtml()}</div></div></div>
+ ${overlapSec()}
+ 
+ <div class="sec"><h2>Alle posities</h2><div class="list">${l.map((r,i)=>`<button class="row" data-d="${r.tk}"><span class="grow"><div class="t">${i+1}. ${r.naam}</div><div class="m">${r.sector}</div><div style="margin-top:6px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${r.w/l[0].w*100}%;background:var(--acc)"></i></div></span><span style="text-align:right"><div class="num">${f1(r.w)}%</div><div class="m num">samen ${f1(cum[i])}%</div></span></button>`).join("")}</div></div>`}
+function inzSeizoen(){const n0=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()),l=own.map(r=>({r,d:earn(r)})).filter(x=>(x.d-n0)/864e5<=14&&(x.d-n0)/864e5>=0).sort((a,b)=>a.d-b.d),w=l.reduce((t,x)=>t+x.r.w,0);
+ return fold("Cijferseizoen",l.length+" bedrijven, "+f1(w)+"%",l.length?`${l.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${dstr(x.d)} · weging ${f1(x.r.w)}%</div></span><span class="m">›</span></button>`).join("")}${nt("Binnen twee weken presenteert "+f1(w)+"% van je portefeuille cijfers. Rond die dagen schommelt de koers het meest. Plan niets overhaast.")}`:nt("De komende twee weken presenteert geen van je bedrijven cijfers."))}
+function inzVolg(){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9);
+ const all=kandidaten().filter(x=>x.r.w==null||x.r.w<8).filter(x=>!lim(x.r)),nmax=INLEG<2500?1:INLEG<5000?2:3,sh=[[1],[.6,.4],[.5,.3,.2]][nmax-1],k=all.slice(0,nmax);
+ const tr=sumJ("t")||1,perT=(sumJ("fb")+sumJ("fv")+sumJ("fx"))/tr,pc1=perT/INLEG*100,pcN=perT*nmax/INLEG*100;
+ return fold("Waar de volgende "+eur(INLEG)+" heen kan",k.length?k.map(x=>x.r.naam).join(" + "):"geen kandidaat",`${k.map((x,i)=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${eur(Math.round(INLEG*sh[i]/50)*50)} in ${x.r.naam}</div><div class="m">${x.r.w!=null?"weging nu "+f1(x.r.w)+"%":"nog geen positie"} · PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`).join("")}${nt("Bij "+eur(INLEG)+" koop ik liefst "+(nmax===1?"alles in één aandeel":"hooguit "+nmax+" aandelen")+", want elke aankoop kost je vast geld. Jouw gemiddelde is "+eur(perT,2)+" per transactie (kosten, valuta en beurstaks). Dat is ongeveer "+f1(pc1)+"% van dit bedrag in één aandeel"+(nmax>1?" en "+f1(pcN)+"% verdeeld over "+nmax:"")+". Kleine plukjes onder ongeveer € 1.000 per aandeel zijn dan zonde. Zonder bedrijven boven 8% weging en zonder clusters die bij hun limiet zitten. Een rekenvoorbeeld, geen advies. Tik op Kandidaten voor de volledige afweging.")}`)}
+let _TW=null,_TD=null;
+function pfTWR(L){if(!PRIVE||!PRIVE.imp||!PRIVE.imp.trx||!PRIVE.imp.trx.x)return null;
+ if(!_TW){const N=(DATA.indices&&DATA.indices.lang&&DATA.indices.lang.sp500&&DATA.indices.lang.sp500.length)||261,u=new Date(DATA.bijgewerkt),last=new Date(Date.UTC(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()));last.setUTCDate(last.getUTCDate()+((7-last.getUTCDay())%7));
+  const ds=[];for(let k=0;k<N;k++){const x=new Date(last);x.setUTCDate(x.getUTCDate()-7*(N-1-k));ds.push(x.toISOString().slice(0,10))}
+  const i2t={};Object.keys(PRIVE.hold).forEach(t=>i2t[PRIVE.hold[t].isin]=t);
+  const raw={};PRIVE.imp.trx.x.forEach(x=>{if(x[5]&&isFinite(x[6]))(raw[x[4]]=raw[x[4]]||[]).push(x)});
+  const tr={},pp={},sp={};
+  Object.keys(raw).forEach(isin=>{const rs=raw[isin],ev=[],skip=new Set();
+   const byD={};rs.forEach((x,i)=>(byD[x[0]]=byD[x[0]]||[]).push(i));
+   Object.keys(byD).forEach(d=>{const b=byD[d].filter(i=>rs[i][5]>0),a=byD[d].filter(i=>rs[i][5]<0);
+    b.forEach(i=>{a.forEach(j=>{if(skip.has(i)||skip.has(j))return;const x=rs[i],y=rs[j],qr=x[5]/-y[5],ar=Math.abs(x[6])/Math.abs(y[6]);if(Math.abs(qr-1)>0.05&&Math.abs(ar-1)<0.02){ev.push([d,qr]);skip.add(i);skip.add(j)}})})});
+   const f=d=>ev.reduce((m,e)=>d<e[0]?m*e[1]:m,1);sp[isin]=f;
+   tr[isin]=rs.map(x=>[x[0],x[5]]);pp[isin]=rs.filter((x,i)=>!skip.has(i)).map(x=>[x[0],Math.abs(x[6]/x[5])/f(x[0])]);
+   if(!pp[isin].length)pp[isin]=rs.map(x=>[x[0],Math.abs(x[6]/x[5])])});
+  const T=d=>Date.parse(d);
+  const interp=(isin,d)=>{const a=pp[isin].slice().sort((p,q)=>p[0]<q[0]?-1:1);if(d<=a[0][0])return a[0][1];if(d>=a[a.length-1][0])return a[a.length-1][1];for(let i=1;i<a.length;i++){if(d<=a[i][0]){const t0=T(a[i-1][0]),t1=T(a[i][0]);return t1===t0?a[i][1]:a[i-1][1]+(a[i][1]-a[i-1][1])*(T(d)-t0)/(t1-t0)}}return a[a.length-1][1]};
+  const pos=[];let ben=0,tot=0;
+  Object.keys(tr).forEach(isin=>{const t=i2t[isin],r=t&&own.find(o=>o.tk===t),e=r&&r.D&&r.D.px_e;
+   const q=ds.map(d=>tr[isin].reduce((s,z)=>z[0]<=d?s+z[1]:s,0)*sp[isin](d));if(!q.some(v=>v>0))return;
+   const V=!e&&DATA.verkocht&&DATA.verkocht[isin],vp=d=>{const i=Math.round((T(d)-T(V.s))/6048e5);return V.v[Math.max(0,Math.min(V.v.length-1,i))]};
+   const px=ds.map((d,k)=>{const m=e?e.length-N+k:-1;return(e&&m>=0&&isFinite(e[m]))?e[m]:V?vp(d):interp(isin,d)});
+   if(e||V||window.PF_SOLD)pos.push({q,px,real:!!e,ye:(r&&r.D&&r.D.px_ye)||null})});
+  {const y0=new Date().getFullYear()+"-01-01",kj=ds.findIndex(d=>d>=y0);let a0=0,a1=0;if(kj>0)pos.forEach(p=>{const n=p.q[kj-1],e0=p.ye||p.px[kj-1];if(n>0&&e0){a0+=n*e0;a1+=n*p.px[kj]}});window._F0=a0>0?a1/a0:null}
+  const A=PRIVE.imp.acc||{},fx={};(A.fxl||[]).forEach(f=>{(fx[f[1]]=fx[f[1]]||[]).push([f[0],f[2]])});Object.keys(fx).forEach(c=>fx[c].sort((p,q)=>p[0]<q[0]?-1:1));
+  const toE=(a,c,d)=>{if(!c||c==="EUR"||!fx[c])return a;let r=fx[c][0][1];for(const z of fx[c]){if(z[0]<=d)r=z[1];else break}return a/r};
+  const fl=new Array(N).fill(0);(A.ev||[]).forEach(e=>{const t=e[1];if(t!=="v"&&t!=="w"&&t!=="k"&&t!=="r")return;const d=e[0];if(d<=ds[0]||d>ds[N-1])return;let k=1;while(k<N&&ds[k]<d)k++;const m=toE(e[2],e[3],d);fl[k]+=t==="k"?-m:m});
+  const idx=[100];for(let k=1;k<N;k++){let v0=0,v1=0;pos.forEach(p=>{const n=p.q[k-1];if(n>0){v0+=n*p.px[k-1];v1+=n*p.px[k]}});if(window._K0==null&&v0>=25000)window._K0=k;idx.push(idx[k-1]*(v0>0?(v1+fl[k])/v0:1))}
+  _TW=idx;_TD=ds}
+ const l=Math.min(L,_TW.length),s=_TW.slice(-l);return s.map(v=>v/s[0]*100)}
+function pfIdx(L){return pfTWR(L)||pfSer(L)}
+function pfSer(L){const it=own.filter(r=>r.D&&(r.D.px_e||r.D.px_w)&&(r.D.px_e||r.D.px_w).length>=L);if(it.length<10)return null;const sw=r=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return r.w*a[0]/a[L-1]},tw=it.reduce((s,r)=>s+sw(r),0),pf=[];for(let i=0;i<L;i++)pf.push(it.reduce((s,r)=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return s+sw(r)*a[i]/a[0]},0)/tw*100);return pf}
+function inzDD(){const s=pfIdx(53);if(!s)return "";let pk=s[0];const dd=s.map(v=>{pk=Math.max(pk,v);return (v/pk-1)*100}),mn=Math.min(...dd),W=320,H=90,n=dd.length-1,Y=v=>8+(mn?v/mn:0)*(H-24);
+ return fold("Grootste daling, laatste jaar",pc(mn),`<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img"><line class="g" x1="0" x2="${W}" y1="8" y2="8"/><path d="M0 8 ${dd.map((v,i)=>`L${(i*W/n).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ")} L${W} 8 Z" fill="var(--bad)" opacity=".25"/><path d="${dd.map((v,i)=>(i?"L":"M")+(i*W/n).toFixed(1)+" "+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--bad)" stroke-width="1.6"/></svg>${kvs([["Diepste daling",pc(mn)],["Nu onder de top",pc(dd[n])]])}<div class="note">Op basis van je huidige posities en weging, zonder valuta-effect.</div><div class="chips" style="padding:10px 0 0"><button class="chip" data-s="x_dd">Diepste daling per bedrijf ›</button></div>`)}
+/* ===== batch 11: extra inzichten (voorbeeldwaarden waar Yahoo nodig is) ===== */
+const GOB='style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"';
+const goRow=t=>`<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>${t}</span><span>›</span></div>`;
+const IPT='style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"';
+const CK={g:"good",a:"warn",r:"bad",n:"acc"};
+const LNd={NL:"Nederland",VS:"Verenigde Staten",VK:"Verenigd Koninkrijk",CA:"Canada",SE:"Zweden",DE:"Duitsland",FR:"Frankrijk",IT:"Italië",KZ:"Kazachstan",BR:"Brazilië",AR:"Argentinië",TW:"Taiwan"};
+const sg=n=>n==null?"–":(n>0?"+":n<0?"−":"")+f1(Math.abs(n));
+const d2=n=>n==null?"–":n.toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const XM={
+ skin:{t:"Eigenbelang management",f:r=>xd(r).ins,fmt:v=>f1(v)+"%",dir:-1,c:r=>{const v=xd(r).ins;return v>=10?"g":v>=2?"n":"a"},
+  sub:r=>{const x=xd(r);return (x.fl?x.fl+" · ":"")+(x.buy==null?"geen insiderdata van Yahoo":x.buy+" kopen en "+x.sell+" verkopen, 180 dagen")},
+  intro:"Hoeveel van het bedrijf in handen is van bestuurders en oprichters. Hoe meer eigen geld, hoe meer ze met jou meevaren.",
+  note:"Het percentage komt van Yahoo (aandelen van insiders). Of een bedrijf oprichter- of familiegeleid is, houd ik zelf bij in je bestand. Groen vanaf 10%, oranje onder 2% voor een bedrijf zonder oprichter. Let op: een oprichter met veel stemrechten kan ook ten koste van kleine aandeelhouders beslissen, en aandelen die iemand als beloning krijgt zijn geen eigen geld. Een bestuurder die op de open markt koopt zegt meer dan iemand die verkoopt, want verkopen kan privé redenen hebben.",
+  extra:()=>{const fw=own.filter(r=>xd(r).f),w=fw.reduce((t,r)=>t+r.w,0),lo=own.filter(r=>!xd(r).f&&xd(r).ins<1);return `<div class="tile" style="margin-top:8px">${kvs([["Oprichter of familie",f1(w)+"%"],["Aantal",fw.length+" van "+own.length],["Weinig eigen geld",lo.length+" bedrijven"]])}</div>`}},
+ verw:{t:"Verwatering en buybacks",f:r=>xd(r).dil,fmt:v=>sg(v)+"%",dir:1,c:r=>{const v=xd(r).dil;return v<=-1?"g":v<=.5?"n":v<=2?"a":"r"},
+  sub:r=>{const v=xd(r).dil;return v<=-1?"koopt eigen aandelen in, jouw deel wordt groter":v<=.5?"aantal aandelen blijft ongeveer gelijk":"geeft nieuwe aandelen uit, jouw deel wordt kleiner"},
+  intro:"Verandering in het aantal aandelen per jaar over vijf jaar. Min is goed: het bedrijf koopt zijn eigen aandelen terug.",
+  note:"Geeft een bedrijf elk jaar nieuwe aandelen uit (aan personeel of voor overnames), dan wordt jouw stuk kleiner, ook als de winst groeit. Terugkopen werkt andersom. Winst per aandeel houdt hier al rekening mee, maar het laat zien of groei uit het bedrijf zelf komt of uit extra aandelen. Bij Zweedse en Canadese bedrijven is de data van Yahoo vaker onvolledig, dan staat er een streepje."},
+ marge:{t:"Winstmarge",f:r=>xd(r).opm,fmt:v=>f1(v)+"%",dir:-1,c:r=>{const x=xd(r),d=x.opm-x.opm5;return d>=2?"g":d>=-1?"n":"a"},
+  sub:r=>{const x=xd(r),d=x.opm-x.opm5;return "was "+x.opm5+"% vijf jaar geleden ("+(d>=0?"+":"−")+Math.abs(d)+" pt)"},
+  intro:"Operationele marge: hoeveel van elke euro omzet overblijft als winst. Stijgend is een teken van prijskracht.",
+  note:"Kleurt op de verandering over vijf jaar, niet op het niveau. Een lage marge kan bij een winkel prima zijn, een dalende marge is bijna altijd een waarschuwing. Voor banken en verzekeraars geldt een ander soort marge, daar is de vergelijking minder zuiver."},
+ cash:{t:"Vrije kasstroom tegenover koers",f:r=>xd(r).fy,fmt:v=>f1(v)+"%",dir:-1,c:r=>{const v=xd(r).fy;return v>=4?"g":v>=2.5?"n":"a"},
+  sub:r=>"EV/EBITDA "+xd(r).ev+"×",
+  intro:"Hoeveel vrije kasstroom je per jaar krijgt voor elke 100 euro die je betaalt. Hoger is goedkoper.",
+  note:"FCF-rendement is vrije kasstroom gedeeld door beurswaarde. Het is een strengere waardering dan PE, want kasstroom is moeilijker op te poetsen dan winst. EV/EBITDA kijkt ook naar de schuld. Voor financials gebruik ik dit niet."},
+ beat:{t:"Cijferverrassingen",f:r=>xd(r).erS,fmt:v=>sg(v)+"%",dir:-1,c:r=>{const v=xd(r).erS;return v>=3?"g":v>=0?"n":"a"},
+  sub:r=>"koers dag erna gemiddeld "+sg(xd(r).erK)+"%",
+  intro:"Gemiddeld verschil tussen de winst en de verwachting van analisten, laatste vier kwartalen.",
+  note:"Bedrijven die structureel boven de verwachting scoren hebben meestal voorzichtige prognoses, maar een goed cijfer kan al in de koers zitten. Kijk daarom ook naar de koersreactie erna."},
+ beta:{t:"Beta",f:r=>xd(r).beta,fmt:v=>d2(v),dir:1,c:r=>{const v=xd(r).beta;return v<=.9?"g":v<=1.2?"n":"a"},
+  sub:r=>"schommelt "+xd(r).vol+"% per jaar",
+  intro:"Hoe sterk het aandeel meebeweegt met de wereldindex.",
+  note:"Beta 1 betekent dat het aandeel gemiddeld net zoveel beweegt als de wereldindex. Boven 1,2 beweegt het harder, onder 0,9 rustiger. Berekend over vijf jaar met weekkoersen."},
+ vol:{t:"Schommeling per bedrijf",f:r=>xd(r).vol,fmt:v=>Math.round(v)+"%",dir:1,c:r=>{const v=xd(r).vol;return v<=22?"g":v<=30?"n":"a"},
+  sub:r=>"beta "+d2(xd(r).beta),
+  intro:"Standaarddeviatie van de koers op jaarbasis.",
+  note:"Zo'n 25% betekent dat de koers in een gewoon jaar ongeveer een kwart omhoog of omlaag kan gaan. Dit zegt niets over kwaliteit, wel over hoeveel je moet kunnen verdragen."},
+ dd:{t:"Diepste daling per bedrijf",f:r=>xd(r).dd,fmt:v=>"−"+Math.abs(v)+"%",dir:-1,c:r=>{const v=xd(r).dd;return v>=-20?"g":v>=-30?"n":"a"},
+  sub:r=>"grootste daling van top naar dal, 5 jaar",
+  intro:"De grootste daling van top naar dal in vijf jaar.",
+  note:"Dit is wat je had moeten verdragen als je op het slechtste moment was ingestapt en vol had gehouden. Het zegt iets over hoe diep het kan gaan."}};
+const bestFirst=k=>{const m=XM[k];return [...own].sort((a,b)=>m.dir>0?m.f(a)-m.f(b):m.f(b)-m.f(a))};
+const xRow=(k,r,mx)=>{const m=XM[k],v=m.f(r);return `<div class="hb"><span class="nm">${r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(v)/mx*100)}%;background:var(--${CK[m.c(r)]})"></i></div><b class="num">${m.fmt(v)}</b></div>`};
+function xCnt(k){const m=XM[k],l=bestFirst(k);return {l,n:l.length,a:wAvg(m.f),ng:l.filter(r=>m.c(r)==="g").length,na:l.filter(r=>m.c(r)==="a"||m.c(r)==="r").length,mx:Math.max(...l.map(r=>Math.abs(m.f(r))),1)}}
+function xFold(k){const m=XM[k],c=xCnt(k);
+ return fold(m.t,"gem. "+m.fmt(c.a),`<button data-s="x_${k}" ${GOB}>${kvs([["Gewogen gemiddelde",m.fmt(c.a)],["Sterk",c.ng+" van "+c.n],["Aandacht",c.na+" van "+c.n]])}<div class="lbl" style="margin-top:12px">Het best</div>${c.l.slice(0,3).map(r=>xRow(k,r,c.mx)).join("")}<div class="lbl" style="margin-top:10px">Het zwakst</div>${c.l.slice(-3).reverse().map(r=>xRow(k,r,c.mx)).join("")}${nt(m.intro)}${goRow("Alle bedrijven")}</button>`)}
+function xSub(k){const m=XM[k],c=xCnt(k);
+ return `<div class="tile" style="margin-top:12px">${kvs([["Gewogen gemiddelde",m.fmt(c.a)],["Sterk",c.ng+" van "+c.n],["Aandacht",c.na+" van "+c.n]])}</div>${m.extra?m.extra():""}<div class="sec"><h2>Alle bedrijven</h2><div class="list">${c.l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${m.c(r)}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m" style="white-space:normal">${m.sub(r)}</div></span><span style="text-align:right"><div class="num">${m.fmt(m.f(r))}</div><div class="m num">${f1(r.w)}%</div></span></button>`).join("")}</div></div>${nt(m.note)}`}
+
+/* eigenbelang, marges, verwatering in het bedrijfsscherm */
+function skinTxt(r){const x=xd(r);
+ if(x.f&&x.ins>=10)return `${x.fl==="Familie"?"Een familie":"De oprichter"} bezit ruim ${Math.round(x.ins)}% van het bedrijf. Dat is veel eigen geld: ze delen in de winst, maar ook in het verlies.`;
+ if(x.f)return `${x.fl==="Familie"?"Familie":"Oprichters"} bezitten ${f1(x.ins)}%. Bij een groot bedrijf is dat nog altijd veel geld, maar het aandeel is lager dan bij de sterkste voorbeelden.`;
+ if(x.ins>=2)return `Het bestuur bezit ${f1(x.ins)}%. Redelijk: ze hebben iets te verliezen.`;
+ return `Het bestuur bezit ${f1(x.ins)}%. Dat is weinig: salaris en bonus drijven hen meer dan het aandeel.`}
+function insSig(r){const x=xd(r);
+ if(x.buy==null)return {t:"Geen insiderdata via Yahoo voor "+(LNd[r.land]||r.land)+".",c:"n"};
+ if(x.buy>x.sell)return {t:`Insiders kochten (${x.buy}) vaker dan ze verkochten (${x.sell}) in de laatste 180 dagen. Een positief signaal.`,c:"g"};
+ if(x.sell>x.buy+1)return {t:`Insiders verkochten (${x.sell}) vaker dan ze kochten (${x.buy}) in de laatste 180 dagen. Verkopen kan privé redenen hebben, kijk naar de grootte.`,c:"a"};
+ return {t:`Evenveel insiderkopen als verkopen (${x.buy} en ${x.sell}) in de laatste 180 dagen.`,c:"n"}}
+function kwExtra(r){const x=xd(r),is=insSig(r),d=x.opm-x.opm5,sc=XM.skin.c(r),st=sc==="g"?"Sterk":sc==="n"?"Redelijk":"Laag";
+ return `<div class="sec"><h2>Eigenbelang van het bestuur</h2><div class="facts"><div class="fact"><small>Belang bestuur</small><b class="num">${f1(x.ins)}%</b><em><span class="pill ${sc}">${st}</span></em></div><div class="fact"><small>Type</small><b style="font-size:14px">${x.fl?x.fl+"-geleid":"Professioneel bestuur"}</b></div><div class="fact"><small>Insiders, 180 dagen</small><b class="num" style="font-size:15px">${x.buy==null?"–":x.buy+" kopen · "+x.sell+" verkopen"}</b></div></div><div class="tile" style="margin-top:8px"><div class="s" style="white-space:normal">${skinTxt(r)}</div><div class="s" style="white-space:normal;margin-top:6px">${is.t}</div></div></div>
+ <div class="sec"><h2>Marges, kasstroom en aandelen</h2><div class="facts"><div class="fact"><small>Winstmarge</small><b class="num">${x.opm}%</b><em>was ${x.opm5}% vijf jaar geleden (${d>=0?"+":"−"}${Math.abs(d)} pt)</em></div><div class="fact"><small>FCF-rendement</small><b class="num">${f1(x.fy)}%</b><em>EV/EBITDA ${x.ev}×</em></div><div class="fact"><small>Aantal aandelen</small><b class="num ${x.dil<0?"pos":x.dil>1?"neg":""}">${sg(x.dil)}%</b><em>per jaar, ${x.dil<=-1?"koopt terug":x.dil<=.5?"stabiel":"verwatering"}</em></div></div></div>`}
+function peerTbl(r){const p=rows.filter(o=>o.sector===r.sector&&o.tk!==r.tk).sort((a,b)=>Math.abs(a.pe-r.pe)-Math.abs(b.pe-r.pe)).slice(0,4);if(!p.length)return "";
+ const ch=p.filter(o=>o.pe>r.pe).length,fa=p.filter(o=>o.eps<r.eps).length;
+ return `<div class="sec"><h2>Tegenover vergelijkbare bedrijven</h2><div class="tile"><table class="t"><tr><th>Bedrijf</th><th>PE</th><th>Groei</th><th>PEG</th></tr>${[r,...p].map(o=>`<tr${o===r?' style="font-weight:700"':""}><td>${o.naam}</td><td class="num">${f1(o.pe)}</td><td class="num">${o.eps}%</td><td class="num">${f1(o.peg)}</td></tr>`).join("")}</table>${nt(`${r.naam} is goedkoper dan ${ch} van de ${p.length} en groeit sneller dan ${fa}. Dit zijn bedrijven uit dezelfde sector in jouw bezit en op je shortlist. Later kun je per bedrijf zelf je concurrenten kiezen.`)}</div></div>`}
+const QL=["Q3 2026","Q2 2026","Q1 2026","Q4 2025"];
+function erTbl(r){const x=xd(r),b=x.er.filter(e=>e.s>0).length,u=x.er.filter(e=>e.k>0).length;
+ return `<div class="sec"><h2>Laatste vier cijferseizoenen</h2><div class="tile"><table class="t"><tr><th>Kwartaal</th><th>Winst vs. verwacht</th><th>Koers erna</th></tr>${x.er.map((e,i)=>`<tr><td>${QL[i]}</td><td class="num ${cls(e.s)}">${pc(e.s,0)}</td><td class="num ${cls(e.k)}">${pc(e.k,0)}</td></tr>`).join("")}</table>${nt(`Boven de verwachting in ${b} van 4, en de koers steeg de dag erna in ${u} van 4. Een goed cijfer waarbij de koers toch daalt betekent vaak dat er al veel in de prijs zat. Voorbeeldcijfers.`)}</div></div>`}
+
+/* winst per bedrijf */
+function winD(r){const hh=HIST[r.tk],yrs=hh?Math.max(.3,(Date.now()-new Date(hh.eerste).getTime())/315576e5):1.5+(r.h%5)*.5,k=r.waarde-r.inkoop,d=r.inkoop*(r.yld||0)/100*Math.min(yrs,6);return {k,d,t:k+d,yrs}}
+function winTile(r){const w=winD(r);return `<div class="chart"><h3>Winst op deze positie</h3>${kvs([["Koerswinst",eur(w.k),cls(w.k)],["Dividend",eur(w.d)],["Totaal",eur(w.t),cls(w.t)]])}<div class="note">Koerswinst is waarde nu min inkoop, uit je export. Dividend is een schatting: inkoop maal rendement maal de tijd dat je het aandeel hebt (schatting).${w.t>0?` Samen is dat ${pc(w.t/r.inkoop*100)} op je inleg.`:""}</div></div>`}
+function inzWin(){const l=own.map(r=>({r,w:winD(r)})).sort((a,b)=>b.w.t-a.w.t),T=l.reduce((t,x)=>t+x.w.t,0),K=l.reduce((t,x)=>t+x.w.k,0),Dv=l.reduce((t,x)=>t+x.w.d,0),mx=Math.max(...l.map(x=>Math.abs(x.w.t)),1);
+ const row=x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.w.t)/mx*100)}%;background:var(--${x.w.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.w.t)}">${eur(x.w.t)}</b></div>`;
+ return fold("Winst per bedrijf",eur(T)+" op open posities",`<button data-s="winst" ${GOB}>${kvs([["Koerswinst",eur(K),cls(K)],["Dividend, geschat",eur(Dv)],["Totaal",eur(T),cls(T)]])}<div class="lbl" style="margin-top:12px">Draagt het meest bij</div>${l.slice(0,3).map(row).join("")}<div class="lbl" style="margin-top:10px">Draagt het minst bij</div>${l.slice(-3).reverse().map(row).join("")}${nt("Alleen je huidige posities. Wat je eerder verkocht staat in Waar je winst vandaan komt.")}${goRow("Alle bedrijven")}</button>`)}
+function winSub(){const l=own.map(r=>({r,w:winD(r)})).sort((a,b)=>b.w.t-a.w.t),mx=Math.max(...l.map(x=>Math.abs(x.w.t)),1);
+ return `<div class="tile" style="margin-top:12px">${l.map(x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.w.t)/mx*100)}%;background:var(--${x.w.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.w.t)}">${eur(x.w.t)}</b></div>`).join("")}</div><div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">koers ${eur(x.w.k)} · dividend ${eur(x.w.d)}</div></span><span style="text-align:right"><div class="num ${cls(x.w.t)}">${eur(x.w.t)}</div><div class="m num ${cls(x.w.t)}">${pc(x.w.t/x.r.inkoop*100)}</div></span></button>`).join("")}</div></div>${nt("Koerswinst is waarde nu min inkoop en komt uit je export. Dividend is een schatting per bedrijf (inkoop maal rendement maal de tijd dat je het hebt), want je export geeft het dividend alleen per jaar. Later tel ik de echte uitbetalingen per bedrijf uit je rekeningoverzicht.")}`}
+
+/* verkocht te vroeg */
+const SOLD0=[];
+function vtStat(){const l=SOLD0,up=l.filter(x=>x.na>0).length,avg=l.reduce((t,x)=>t+x.na,0)/l.length,w=l.filter(x=>x.g>=0),lo=l.filter(x=>x.g<0);return {l,up,avg,wa:w.reduce((t,x)=>t+x.na,0)/(w.length||1),la:lo.reduce((t,x)=>t+x.na,0)/(lo.length||1),w,lo}}
+function inzVT(){return "";}
+function inzVTOud(){const s=vtStat();
+ return fold("Verkocht te vroeg?","gem. "+pc(s.avg,0)+" erna",`<button data-s="vt" ${GOB}><div style="margin-bottom:8px"></div>${kvs([["Verkopen",String(s.l.length)],["Daarna gestegen",s.up+" van "+s.l.length],["Gemiddeld erna",pc(s.avg,0),cls(s.avg)]])}${s.l.slice(0,3).map(x=>`<div class="hb"><span class="nm">${x.n}</span><div class="tr"></div><b class="num ${cls(x.na)}">${pc(x.na,0)}</b></div>`).join("")}${nt("Voor elke verkochte positie kijk ik hoeveel de koers daarna nog is veranderd. Zo zie je of je verkopen goed getimed waren. Voorbeeld met verzonnen posities; in de echte app komt het uit je transacties.")}${goRow("Alle verkopen")}</button>`)}
+function vtSub(){const s=vtStat();
+ return `<div class="tile" style="margin-top:12px">${kvs([["Daarna gestegen",s.up+" van "+s.l.length],["Gem. na winst-verkoop",pc(s.wa,0),cls(s.wa)],["Gem. na verlies-verkoop",pc(s.la,0),cls(s.la)]])}${nt(s.la>s.wa?"In dit voorbeeld stegen de aandelen die je met verlies verkocht het meest daarna. Dat is het patroon van te vroeg opgeven.":"In dit voorbeeld stegen de aandelen die je met winst verkocht het meest daarna. Dat is het patroon van winst te snel nemen.")}</div><div class="sec"><h2>Alle verkopen</h2><div class="list">${s.l.map(x=>`<div class="row"><span class="grow"><div class="t">${x.n}</div><div class="m">verkocht ${x.d} met ${x.g>=0?"winst":"verlies"} van ${pc(Math.abs(x.g),0).replace("+","")}</div></span><span style="text-align:right"><div class="num ${cls(x.na)}">${pc(x.na,0)}</div><div class="m">sindsdien</div></span></div>`).join("")}</div></div>${nt("Sindsdien is de koers nu tegenover de verkoopkoers. Een stijging na verkoop is niet altijd een fout: soms is een gewonnen kans in een ander aandeel terechtgekomen. Wil je de eigen verkoopregels vastleggen, doe dat dan bij het bedrijf onder Analyse.")}`}
+
+/* gedrag, uit je export */
+function gedStat(){const ys=Object.keys(JR).sort(),k=y=>JR[y].t?JR[y].k/JR[y].t:0,dr=ys.reduce((m,y)=>JR[y].t>JR[m].t?y:m,ys[0]),yr=NOW.getFullYear(),m=NOW.getMonth(),gh=[...Array(m)].filter((_,i)=>sumM(yr,i)>=SDOEL).length;return {ys,k,dr,yr,m,gh,n:JR[yr]?JR[yr].t:0}}
+function inzGed(){const g=gedStat(),t=g.ys.map(y=>JR[y].t||0);
+ return fold("Mijn gedrag",g.n+" transacties dit jaar",`<button data-s="ged" ${GOB}>${miniBars(t,g.ys.map(y=>y.slice(2)),"")}${kvs([["Dit jaar",g.n+" transacties"],["Kosten per transactie",eur(g.k(String(g.yr)),2)],["Stortdoel gehaald",g.gh+" van "+g.m+" mnd"]])}${nt(`Je drukste jaar was ${g.dr} met ${JR[g.dr].t} transacties en ${eur(JR[g.dr].k)} aan kosten. Dit jaar zit je op ${f1(g.n/(g.m+1))} transacties per maand. Echte cijfers uit je DeGiro-export.`)}${goRow("Per jaar")}</button>`)}
+function gedSub(){const g=gedStat();
+ return `<div class="tile" style="margin-top:12px">${miniBars(g.ys.map(y=>JR[y].t||0),g.ys.map(y=>y.slice(2)),"")}</div><div class="sec"><h2>Per jaar</h2><div class="tile"><table class="t"><tr><th>Jaar</th><th>Transacties</th><th>Kosten</th><th>Per stuk</th></tr>${[...g.ys].reverse().map(y=>`<tr><td>${y}</td><td class="num">${JR[y].t}</td><td class="num">${eur(JR[y].k)}</td><td class="num">${eur(g.k(y),2)}</td></tr>`).join("")}</table></div></div><div class="sec"><h2>Regelmaat</h2><div class="tile">${kvs([["Stortdoel",eur(SDOEL)+" per maand"],["Gehaald",g.gh+" van "+g.m+" maanden"],["Dit jaar gestort",eur(sumY(g.yr))]])}${nt("Stortingen uit je eigen lijst en je export. Hoe regelmatiger je stort, hoe minder het uitmaakt wanneer de markt draait.")}</div></div>${nt("Veel transacties kosten geld en hebben zelden meer opgeleverd dan rustig bijkopen. Het is een spiegel, geen oordeel.")}`}
+
+/* correlatie, schommeling en beta */
+function cc(a,b){if(a===b)return 1;const same=OVG.some(g=>g.f(a)&&g.f(b)),h=a.h+b.h;return same?+(.74+(h%9)/50).toFixed(2):a.sector===b.sector?+(.55+(h%12)/60).toFixed(2):+(.28+(h%20)/70).toFixed(2)}
+function pfRisk(){const L=own,s=L.reduce((t,r)=>t+r.w,0);let v=0,ind=0,sw=0;L.forEach(a=>{const wa=a.w/s,sa=xd(a).vol/100;sw+=wa*sa;ind+=wa*wa*sa*sa;L.forEach(b=>{v+=wa*(b.w/s)*sa*(xd(b).vol/100)*cc(a,b)})});
+ const pr=[];for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const c=cc(L[i],L[j]);if(c>=.78)pr.push({a:L[i],b:L[j],c,w:L[i].w+L[j].w})}
+ pr.sort((x,y)=>y.c*Math.min(x.w,12)-x.c*Math.min(y.w,12)||y.c-x.c);
+ return {vol:Math.sqrt(v)*100,ind:Math.sqrt(ind)*100,avg:sw*100,div:sw/Math.sqrt(v),beta:wAvg(r=>xd(r).beta),pr}}
+function inzCorr(){return "";}
+function inzCorrOud(){const k=pfRisk();
+ return fold("Schommeling en correlatie","verwacht "+Math.round(k.vol)+"% per jaar",`<button data-s="corr" ${GOB}>${kvs([["Schommeling",f1(k.vol)+"%"],["Beta",d2(k.beta)],["Spreidingsvoordeel",f1((1-k.vol/k.avg)*100)+"%"]])}<div class="lbl" style="margin-top:12px">Bedrijven die bijna gelijk bewegen</div>${k.pr.slice(0,4).map(p=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0"><span>${p.a.naam} en ${p.b.naam}</span><b class="num">${d2(p.c)}</b></div>`).join("")||nt("Geen paren boven 0,78.")}${nt("Schommeling is de verwachte jaarlijkse koersbeweging van je hele portefeuille, op basis van de beweging per bedrijf en hoe ze samenhangen. Zou alles onafhankelijk bewegen, dan was het "+f1(k.ind)+"%. Voorbeeldcijfers; in de echte app berekend uit vijf jaar echte weekkoersen.")}${goRow("Paren en risico per bedrijf")}</button><div class="chips" style="padding:10px 0 0">${[["beta","Beta"],["vol","Schommeling"],["dd","Diepste daling"]].map(([k,t])=>`<button class="chip" data-s="x_${k}">${t} per bedrijf ›</button>`).join("")}</div>`)}
+function corrSub(){const k=pfRisk();
+ return `<div class="tile" style="margin-top:12px">${kvs([["Schommeling",f1(k.vol)+"%"],["Zonder samenhang",f1(k.ind)+"%"],["Gem. per bedrijf",f1(k.avg)+"%"]])}<div style="margin-top:8px">${kvs([["Beta",d2(k.beta)],["Spreidingsfactor",d2(k.div)+"×"],["Paren boven 0,78",String(k.pr.length)]])}</div>${nt("Spreidingsfactor is hoeveel rustiger je portefeuille is dan het gemiddelde van de losse bedrijven. Hoger is beter gespreid. Alles dat boven 0,78 correleert, beweegt bijna als één aandeel: het derde bedrijf in zo'n groep voegt weinig toe. Voorbeeldcijfers.")}</div><div class="sec"><h2>Paren die bijna gelijk bewegen</h2><div class="list">${k.pr.slice(0,14).map(p=>`<button class="row" data-d="${p.a.tk}"><span class="grow"><div class="t">${p.a.naam} en ${p.b.naam}</div><div class="m">samen ${f1(p.w)}% van je portefeuille</div></span><span class="num">${d2(p.c)}</span></button>`).join("")}</div></div><div class="chips" style="padding:10px 0 0">${[["beta","Beta"],["vol","Schommeling"],["dd","Diepste daling"]].map(([a,t])=>`<button class="chip" data-s="x_${a}">${t} per bedrijf ›</button>`).join("")}<button class="chip" data-s="spr">Spreiding ›</button></div>`}
+
+/* eigen verkoopcriteria */
+let VK={};try{VK=JSON.parse(localStorage.getItem("pf_vk")||"{}")}catch(e){}
+const saveVK=()=>{try{localStorage.setItem("pf_vk",JSON.stringify(VK))}catch(e){}};
+function vkHit(r){const v=VK[r.tk]||{},h=[];if(r.watch)return h;
+ if(v.pe>0&&r.pe>v.pe)h.push({t:"PE boven je grens",m:`PE ${f1(r.pe)} ligt boven de ${f1(v.pe)} die je als verkoopgrens opschreef.`});
+ if(v.eps>0&&r.eps<v.eps)h.push({t:"Winstgroei onder je grens",m:`Winstgroei ${r.eps}% ligt onder de ${f1(v.eps)}% die je als grens opschreef.`});
+ if(v.w>0&&r.w>v.w)h.push({t:"Weging boven je grens",m:`Weging ${f1(r.w)}% ligt boven de ${f1(v.w)}% die je als grens opschreef.`});
+ return h}
+function vkStatus(r){const v=VK[r.tk]||{},h=vkHit(r),any=v.pe>0||v.eps>0||v.w>0;
+ if(h.length)return h.map(x=>`<div class="row" style="align-items:flex-start"><span class="dot r" style="margin-top:6px"></span><span class="grow"><div class="t" style="white-space:normal">${x.t}</div><div class="m" style="white-space:normal">${x.m}</div></span></div>`).join("");
+ return `<div class="note" style="margin:0">${any?"Geen van je criteria is geraakt.":"Nog niets ingevuld. Laat een veld leeg als je die grens niet wilt."}</div>`}
+function vkTile(r){if(r.watch)return "";const v=VK[r.tk]||{},inp=(id,l,val,ph)=>`<label class="note" style="margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:4px">${l}<input id="${id}" data-tk="${r.tk}" type="number" inputmode="decimal" value="${val||""}" placeholder="${ph}" ${IPT}></label>`;
+ return `<div class="sec"><h2>Mijn verkoopcriteria</h2><div class="tile"><div class="note" style="margin:0 0 8px">Schrijf op wanneer je ${r.naam} zou verkopen, nu je nuchter bent. Raakt het bedrijf een grens, dan wordt mijn oordeel Verkoop overwegen en krijg je een melding.</div><div class="three">${inp("vk_pe","PE boven",v.pe,"bijv. "+Math.round(r.peh*1.4))}${inp("vk_eps","Groei onder (%)",v.eps,"bijv. 10")}${inp("vk_w","Weging boven (%)",v.w,"bijv. 12")}</div><textarea id="vk_x" data-tk="${r.tk}" placeholder="In eigen woorden: wanneer verkoop ik? Bijvoorbeeld: als de oprichter vertrekt." style="margin-top:8px">${v.x||""}</textarea><div id="vkOut" style="margin-top:8px">${vkStatus(r)}</div></div></div>`}
+
+/* koopzone */
+function zone(r){const zpe=Math.min(r.peh*.95,PAR.peg*r.eps),need=(1-zpe/r.pe)*100;return {zpe,need:Math.max(0,need),inz:r.pe<=zpe,near:need>0&&need<=3}}
+const zt=r=>{const z=zone(r);return z.inz?"bereikt":z.near?"bijna, koers −"+f1(z.need)+"%":"koers −"+Math.round(z.need)+"%"};
+function zoneTile(r){const z=zone(r);
+ return `<div class="sec"><h2>${r.watch?"Koopzone":"Bijkoopzone"}</h2><div class="tile"><div class="facts" style="margin:0"><div class="fact"><small>PE nu</small><b class="num">${f1(r.pe)}</b></div><div class="fact"><small>Zone vanaf PE</small><b class="num">${f1(z.zpe)}</b></div><div class="fact"><small>Status</small><b><span class="pill ${z.inz?"g":z.near?"a":"n"}">${z.inz?"In de zone":z.near?"Bijna":"Nog niet"}</span></b><em>${z.inz?"":"koers "+(z.need>0?"−"+f1(z.need)+"%":"")+" bij gelijke winst"}</em></div></div>${nt(`De zone is waar ik kopen pas interessant vind: een PE van hooguit 95% van het eigen gemiddelde (${f1(r.peh)}) en een PEG onder je grens van ${f1(PAR.peg)}. Het strengste van die twee telt. Je krijgt een melding zodra een bedrijf op je shortlist de zone ingaat, en ook als hij binnen 3% komt.`)}</div></div>`}
+function inzZone(){const w=rows.filter(r=>r.watch).map(r=>({r,z:zone(r)})).sort((a,b)=>a.z.need-b.z.need),n=w.filter(x=>x.z.inz).length,nb=w.filter(x=>x.z.near).length;
+ return fold("Koopzone van je shortlist",n+" in de zone, "+nb+" bijna",`${w.slice(0,5).map(x=>`<button class="row" data-d="${x.r.tk}"><span class="dot ${x.z.inz?"g":x.z.near?"a":"n"}"></span><span class="grow"><div class="t">${x.r.naam}</div><div class="m">PE ${f1(x.r.pe)} · zone vanaf ${f1(x.z.zpe)}</div></span><span class="m num">${x.z.inz?"in de zone":"koers −"+f1(x.z.need)+"%"}</span></button>`).join("")}${nt("De vijf dichtstbij. Dit zijn de bedrijven die ik wil kopen als de prijs goed is, niet nu. Een push vertelt je zodra er een binnenkomt.")}<button class="chip" data-kz="1" style="margin-top:8px">Hele shortlist ›</button>`)}
+
+/* beslislogboek */
+let LOG=[];try{LOG=JSON.parse(localStorage.getItem("pf_log")||"[]")}catch(e){}
+const saveLog=()=>{try{localStorage.setItem("pf_log",JSON.stringify(LOG))}catch(e){}};
+const LOG0=[];
+const logList=()=>LOG.length?LOG:LOG0;
+const logRow=(e,del)=>`<div class="row" style="align-items:flex-start"><span class="grow"><div class="t" style="white-space:normal">${nameOf(e.tk)} <span class="pill ${e.ty==="Kopen"?"g":e.ty==="Verkopen"?"r":"n"}">${e.ty}</span>${e.ex?'':""}</div><div class="m">${new Date(e.d).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})}</div><div class="m" style="white-space:normal;color:var(--fg);font-size:14px;margin-top:4px">${e.x}</div></span>${del&&!e.ex?`<button class="chip" data-ldel="${LOG.indexOf(e)}">Verwijder</button>`:""}</div>`;
+function logTile(r){const l=logList().filter(e=>e.tk===r.tk);
+ return `<div class="sec"><h2>Beslislogboek</h2><div class="tile"><div class="note" style="margin:0 0 8px">Schrijf op waarom je iets doet. Over een jaar lees je terug of je redenering klopte. Alleen op dit toestel bewaard.</div><label class="note" style="margin:0">Soort<br><select id="lgT" style="width:100%"><option>Kopen</option><option>Verkopen</option><option>Houden</option><option>Besluit</option></select></label><textarea id="lgX" placeholder="Wat is je reden en wanneer heroverweeg je?" style="margin-top:8px"></textarea><button class="chip" id="logAdd" data-tk="${r.tk}" style="margin-top:8px;background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:600">Toevoegen</button></div>${l.length?`<div class="list" style="margin-top:8px">${l.map(e=>logRow(e,1)).join("")}</div>`:""}</div>`}
+function inzLog(){const l=logList().slice(0,5);
+ return `<div class="list">${l.map(e=>logRow(e,0)).join("")}</div>${nt("Een notitie schrijf je bij het bedrijf zelf, onder Positie. Hier zie je de laatste. Later zet ik bij elke notitie hoeveel de koers sindsdien is veranderd, zodat je ziet of je redenering klopte.")}`}
+
+/* belasting */
+let BOX={p:0,s:0};try{BOX=Object.assign(BOX,JSON.parse(localStorage.getItem("pf_box")||"{}"))}catch(e){}
+const saveBox=()=>{try{localStorage.setItem("pf_box",JSON.stringify(BOX))}catch(e){}};
+const B3={2025:{h:57684,rb:5.88,rs:1.37,res:YRS[0]},2026:{h:59357,rb:6.00,rs:1.28,res:YRS[1]}};
+function b3(y){const c=B3[y],V=c.res.begin,S=+BOX.s||0,H=c.h*(BOX.p?2:1),T=V+S,ret=V*c.rb/100+S*c.rs/100,fr=T>0?Math.max(0,T-H)/T:0,inc=ret*fr;return {V,S,H,T,ret,inc,tax:inc*.36,c}}
+function boxHtml(){const a=b3(2026),b=b3(2025),r25=YRS[0].res;
+ return `${kvs([["Verwacht 2026",eur(a.tax)],["Aanslag 2025",eur(b.tax)],["Per € 10.000 extra",eur(10000*a.c.rb/100*.36)]])}
+ <div style="margin-top:8px">${kvs([["Vermogen 1 jan 2026",eur(a.T)],["Heffingvrij",eur(a.H)],["Fictief rendement",eur(a.inc)]])}</div>
+ <div class="lbl" style="margin-top:12px">Forfait tegenover wat je echt verdiende</div>${kvs([["Echt 2025",eur(r25),cls(r25)],["Forfait 2025",eur(b.ret)],["Aanslag in % van echt",f1(b.tax/r25*100)+"%"]])}
+ ${nt(`Box 3 rekent met een vast rendement (${f1(a.c.rb)}% voor beleggingen in 2026) over wat je op 1 januari bezat, boven het heffingvrije bedrag. Daar betaal je 36% over. Wat je echt verdiende doet niet mee. In 2025 verdiende je ${eur(r25)} en rekende de fiscus met ${eur(b.ret)}.`)}
+ ${nt("Alleen 1 januari telt. Zet je op 31 december € 10.000 extra op je rekening, dan kost dat ongeveer "+eur(10000*a.c.rb/100*.36)+" belasting over dat jaar, ook als je het pas in januari belegt: geld op een bankrekening telt ook mee, dus het verschuift alleen. Is je werkelijke rendement in een slecht jaar lager dan het forfait, dan kun je dat aantonen (tegenbewijs). Sparen heeft een lager forfait.")}
+ ${nt("Een rekenvoorbeeld op basis van je DeGiro-vermogen en de tarieven van het jaar, geen belastingadvies. Schulden, spaargeld en vermogen van je partner voeg je toe bij Ander vermogen. Controleer de definitieve bedragen bij de Belastingdienst.")}`}
+function drawBox(){const el=document.getElementById("bxOut");if(el)el.innerHTML=boxHtml()}
+function inzBox(){const a=b3(2026);
+ return fold("Box 3",eur(a.tax)+" verwacht 2026",`<label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Ander vermogen in box 3 (€)<input id="bxS" type="number" inputmode="numeric" value="${BOX.s||""}" placeholder="0" ${IPT}></label><label class="sw2" style="padding:10px 0 0;border:0"><span class="grow"><div class="t" style="font-weight:600">Fiscaal partner</div><div class="m" style="font-size:13px;color:var(--mut)">Verdubbelt het heffingvrije bedrag</div></span><input type="checkbox" id="bxP" ${BOX.p?"checked":""}></label><div id="bxOut" style="margin-top:10px">${boxHtml()}</div>`)}
+const BRON={NL:[15,15],VS:[15,15],VK:[0,0],CA:[25,15],SE:[30,15],DE:[26.375,15],FR:[25,12.8],IT:[26,15],KZ:[15,15],BR:[0,0],AR:[7,7],TW:[21,21]};
+function bronData(){const m={};own.forEach(r=>{const d=r.waarde*(r.yld||0)/100;if(d<=0)return;(m[r.land]=m[r.land]||{d:0,l:[]});m[r.land].d+=d;m[r.land].l.push(r)});
+ return Object.entries(m).map(([k,o])=>{const [w,v]=BRON[k]||[15,15];return {k,d:o.d,w,v,ing:o.d*w/100,terug:o.d*(w-v)/100,l:o.l}}).sort((a,b)=>b.terug-a.terug||b.d-a.d)}
+function inzBronb(){const l=bronData(),D=l.reduce((t,x)=>t+x.d,0),I=l.reduce((t,x)=>t+x.ing,0),T=l.reduce((t,x)=>t+x.terug,0);
+ return fold("Bronbelasting op dividend",eur(T)+" terug",`<button data-s="bronb" ${GOB}>${kvs([["Dividend, bruto",eur(D)],["Ingehouden",eur(I)],["Terug te vragen",eur(T),T>0?"pos":""]])}${l.filter(x=>x.terug>1).slice(0,4).map(x=>`<div class="hb"><span class="nm">${LNd[x.k]||x.k}</span><div class="tr"><i style="width:${Math.min(100,x.terug/(l[0].terug||1)*100)}%;background:var(--acc)"></i></div><b class="num">${eur(x.terug)}</b></div>`).join("")}${nt("Landen houden soms meer in dan het belastingverdrag toestaat. Het verschil kun je terugvragen. Schatting op basis van je bezit en het dividendrendement; je werkelijke dividend kan afwijken.")}${goRow("Per land")}</button>`)}
+function bronSub(){const l=bronData(),T=l.reduce((t,x)=>t+x.terug,0),I=l.reduce((t,x)=>t+x.ing,0);
+ return `<div class="tile" style="margin-top:12px">${kvs([["Verwacht ingehouden",eur(I)],["Terug te vragen",eur(T),T>0?"pos":""],["Landen",String(l.length)]])}</div><div class="sec"><h2>Per land</h2>${l.map(x=>`<details class="tile" style="margin-top:8px;padding:0"${x.terug>1?" open":""}><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span><b>${LNd[x.k]||x.k}</b> <span class="num" style="color:var(--mut)">${f1(x.w)}% ingehouden</span></span><span class="num">${x.terug>1?eur(x.terug)+" terug":"niets terug"}</span></summary><div style="padding:0 12px 12px">${kvs([["Dividend",eur(x.d)],["Ingehouden",eur(x.ing)],["Verdragstarief",f1(x.v)+"%"]])}<div class="note" style="margin-top:8px">${x.l.map(r=>r.naam).join(", ")}. ${x.k==="NL"?"Nederlandse dividendbelasting verreken je in je aangifte, die gaat dus niet verloren.":x.terug>1?"Het te veel ingehouden deel vraag je terug bij de belastingdienst van dat land, vaak met een formulier. Bij kleine bedragen loont dat soms niet.":"Dit is al het verdragstarief."}</div></div></details>`).join("")}</div>${nt("Standaardtarieven en verdragstarieven zijn vereenvoudigd en kunnen veranderen. Buitenlandse bronbelasting is in je aangifte vaak te verrekenen, tot het verdragstarief. Dit is geen belastingadvies; laat het bij grote bedragen nakijken. Later gebruik ik de echte inhoudingen uit je export.")}`}
+
+/* markt op Start */
+const MKT={vix:16.8,sp:.3,sp200:4.1};
+function marktBlok(){const dp=own.reduce((s,r)=>s+r.w*r.dag,0)/own.reduce((s,r)=>s+r.w,0),st=MKT.vix<15?["Zeer rustig","g"]:MKT.vix<20?["Rustig","g"]:MKT.vix<30?["Onrustig","a"]:["Angstig","r"];
+ return `<div class="tile" style="margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="lbl" style="margin:0">Markt vandaag</div><span class="pill ${st[1]}">${st[0]}</span></div>${kvs([["Angst-index (VIX)",f1(MKT.vix)],["S&P 500",pc(MKT.sp)],["Jij vandaag",pc(dp),cls(dp)]])}<div class="s" style="white-space:normal">De S&P 500 staat ${f1(MKT.sp200)}% boven het 200-daags gemiddelde. ${MKT.vix<20?"Een rustige markt is geen reden om iets te doen.":"In een onrustige markt helpt het om niets te forceren."} Voorbeeldcijfers.</div></div>`}
+
+/* inzichten: schakelaar */
+let inzTab="rend";try{inzTab=localStorage.getItem("pf_inz")||"rend"}catch(e){}
+function subX(k){if(!k)return null;
+ if(k.startsWith("x_")){const a=k.slice(2);return XM[a]?[XM[a].t,xSub(a)]:null}
+ if(k==="winst")return ["Winst per bedrijf",winSub()];
+ if(k==="vt")return ["Verkocht te vroeg?",vtSub()];
+ if(k==="ged")return ["Mijn gedrag",gedSub()];
+ if(k==="bronb")return ["Bronbelasting op dividend",bronSub()];
+ if(k==="corr")return ["Schommeling en correlatie",corrSub()];
+ return null}
+
+const sekt=(t,h)=>`<div class="sec"><h2>${t}</h2>${h}</div>`;
+function nieuweInz(){return `<div class="sec"><h2>Meer inzichten</h2>${inzDiv()}${inzBron()}${inzKw()}${inzGT()}${inzOpt()}${inzConc()}${inzSeizoen()}${inzVolg()}${inzDD()}</div>`}
+function vInz(){
+ setTimeout(()=>{drawPrj();drawStress();drawVal();drawOpt();drawBox()},0);
+ const secOpts=Object.keys(secW).map(k=>`<option>${k}</option>`).join("");
+ const P={stS:`<div class="sec"><h2>Stresstest sector</h2><div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Sector daalt<select id="stS" style="width:100%">${secOpts}</select></label><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Daling in %<input id="stP" type="number" inputmode="decimal" min="-100" max="100" step="1" value="30" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><div id="stOut"></div></div></div>`,stV:`<div class="sec"><h2>Stresstest valuta</h2><div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Valuta daalt<select id="vS" style="width:100%"><option value="USD">Dollar (USD)</option><option value="GBP">Pond (GBP)</option><option value="ov">Overige valuta</option><option value="all">Alle valuta buiten de euro</option></select></label><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Daling in %<input id="vP" type="number" inputmode="decimal" min="-100" max="100" step="1" value="10" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><div id="vOut"></div></div></div>`,wd:`<div class="sec"><h2>Waardering tegenover groei</h2>${secChips()}<button class="tile go" data-s="waard">${bubble()}<div class="note">Grootte is weging. Linksboven is goedkoop en snel groeiend, rechtsonder is duur en traag. De stippellijn is je doel van ${DOEL}%. Kleur is het oordeel uit Doelcheck. Namen staan alleen bij de grootste en opvallendste stippen. Tik voor de lijst per bedrijf.</div></button></div>`,vo:`<div class="sec"><h2>Vooruitblik</h2><div class="tile"><div class="three">${[["prm","Inleg per maand",prj.m,0,"numeric"],["pry","Aantal jaren",prj.y,1,"numeric"],["prr","Rendement in %",prj.r,0,"decimal"]].map(([id,l,v,mn,im])=>`<label class="note" style="margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:4px">${l}<input id="${id}" type="number" inputmode="${im}" min="${mn}" ${id==="prr"?'step="0.5" max="60"':id==="pry"?'max="60"':'step="100"'} value="${v}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label>`).join("")}</div><input id="prj" class="rg" type="range" min="5" max="25" step="0.5" value="${Math.min(25,Math.max(5,prj.r))}" aria-label="Rendement" style="margin-top:10px"><div id="prjOut" style="margin-top:8px"></div><div class="note">Lijnen: 8% (grijs), jouw keuze (groen) en je eigen ${f1(REAL.xirr)}% (blauw). Vul alles zelf in. Een rekenvoorbeeld, geen voorspelling.</div></div></div>`,ko:`<div class="sec"><h2>Kosten en belasting</h2><button class="tile go" data-s="kosten">${kostChart()}<div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Kosten</small><b class="num">${eur(REAL.kosten)}</b></div><div><small>Dividendbelasting</small><b class="num">${eur(REAL.divbel)}</b></div></div><div class="note">Van elke € 100 winst gaat € ${f1(kPct())} naar kosten, en € ${f1(kbPct())} als je de dividendbelasting meetelt. Staafjes zijn alle kosten per jaar. Tik voor elk jaar.</div></button></div>`};
+ const seg=`<div class="seg segi" style="margin:8px 0 4px">${[["rend","Rendement"],["risico","Risico"],["kwal","Kwaliteit"],["bel","Belasting"],["plan","Plannen"]].map(([k,t])=>`<button data-it="${k}" aria-pressed="${inzTab===k}">${t}</button>`).join("")}</div>`;
+ const T={
+  rend:yearSec()+sekt("Rendement",inzBron()+inzGT()+inzWin()+inzDiv()+inzVT()+inzGed()),
+  risico:sekt("Risico en spreiding",inzConc()+inzCorr()+inzOpt()+inzDD())+P.stS+P.stV+aiSec(),
+  kwal:sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
+  bel:sekt("Belasting",inzBox()+inzBronb())+P.ko,
+  plan:sekt("Deze maand",inzVolg()+inzZone()+inzSeizoen())+P.vo+sekt("Beslislogboek",inzLog())};
+ return head("Inzichten")+seg+(T[inzTab]||T.rend)+demo}
+const KC=[["Aankoop","--c1",o=>o.fb||0],["Verkoop","--c2",o=>o.fv||0],["Valuta","--c3",o=>o.fx||0],["Beurstaks","--c4",o=>o.ks||0],["Aansluiting","--c5",o=>o.ka||0],["Rente en overig","--cx",o=>(o.r||0)+(o.ko||0)]];
+function kostChart(){const ys=Object.keys(JR).sort(),W=320,H=110,top=14,bot=H-18,tot=y=>KC.reduce((t,c)=>t+c[2](JR[y]),0),mx=Math.max(...ys.map(tot),1),bw=W/ys.length;
+ return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Kosten per jaar, per soort"><line class="g" x1="0" x2="${W}" y1="${bot}" y2="${bot}"/>${ys.map((y,k)=>{const x=k*bw+bw*.18,w=bw*.64;let acc=0;const segs=KC.map(c=>{const v=c[2](JR[y]),h=v/mx*(bot-top),yy=bot-acc-h;acc+=h;return h>0?`<rect x="${x}" y="${yy}" width="${w}" height="${h}" fill="var(${c[1]})"><title>${y} ${c[0]}: ${hide?"":eur(v)}</title></rect>`:""}).join("");const t=tot(y);return segs+(t>=mx*.5&&!hide?`<text x="${x+w/2}" y="${bot-acc-3}" text-anchor="middle">${t>=1000?(t/1000).toFixed(1).replace(".",",")+"k":Math.round(t)}</text>`:"")+`<text x="${x+w/2}" y="${H-4}" text-anchor="middle">${y.slice(2)}</text>`}).join("")}</svg><div class="s" style="display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px;font-size:12px">${KC.map(c=>`<span><span class="sw3" style="background:var(${c[1]})"></span>${c[0]}</span>`).join("")}</div>`}
+const winstVK=()=>BROKER_WV+REAL.kosten,kPct=()=>REAL.kosten/winstVK()*100,kbPct=()=>(REAL.kosten+REAL.divbel)/(winstVK()+REAL.divbel)*100;
+const sumJ=k=>Object.values(JR).reduce((t,o)=>t+(o[k]||0),0);
+function kostPosten(o){const hf=IMP.acc?IMP.hasFee:true,hx=IMP.acc?IMP.hasFx:true,a=[];
+ if(hf){a.push(["Aankoop van aandelen",o.fb||0]);a.push(["Verkoop van aandelen",o.fv||0])}else a.push(["Transactiekosten",o.kt||0]);
+ a.push(["Valuta omzetten (AutoFX)",hx?(o.fx||0):null]);a.push(["Beurstaks (zegelrecht)",o.ks||0]);a.push(["Aansluiting beurzen",o.ka||0]);a.push(["Rente op negatief saldo",o.r||0]);a.push(["Overige DEGIRO-kosten",o.ko||0]);a.push(["Dividendbelasting",o.b!=null?o.b:null]);return a}
+function kostSplit(){
+ const tot={fb:sumJ("fb"),fv:sumJ("fv"),kt:sumJ("kt"),fx:sumJ("fx"),ka:sumJ("ka"),ks:sumJ("ks"),r:sumJ("r"),ko:sumJ("ko"),b:sumJ("b")};
+ const rows=kostPosten(tot),mx=Math.max(...rows.map(r=>r[1]||0),1);
+ return `<div class="sec"><h2>Waar gaan de kosten naartoe</h2><div class="tile">${rows.map(([n,v])=>`<div style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${n}</span><b class="num">${v==null?"n.v.t.":eur(v)}</b></div><div style="margin-top:4px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${v?v/mx*100:0}%;background:var(--acc)"></i></div></div>`).join("")}<div class="note">${(IMP.acc?IMP.hasFx:true)?"":"Valutakosten ontbreken: je Transactions.csv heeft geen kolom met AutoFX-kosten. "}${(IMP.acc?IMP.hasFee:true)?"":"Aankoop en verkoop zijn niet gesplitst, omdat de kostenkolom in je Transactions.csv niet is herkend. "}Valutakosten komen uit je transacties en zitten niet in het rekeningoverzicht. Dividend in andere valuta heeft geen aparte belasting in euro.</div></div></div>`}
+const yBeg=y=>{const r=YRS.find(x=>x.y===+y);return r?r.begin:0};
+function kostRow(y){const d=JR[y],tot=d.k+(d.b||0),per=d.t?d.k/d.t:0;
+ return `<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span>${y}</span><span class="num" style="color:var(--mut)">${eur(d.k)} kosten${d.b!=null?" · "+eur(d.b)+" belasting":""}</span></summary><div style="padding:0 12px 12px"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Kosten</small><b class="num">${eur(d.k)}</b><small>${yBeg(y)?f1(d.k/yBeg(y)*100)+"% yield":""}</small></div><div><small>Transacties</small><b class="num">${d.t}</b></div><div><small>Per transactie</small><b class="num">${d.t?eur(per):"n.v.t."}</b></div></div><div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Dividendbelasting</small><b class="num">${d.b!=null?eur(d.b):"na import"}</b></div><div><small>Kosten als % van storting</small><b class="num">${d.i?f1(d.k/d.i*100)+"%":"n.v.t."}</b></div></div>${(()=>{const yr=YRS.find(z=>z.y===+y);return yr?`<div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Kosten als % van resultaat</small><b class="num">${f1(d.k/(yr.res+d.k)*100)}%</b></div><div><small>Rendement gedrukt met</small><b class="num">${f1(d.k/yr.begin*100)} procentpunt</b></div></div>`:""})()}${true?`<div class="list" style="margin-top:8px">${kostPosten(d).map(([n,v])=>`<div class="row"><span class="grow m">${n}</span><span class="num">${v==null?"n.v.t.":eur(v)}</span></div>`).join("")}</div>`:""}</div></details>`}
+function yearRow(y){const d=JR[y],real=YRS.find(x=>x.y===+y);const netto=d.i-d.u;let cum=0;Object.keys(JR).filter(k=>+k<=+y).forEach(k=>cum+=JR[k].i-JR[k].u);
+ const head=real?`<span class="num ${cls(real.res)}">${pc(real.res/real.begin*100)}</span>`:"";const bin=(d.g||0)+(d.dv||0);
+ return `<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span>${y}${real&&real.lopend?" (tot nu)":""}</span><span style="text-align:right"><span class="num" style="color:var(--mut)">${eur(netto)} netto ${head}</span><br><span class="num ${cls(bin)}" style="font-size:12px">${bin>=0?"+":"−"}${eur(Math.abs(bin))} binnengehaald</span></span></summary><div style="padding:0 12px 12px"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Gestort</small><b class="num">${eur(d.i)}</b></div><div><small>Opgenomen</small><b class="num">${eur(d.u)}</b></div><div><small>Netto</small><b class="num">${eur(netto)}</b></div><div><small>Totaal inleg tot nu</small><b class="num">${eur(cum)}</b></div><div><small>Kosten</small><b class="num">${eur(d.k)}</b><small>${yBeg(y)?f1(d.k/yBeg(y)*100)+"% yield":""}</small></div><div><small>Transacties</small><b class="num">${d.t}</b></div></div>${d.g!=null||d.dv!=null?`<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Winst op verkopen</small><b class="num ${cls(d.g||0)}">${eur(d.g||0)}</b></div><div><small>Dividend (netto)</small><b class="num">${eur(d.dv||0)}</b></div><div><small>Samen</small><b class="num ${cls(bin)}">${eur(bin)}</b></div></div>`:""}${real?`<div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Vermogen begin</small><b class="num">${eur(real.begin)}</b></div><div><small>Vermogen eind</small><b class="num">${eur(real.eind)}</b></div><div><small>Resultaat</small><b class="num ${cls(real.res)}">${eur(real.res)}</b></div><div><small>Yield</small><b class="num ${cls(real.res)}">${pc(real.res/real.begin*100)}</b></div></div>`:`<div class="note">Binnengehaald is wat je dat jaar echt hebt gerealiseerd: winst of verlies op verkochte aandelen plus dividend. De koerswinst op wat je nog bezat komt erbij zodra de app je vermogen per jaareinde heeft nagebouwd met koersdata. Daarom staat hier nog geen yield.</div>`}</div></details>`}
+function vSub(){
+ const k=sub;let body="",title="";const X=subX(k);if(X){title=X[0];body=X[1]}
+ if(k==="jaren"){title="Alle jaren sinds 2016";const it=Object.keys(JR).map(y=>({l:y.slice(2),v:JR[y].i-JR[y].u}));
+  body=cols(it,"Netto inleg per jaar")+`<div class="sec"><h2>Per jaar</h2>${Object.keys(JR).sort().reverse().map(yearRow).join("")}</div><div class="note">Gestort, opgenomen, kosten en aantal transacties komen rechtstreeks uit je DeGiro-rekeningoverzicht en transacties. Kosten zijn de DEGIRO-posten in het rekeningoverzicht.</div>`}
+ if(k==="kosten"){title="Kosten en belasting";const yy=Object.keys(JR).sort();const mx=yy.reduce((m,y)=>JR[y].k>JR[m].k?y:m,yy[0]);const n=yy.reduce((t,y)=>t+JR[y].t,0);
+  body=`<div class="tile" style="margin-top:12px">${kostChart()}<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Kosten</small><b class="num">${eur(REAL.kosten)}</b></div><div><small>Belasting</small><b class="num">${eur(REAL.divbel)}</b></div><div><small>Per transactie</small><b class="num">${eur(REAL.kosten/n)}</b></div></div><div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Kosten als % van winst</small><b class="num">${f1(kPct())}%</b></div><div><small>Met belasting</small><b class="num">${f1(kbPct())}%</b></div></div><div class="note">Winst is wat je totaal hebt verdiend vóór kosten (${eur(winstVK())}). Duurste jaar: ${mx} met ${eur(JR[mx].k)} aan kosten bij ${JR[mx].t} transacties. Dividendbelasting is de belasting die al is ingehouden op dividend in euro's. Buitenlandse dividenden staan er niet bij.</div></div>${kostSplit()}<div class="sec"><h2>Per jaar</h2>${yy.slice().reverse().map(kostRow).join("")}</div><div class="note">Kosten zijn de DEGIRO-posten in je rekeningoverzicht. Resultaat en procentpunt zie je alleen voor 2025 en 2026, de jaren waarvan ik je vermogen ken. De uitsplitsing komt uit je DeGiro-export van 6 november 2026. Laad je een nieuwe export, dan wordt ze bijgewerkt.</div>`}
+ if(k==="rend"){title="Rendement per aandeel";const it=own.map(r=>({r,v:pv(r),e:per==="t"?null:r.waarde*(r.p[per]||0)/(100+(r.p[per]||0))})).sort((a,b)=>(per==="t"?b.v-a.v:b.e-a.e));
+  const keep=per;const rowsT=["d","m","y","f","t"].map(p=>{per=p;const r=portPerf();return `<tr><td>${p==="t"?"Per jaar sinds 2016":perChip[p]}</td><td class="num ${cls(r.p)}">${pc(r.p)}</td><td class="num">${eur(r.e)}</td></tr>`}).join("");per=keep;
+  body=`<div class="seg" style="margin-top:12px">${Object.keys(perChip).map(k=>`<button data-p="${k}" aria-pressed="${per===k}">${perChip[k]}</button>`).join("")}</div>
+  <div class="sec"><h2>${per==="t"?"Totaalrendement per aandeel, inclusief verkopen":"Bijdrage per aandeel, "+perLbl[per]}</h2><div class="list">${it.map(i=>`<button class="row" data-d="${i.r.tk}"><span class="dot ${i.v>=0?"g":"r"}"></span><span class="grow"><div class="t">${i.r.naam}</div><div class="m">weging ${f1(i.r.w)}%</div></span><span style="text-align:right"><div class="num ${cls(i.v)}">${pc(i.v)}</div>${i.e==null?"":`<div class="m num ${cls(i.e)}">${eur(i.e)}</div>`}</span></button>`).join("")}</div></div>
+  <div class="sec"><h2>Alle periodes</h2><div class="tile"><table class="t"><tr><th>Periode</th><th>Rendement</th><th>Bedrag</th></tr>${rowsT}</table></div></div><div class="note">Dag tot 5 jaar: op je huidige posities, zonder aan- en verkopen. Het bedrag is wat elk aandeel bijdroeg. Bij Totaal zie je per aandeel het rendement over alles wat je erin stopte en eruit haalde.</div>`}
+ if(k==="storten"){title="Stortingen";const y=NOW.getFullYear(),today=NOW.toISOString().slice(0,10);
+  const list=[...STORT].map((x,i)=>({d:x[0],a:x[1],i})).sort((a,b)=>b.d.localeCompare(a.d));
+  body=`<div class="tile" style="margin-top:12px"><div class="lbl">Storting toevoegen</div><div class="two" style="margin-top:8px"><label class="note" style="margin:0">Datum<br><input id="sd" type="date" value="${today}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label><label class="note" style="margin:0">Bedrag in euro<br><input id="sa" type="number" inputmode="decimal" placeholder="500" style="width:100%;text-align:left;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><button class="chip" id="addS" style="margin-top:10px;background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:600">Toevoegen</button></div>
+  <div class="field"><label for="sdoel" style="flex:1">Stortdoel per maand</label><span class="num">€</span><input id="sdoel" type="number" inputmode="numeric" value="${SDOEL}" style="max-width:100px"></div>
+  <div class="sec"><h2>${y} per maand</h2><div class="tile">${stortChart()}${stortGem()}<div class="note">De streep is je maanddoel. Groen is gehaald. Verleden maanden zonder storting tellen als 0.</div></div></div>
+  <div class="sec"><h2>Alle stortingen</h2><div class="list">${list.map(x=>`<div class="row"><span class="grow"><div class="t num">${eur(x.a)}</div><div class="m">${new Date(x.d).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})}</div></span><button class="chip" data-del="${x.i}">Verwijder</button></div>`).join("")||'<div class="row"><span class="grow m">Nog geen stortingen.</span></div>'}</div></div>
+  <div class="note">Stortingen staan op dit toestel. De app kan je bank of DeGiro niet zelf inzien. Of laad je DeGiro-export, dan vult de app ze zelf in (zie Start, DeGiro-export laden).</div>`}
+ if(k==="acties"){title="Actie nodig";const l=actieLijst();body=`<div class="sec"><div class="list">${l.map(actieRij).join("")||'<div class="row"><span class="grow m">Geen acties.</span></div>'}</div></div><div class="note">Acties komen uit je eigen grenzen (10% per bedrijf, 35% per sector), uit het oordeel in Doelcheck uit een PE die meer dan 30% boven het eigen historische gemiddelde ligt, een winstverwachting die 10% of meer daalt, een koers 25% onder de jaartop, een verlaagd dividend, schuld boven 2,5× EBITDA en meerdere verkopende insiders.</div>`}
+ if(k==="waard"){title="Waardering per bedrijf";
+  const Q=[["gs","Goedkoop en snelgroeiend","Winstgroei op of boven je doel en een PE onder het eigen gemiddelde. Dit is de beste plek.",r=>r.pe<r.peh&&r.eps>=DOEL,"g"],["ds","Duur, maar snelgroeiend","Winstgroei op doel, maar je betaalt een premie. Prima zolang de groei blijft komen.",r=>r.pe>=r.peh&&r.eps>=DOEL,"n"],["gt","Goedkoop, maar traag","Lage waardering, maar de groei haalt je doel niet. Goedkoop kan een valkuil zijn.",r=>r.pe<r.peh&&r.eps<DOEL,"a"],["dt","Duur en traag","Hoge waardering en weinig groei. Hier let ik het meest op.",r=>r.pe>=r.peh&&r.eps<DOEL,"r"]];
+  const g=Q.map(q=>({q,l:wOwn().filter(q[3]).sort((a,b)=>b.w-a.w)}));
+  body=`<div style="margin-top:12px">${secChips()}</div><div class="two">${g.map(x=>`<div class="tile"><div class="lbl">${x.q[1]}</div><div class="v num">${x.l.length} <span style="font-size:13px;color:var(--mut);font-weight:400">${f1(x.l.reduce((t,r)=>t+r.w,0))}%</span></div></div>`).join("")}</div>`+
+  g.map(x=>`<details class="tile" style="margin-top:8px;padding:0"${x.q[0]==="dt"||x.q[0]==="gt"?" open":""}><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span><b>${x.q[1]}</b></span><span class="num" style="color:var(--mut)">${x.l.length}</span></summary><div style="padding:0 12px 12px"><div class="note" style="margin:0 0 6px">${x.q[2]}</div><div class="list">${x.l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">PE ${f1(r.pe)} tegenover ${f1(r.peh)} (${r.pe>=r.peh?"+":""}${Math.round((r.pe/r.peh-1)*100)}%) · PEG ${f1(r.peg)}</div><div class="m">Winstgroei ${f1(r.eps)}% per jaar · weging ${f1(r.w)}%</div></span><span class="m">›</span></button>`).join("")||'<div class="row"><span class="grow m">Geen bedrijven.</span></div>'}</div></div></details>`).join("")+
+  `<div class="note">Waardering is de huidige PE tegenover het eigen gemiddelde van het bedrijf zelf. Groei is de winstgroei per aandeel per jaar. PEG is PE gedeeld door die groei. Tik een bedrijf voor alle details.</div>`}
+ if(k==="cluster"){title="Clusters";body=CLU.map(c=>{const l=own.filter(c.f).sort((a,b)=>b.w-a.w),w=cluW(c);return `<div class="tile" style="margin-top:12px"><div class="lbl">${c.n}</div><div class="v num ${w>c.lim?"neg":""}">${f1(w)}% <span style="font-size:13px;color:var(--mut);font-weight:400">grens ${c.lim}%</span></div><div class="s">${c.u}</div></div><div class="list" style="margin-top:8px">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.sector}</div></span><span class="num">${f1(r.w)}%</span></button>`).join("")}</div>`}).join("")+`<div class="note">Clusters zijn groepen bedrijven die vaak samen bewegen. Ze staan los van de sectoren. Een bedrijf kan in meer dan één cluster zitten.</div>`}
+ if(k==="import"){title="DeGiro-export laden";body=vImport()}
+ if(k==="valuta"){title="Valuta";const cur={};own.forEach(r=>{(cur[r.munt]=cur[r.munt]||[]).push(r)});
+  body=Object.entries(cur).sort((a,b)=>b[1].reduce((t,r)=>t+r.w,0)-a[1].reduce((t,r)=>t+r.w,0)).map(([m,l])=>{const w=l.reduce((t,r)=>t+r.w,0);l.sort((a,b)=>b.w-a.w);return `<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span><b>${m}</b> <span class="num" style="color:var(--mut)">${l.length} bedrijven</span></span><span class="num">${f1(w)}%</span></summary><div style="padding:0 12px 12px">${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:"n"})),0,"%")}</div></details>`}).join("")+`<div class="note">Valuta is de valuta waarin het aandeel noteert. Een bedrijf kan ook omzet in andere valuta's hebben. Een daling van de dollar of het pond raakt je waarde in euro's.</div>`}
+ if(k==="sector"){title="Spreiding per sector";body=Object.entries(secW).sort((a,b)=>b[1]-a[1]).map(([sec,w])=>{const l=own.filter(r=>r.sector===sec).sort((a,b)=>b.w-a.w);const avg=l.reduce((t,r)=>t+r.eps*r.w,0)/l.reduce((t,r)=>t+r.w,0);
+   return `<details class="tile" style="margin-top:8px;padding:0"${w>35?" open":""}><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span><b>${sec}</b> <span class="num" style="color:var(--mut)">${l.length} bedrijven</span></span><span class="num ${w>35?"neg":""}">${f1(w)}%</span></summary><div style="padding:0 12px 12px"><div class="note" style="margin:0 0 6px">Gemiddelde winstgroei (gewogen): ${f1(avg)}% per jaar${w>35?". Boven je grens van 35%.":"."}</div>${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:r.licht})),0,"%")}</div></details>`}).join("")}
+ if(k==="bedrijven"){title="Weging per bedrijf";const l=[...own].sort((a,b)=>b.w-a.w);
+  body=`<div class="tile">${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:r.w>=10?"a":"n"})),10,"%")}<div class="note">De streep is je grens van 10%. Oranje staat erboven.</div></div><div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.sector} · ${r.land} · ${r.munt}</div></span><span style="text-align:right"><div class="num">${f1(r.w)}%</div><div class="m num">${eur(r.waarde)}</div></span></button>`).join("")}</div></div>`}
+ if(k==="kwal"){title="Kwaliteit over 5 jaar";body=kwalSub()}
+ if(k==="gt"){title="Geld- tegenover tijdgewogen";body=gtSub()}
+ if(k==="conc"){title="Concentratie";body=concSub()}
+ if(k==="spr"){title="Spreiding";body=sprSub()}
+ if(k==="divpa"){title="Dividend per aandeel";
+  const gr=r=>{const a=(r.D||{}).div_reeks||[];const g1=a.length>=2&&a[a.length-2]>0?Math.round((a[a.length-1]/a[a.length-2]-1)*1000)/10:null;const g5=r.D&&r.D.div_cagr!=null?Math.round(r.D.div_cagr*1000)/10:null;return {g1,g5}};const l=[...own].map(r=>({r,ps:r.waarde/r.qty*(r.yld||0)/100,tot:r.waarde*(r.yld||0)/100,...gr(r)})).sort((a,b)=>b.tot-a.tot),T=l.reduce((t,x)=>t+x.tot,0),pay=l.filter(x=>x.tot>0),no=l.filter(x=>!(x.tot>0));
+  const d24=(JR[2024]||{}).dv||0,d25=(JR[2025]||{}).dv||0,d20=(JR[2020]||{}).dv||0,y1=d24?(d25/d24-1)*100:null,y5=d20?(Math.pow(d25/d20,1/5)-1)*100:null,wg1=pay.reduce((t,x)=>t+x.tot*x.g1,0)/T,wg5=pay.reduce((t,x)=>t+x.tot*x.g5,0)/T,vc=n=>n==null?"":n>0?"pos":"neg",ar=n=>(n>0?"▲ +":"▼ −")+f1(Math.abs(n))+"%";
+  body=`<div class="tile" style="margin-top:12px">${kvs([["Verwacht per jaar",eur(T)],["Per maand",eur(T/12)],["Betalers",pay.length+" van "+own.length]])}</div>
+  <div class="sec"><h2>Ontwikkeling</h2><div class="tile"><div class="lbl">Ontvangen dividend (jouw export)</div>${kvs([["2024",eur(d24)],["2025",eur(d25)],["Groei",y1==null?"–":ar(y1),vc(y1)]])}<div style="margin-top:8px">${kvs([["2020",eur(d20)],["2025",eur(d25)],["Per jaar, 5 jaar",y5==null?"–":ar(y5),vc(y5)]])}</div><div class="note" style="margin-top:8px">Het ontvangen dividend stijgt ook doordat je meer aandelen kocht, niet alleen doordat bedrijven meer uitkeren.</div>
+  <div class="lbl" style="margin-top:12px">Dividend per aandeel, gewogen</div>${kvs([["Laatste jaar",ar(wg1),vc(wg1)],["Per jaar, 5 jaar",ar(wg5),vc(wg5)],["Verhoogd door",l.filter(x=>x.tot>0&&x.g1>0).length+" van "+pay.length]],3)}</div></div>
+  <div class="sec"><h2>Verwacht dividend, per bedrijf</h2><div class="list">${pay.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.r.qty} aandelen · ${eur(x.ps,2)} per aandeel · rendement ${f1(x.r.yld)}%</div><div class="m">per aandeel <b class="${vc(x.g1)}">${ar(x.g1)}</b> laatste jaar · <b class="${vc(x.g5)}">${ar(x.g5)}</b> per jaar over 5 jaar</div></span><span style="text-align:right"><div class="num">${eur(x.tot)}</div><div class="m num">${f1(x.tot/T*100)}% van totaal</div></span></button>`).join("")}</div></div>
+  ${no.length?`<div class="sec"><h2>Geen dividend</h2><div class="list">${no.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">herinvesteert de winst</div></span><span class="m">›</span></button>`).join("")}</div></div>`:""}
+  <div class="note">Dividend per aandeel is de koers maal het dividendrendement van Yahoo. De groei per aandeel komt uit de dividendhistorie van Yahoo.</div>`}
+ if(k==="ai"){title="AI-impact";setTimeout(drawAi,0);
+  const lev=own.filter(r=>r.ai[0]>=2),sp=own.filter(r=>["MSFT","GOOGL","AMZN"].includes(r.tk));
+  const top=`<div class="tile" style="margin-top:12px">${hbars([[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraal"],[-1,"Kwetsbaar"]].map(([c,n])=>({n,v:aiW(r=>r.ai[0]===c),k:c>=1?"g":c===0?"n":"a"})),0,"%")}</div>
+  <div class="sec"><h2>Wat valt op</h2><div class="list">
+  <div class="row"><span class="grow"><div class="t">Leveranciers: ${f1(aiW(r=>r.ai[0]>=2))}%</div><div class="m">${own.filter(r=>r.ai[0]>=2).map(r=>r.naam).join(", ")}. Zij verdienen aan de investeringen in AI.</div></span></div>
+  <div class="row"><span class="grow"><div class="t">Klanten van die leveranciers: ${f1(sp.reduce((t,r)=>t+r.w,0))}%</div><div class="m">${sp.map(r=>r.naam).join(", ")} geven het meeste uit aan AI. Je bezit dus zowel de leveranciers als hun grootste klanten. Gaan de uitgaven omlaag, dan raakt dat beide kanten.</div></span></div>
+  <div class="row"><span class="grow"><div class="t">Kwetsbaar: ${f1(aiW(r=>r.ai[0]<=-1))}%</div><div class="m">${own.filter(r=>r.ai[0]<=-1).map(r=>r.naam).join(", ")}. Bedrijven met software voor niches, waar AI nieuwe concurrenten kan helpen.</div></span></div></div></div>
+  <div class="sec"><h2>Stresstest AI</h2><div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Profiterende bedrijven dalen (%)<input id="aiA" type="number" inputmode="decimal" value="30" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Kwetsbare bedrijven dalen (%)<input id="aiB" type="number" inputmode="decimal" value="20" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><div id="aiOut"></div></div></div>`;
+  const lists=[[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraal"],[-1,"Kwetsbaar"]].map(([c,n])=>{const l=own.filter(r=>r.ai[0]===c).sort((a,b)=>b.w-a.w);return l.length?`<div class="sec"><h2>${n} · ${f1(l.reduce((t,r)=>t+r.w,0))}%</h2><div class="list">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.ai[1]}</div></span><span class="num">${f1(r.w)}%</span></button>`).join("")}</div></div>`:""}).join("")+`<div class="note">Mijn inschatting op basis van het bedrijfsmodel, geen meetgegevens. Tik een bedrijf voor de uitleg en waar ik op let.</div>`;
+  body=top+lists+`<div class="sec"><h2>Hoe ik dit beoordeel</h2><div class="tile"><div class="s">Per bedrijf stel ik drie vragen. Eén: levert het bedrijf iets waar AI veel van nodig heeft, zoals chips, machines of cloud? Twee: kan AI het product vervangen of de concurrentie goedkoper maken? Drie: hoe sterk zijn de klantrelaties en hoe moeilijk is overstappen? Dat is mijn oordeel op basis van het bedrijfsmodel, geen meting. Ik loop het elk kwartaal na. Laatst beoordeeld: ${new Date(AI_DATUM).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})}. Verslechtert mijn oordeel of komt de kwetsbare groep boven ${AI_LIM}%, dan krijg je een actie en een melding.</div></div></div>`}
+ return `<div class="bar"><button class="back" id="bk">‹ Terug</button></div><h1 style="font-size:26px;letter-spacing:-.01em">${title}</h1>${body}${demo}`}
+function render(){render0();cleanDom()}
+function render0(){
+ const s=document.getElementById("sheet");
+ document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
+ nav();
+ if(det){s.hidden=false;s.innerHTML=vDet()}else if(sub){s.hidden=false;s.innerHTML=vSub()}else{s.hidden=true}
+}
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;render();window.scrollTo(0,0)}
+ else if(b.dataset.d){det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
+ else if(b.id==="bk"){if(det)det=null;else sub=null;render()}
+ else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
+ else if(b.dataset.del!==undefined){STORT.splice(+b.dataset.del,1);saveS();render()}
+ else if(b.dataset.s){sub=b.dataset.s;render();document.getElementById("sheet").scrollTop=0}
+ else if(b.dataset.p){per=b.dataset.p;render()}
+ else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
+ else if(b.dataset.pv){posView=b.dataset.pv;render()}
+ else if(b.dataset.nt){nwsTab=b.dataset.nt;render()}
+ else if(b.dataset.ag){agTab=b.dataset.ag;render()}
+ else if(b.id==="readAll"){READ=NWS.map(x=>x.id);try{localStorage.setItem("pf_read",JSON.stringify(READ))}catch(e){}render()}
+ else if(b.dataset.f){filter=b.dataset.f;render()}
+ else if(b.dataset.cs){cSort=b.dataset.cs;render()}
+ else if(b.dataset.dt){dtab=b.dataset.dt;render()}
+ else if(b.dataset.it){inzTab=b.dataset.it;try{localStorage.setItem("pf_inz",inzTab)}catch(x){}render()}
+ else if(b.dataset.kz){det=null;sub=null;tab="kand";kTab="short";slF="zone";render();window.scrollTo(0,0)}
+ else if(b.id==="logAdd"){const x=document.getElementById("lgX").value.trim();if(x){LOG.unshift({d:new Date().toISOString().slice(0,10),tk:b.dataset.tk,ty:document.getElementById("lgT").value,x});saveLog();render()}}
+ else if(b.dataset.ldel!==undefined){LOG.splice(+b.dataset.ldel,1);saveLog();render()}
+ else if(b.dataset.dc){docF=b.dataset.dc;render()}
+ else if(b.dataset.dk){docC=b.dataset.dk;render()}
+ else if(b.dataset.kt){kTab=b.dataset.kt;render();window.scrollTo(0,0)}
+ else if(b.dataset.sf){slF=b.dataset.sf;render()}
+ else if(b.dataset.ss){slS=b.dataset.ss;render()}
+ else if(b.dataset.ds){docS=b.dataset.ds;render()}
+ else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
+});
+document.addEventListener("input",e=>{const t=e.target;
+ if(t.id&&t.id.startsWith("vk_")){const r=rows.find(x=>x.tk===t.dataset.tk);if(r){const k=t.id.slice(3),o=VK[r.tk]=VK[r.tk]||{};if(k==="x")o.x=t.value;else{const v=parseFloat(t.value);if(isFinite(v)&&v>0)o[k]=v;else delete o[k]}saveVK();const el=document.getElementById("vkOut");if(el)el.innerHTML=vkStatus(r)}return}
+ if(t.id==="bxS"){BOX.s=Math.max(0,parseFloat(t.value)||0);saveBox();drawBox();return}
+ if(t.id&&t.id.startsWith("par_")){const k=t.id.slice(4),v=parseFloat(t.value);if(k in PAR&&isFinite(v)&&v>0){PAR[k]=v;applyPar();savePar()}return}
+ if(t.id==="note"){noteSet(t.dataset.tk,t.value)}
+ if(t.id==="sdoel"){SDOEL=+t.value>0?+t.value:SDOEL;saveS()}
+ if(t.id==="tot"){try{localStorage.setItem("pf_totaal",String(+t.value||0))}catch(x){}TOTAAL=+t.value||0}
+ if(t.id==="prj"){prj.r=+t.value;document.getElementById("prr").value=prj.r;savePrj();drawPrj()}
+ if(t.id==="prr"){const v=parseFloat(t.value);if(isFinite(v)&&v>-50&&v<=60){prj.r=v;document.getElementById("prj").value=Math.min(25,Math.max(5,v));savePrj();drawPrj()}}
+ if(t.id==="prm"){const v=parseFloat(t.value);prj.m=isFinite(v)&&v>=0?v:0;savePrj();drawPrj()}
+ if(t.id==="pry"){const v=Math.round(parseFloat(t.value));if(isFinite(v)&&v>=1&&v<=60){prj.y=v;savePrj();drawPrj()}}
+ if(t.id==="oN"||t.id==="oK"||t.id==="oP"||t.id==="oD"){const v=parseFloat(t.value);if(t.id==="oD"){if(t.value)OPT.d=t.value}else if(isFinite(v)&&v>0){OPT[{oN:"n",oK:"k",oP:"p"}[t.id]]=v}saveOpt();drawOpt()}
+ if(t.id==="tbP"){TBP=+t.value;drawTb()}
+ if(t.id==="stS"||t.id==="stP"){drawStress()}
+ if(t.id==="vS"||t.id==="vP"){drawVal()}
+ if(t.id==="aiA"||t.id==="aiB"){drawAi()}
+});
+document.addEventListener("change",e=>{if(e.target.id==="bxP"){BOX.p=e.target.checked?1:0;saveBox();drawBox();return}if(e.target.id==="sdoel"){INLEG=SDOEL;budget=SDOEL;render();return}if(e.target.id==="hide"){hide=e.target.checked;try{localStorage.setItem("pf_hide",hide?"1":"0")}catch(x){}render();return}if(e.target.dataset.m){mel[e.target.dataset.m]=e.target.checked?1:0;return}if(e.target.dataset.pin){const k=e.target.dataset.pin;PINS=PINS.filter(x=>x!==k);if(e.target.checked)PINS.push(k);try{localStorage.setItem("pf_pin",JSON.stringify(PINS))}catch(x){}return}if(e.target.dataset.mu){const k=e.target.dataset.mu;MUTE=MUTE.filter(x=>x!==k);if(!e.target.checked)MUTE.push(k);try{localStorage.setItem("pf_mute",JSON.stringify(MUTE))}catch(x){}return}if(e.target.id==="sort"){sort=e.target.value;render()}if(e.target.id==="bud"){budget=Math.max(0,+e.target.value||0);render()}});
+
+/* ---- DeGiro import (alles blijft op dit toestel) ---- */
+function csvRows(t){t=t.replace(/^﻿/,"");const first=t.split(/\r?\n/)[0]||"";const sep=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?";":",";const out=[];let r=[],f="",q=false;
+ for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===sep){r.push(f);f=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;r.push(f);f="";if(r.some(x=>x!==""))out.push(r);r=[]}else f+=c}
+ if(f!==""||r.length){r.push(f);if(r.some(x=>x!==""))out.push(r)}return out}
+function num(x){if(x==null)return NaN;x=String(x).trim().replace(/\s/g,"");if(!x)return NaN;if(x.includes(",")&&x.includes("."))x=x.lastIndexOf(",")>x.lastIndexOf(".")?x.replace(/\./g,"").replace(",","."):x.replace(/,/g,"");else if(x.includes(","))x=x.replace(",",".");return parseFloat(x)}
+function isoD(d){const m=String(d).trim().match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);if(m)return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;const n=String(d).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);return n?n[0]:null}
+function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error("Leeg bestand");const H=R[0].map(h=>h.trim().toLowerCase());
+ const iD=H.indexOf("datum"),iO=H.findIndex(h=>h==="omschrijving"||h==="description");let iM=H.findIndex(h=>h==="mutatie"||h==="change");
+ if(iD<0||iO<0||iM<0)throw new Error("Dit lijkt geen Account.csv (rekeningoverzicht): ik mis de kolommen Datum, Omschrijving en Mutatie.");
+ const ev=[],fxl=[];let rows=0;const iFX=H.indexOf("fx");
+ for(const r of R.slice(1)){const d=isoD(r[iD]);if(!d)continue;const om=(r[iO]||"").trim(),cur=(r[iM]||"").trim(),a=num(r[iM+1]);
+  if(isFinite(a)&&cur&&cur!=="EUR"){if(/^valuta (creditering|debitering)/i.test(om)&&iFX>=0&&isFinite(num(r[iFX]))&&num(r[iFX])>0)fxl.push([d,cur,num(r[iFX])]);else if(/^(dividend|kapitaalsuitkering)$/i.test(om))ev.push([d,"v",a,cur]);else if(/^dividendbelasting$/i.test(om))ev.push([d,"w",a,cur])}
+  if(!isFinite(a)||cur!=="EUR")continue;rows++;
+  if(/^(dividend|kapitaalsuitkering)$/i.test(om)){ev.push([d,"v",a,"EUR"]);continue}
+  if(/^dividendbelasting$/i.test(om))ev.push([d,"w",a,"EUR"]);
+  if(/reservation|reservering|processed/i.test(om))continue;
+  if(/deposit|storting/i.test(om)&&!/terugstorting/i.test(om)&&a>0)ev.push([d,"i",a]);
+  else if(/withdrawal|terugstorting|uitbetaling|opname/i.test(om)&&a<0)ev.push([d,"u",-a]);
+  else if(a!==0&&/dividendbelasting|dividend tax/i.test(om))ev.push([d,"b",-a]);
+  else if(/stamp duty|transactiebelasting/i.test(om)&&a!==0)ev.push([d,"s",-a]);
+  else if(a<0&&/aansluit|connection|exchange.*fee/i.test(om))ev.push([d,"a",-a]);
+  else if(a<0&&/transactiekosten|transaction/i.test(om))ev.push([d,"k",-a]);
+  else if(a<0&&/rente|interest/i.test(om))ev.push([d,"r",-a]);
+  else if(a<0&&/degiro.*kosten|kosten van derden|fee/i.test(om))ev.push([d,"o",-a])}
+ if(!rows)throw new Error("Geen regels in euro's gevonden. Is dit wel het rekeningoverzicht?");
+ const ds=R.slice(1).map(r=>isoD(r[iD])).filter(Boolean).sort();return {ev,fxl,rows,min:ds[0],max:ds[ds.length-1]}}
+let FXL=[];
+function fxRate(cur,iso){const L=FXL.filter(x=>x[1]===cur);if(!L.length)return null;const T=d=>new Date(d).getTime();let best=L[0],bd=1e18;for(const x of L){const dd=Math.abs(T(x[0])-T(iso));if(dd<bd){bd=dd;best=x}}let r=best[2];if(cur==="GBP"&&r>20)r/=100;return r}
+function aggAcc(ev){const jr={},stort=[],flows=[];let kosten=0,divbel=0;const Y=y=>jr[y]||(jr[y]={i:0,u:0,k:0,t:0,kt:0,ka:0,ko:0,ks:0,r:0});
+ for(const [d,t,a,cu] of ev){const y=d.slice(0,4);const o=Y(y);if(t==="v"||t==="w"){let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}o.dv=(o.dv||0)+e;continue}if(t==="i"){o.i+=a;flows.push([d,-a]);if(+y===NOW.getFullYear())stort.push([d,Math.round(a*100)/100])}else if(t==="u"){o.u+=a;flows.push([d,a])}
+  else if(t==="k"||t==="a"||t==="o"||t==="s"){o.k+=a;kosten+=a;if(t==="k")o.kt+=a;else if(t==="a")o.ka+=a;else if(t==="s")o.ks+=a;else o.ko+=a}
+  else if(t==="r"){o.r+=a}
+  else if(t==="b"){divbel+=a;o.b=(o.b||0)+a}}
+ Object.values(jr).forEach(o=>{["i","u","k","kt","ka","ko","ks","r"].forEach(k=>o[k]=Math.round(o[k]));if(o.dv!=null)o.dv=Math.round(o.dv);if(o.b!=null)o.b=Math.round(o.b)});
+ return {jr,stort,flows,kosten:Math.round(kosten),divbel:Math.round(divbel),van:flows.length?flows.map(f=>f[0]).sort()[0]:null}}
+function parseTrx(text){const R=csvRows(text);if(R.length<2)throw new Error("Leeg bestand");const H=R[0].map(h=>h.trim().toLowerCase());
+ const iD=H.indexOf("datum"),iA=H.findIndex(h=>h==="aantal"||h==="quantity"),iP=H.findIndex(h=>h==="product");
+ if(iD<0||iA<0||iP<0)throw new Error("Dit lijkt geen Transactions.csv: ik mis de kolommen Datum, Product en Aantal.");
+ const iI=H.indexOf("isin"),iTt=H.findIndex(h=>h.startsWith("totaal")||h.startsWith("total")),iTm=H.indexOf("tijd"),iX=H.findIndex(h=>h.includes("autofx")),iF=H.findIndex(h=>h.includes("transactiekosten")||h.includes("transaction")&&h.includes("fee")||h.includes("transaction and/or third"));
+ const dd=[],x=[];for(const r of R.slice(1)){const d=isoD(r[iD]),q=num(r[iA]);if(!d||!isFinite(q))continue;dd.push(d);
+  const fx=iX>=0?Math.abs(num(r[iX])||0):0,fee=iF>=0?(isFinite(num(r[iF]))?Math.abs(num(r[iF])):0):0;x.push([d,q>0?"k":"v",Math.round(fx*100)/100,Math.round(fee*100)/100,(r[iI]||r[iP]||""),q,iTt>=0?(num(r[iTt])||0):0,iTm>=0?(r[iTm]||""):""])}
+ if(!dd.length)throw new Error("Geen transacties gevonden.");dd.sort();return {dd,x,fx:iX>=0,fee:iF>=0,min:dd[0],max:dd[dd.length-1]}}
+function fifo(x){const g={};const rows=x.filter(r=>r.length>=8).reverse().sort((a,b)=>{const p=a[0]+a[7],q=b[0]+b[7];return p<q?-1:p>q?1:0});const lots={};
+ for(const [d,sd,fx,fee,k,q,tot] of rows){const y=d.slice(0,4),L=lots[k]||(lots[k]=[]);
+  if(q>0){let rem=q;const per=-tot/q;while(rem>1e-9&&L.length&&L[0][0]<0){const t=Math.min(rem,-L[0][0]);g[y]=(g[y]||0)+(L[0][1]-per)*t;L[0][0]+=t;rem-=t;if(Math.abs(L[0][0])<1e-9)L.shift()}if(rem>1e-9)L.push([rem,per])}
+  else{const sq=-q,per=tot/sq;let rem=sq;while(rem>1e-9&&L.length&&L[0][0]>0){const t=Math.min(rem,L[0][0]);g[y]=(g[y]||0)+(per-L[0][1])*t;L[0][0]-=t;rem-=t;if(L[0][0]<1e-9)L.shift()}if(rem>1e-9)L.push([-rem,per])}}
+ return g}
+function aggTrx(dd){const t={};dd.forEach(d=>t[d.slice(0,4)]=(t[d.slice(0,4)]||0)+1);return {t,n:dd.length}}
+function xirrOf(flows,end,val){const f=flows.map(x=>[new Date(x[0]).getTime()/864e5,x[1]]);f.push([end.getTime()/864e5,val]);if(f.length<3||val<=0)return null;const t0=Math.min(...f.map(x=>x[0]));
+ const npv=r=>f.reduce((s,x)=>s+x[1]/Math.pow(1+r,(x[0]-t0)/365),0);let lo=-.9,hi=3;if(npv(lo)*npv(hi)>0)return null;for(let i=0;i<80;i++){const m=(lo+hi)/2;if(npv(lo)*npv(m)<=0)hi=m;else lo=m}return (lo+hi)/2*100}
+let IMP=Object.assign({acc:null,trx:null,at:null,err:{}},PRIVE&&PRIVE.imp?PRIVE.imp:{});
+function applyImp(){if(!IMP.acc)return;FXL=IMP.acc.fxl||[];const a=Object.assign({rows:IMP.acc.ev.length},aggAcc(IMP.acc.ev));IMP.aA=a;IMP.aT=IMP.trx?aggTrx(IMP.trx.dd):null;const jr={};Object.keys(a.jr).forEach(y=>{jr[y]=Object.assign({t:0},a.jr[y])});
+ if(IMP.aT)Object.keys(IMP.aT.t).forEach(y=>{(jr[y]=jr[y]||{i:0,u:0,k:0,t:0}).t=IMP.aT.t[y]});
+ if(IMP.trx&&IMP.trx.x){IMP.trx.x.forEach(([d,sd,fx,fee])=>{const o=jr[d.slice(0,4)]||(jr[d.slice(0,4)]={i:0,u:0,k:0,t:0});o.fx=(o.fx||0)+fx;if(sd==='k'){o.fb=(o.fb||0)+fee;o.nb=(o.nb||0)+1}else{o.fv=(o.fv||0)+fee;o.nv=(o.nv||0)+1}});Object.values(jr).forEach(o=>{['fx','fb','fv'].forEach(k=>{if(o[k]!=null)o[k]=Math.round(o[k])})});IMP.hasFx=!!IMP.trx.fx;IMP.hasFee=!!IMP.trx.fee;const gg=fifo(IMP.trx.x);Object.keys(gg).forEach(y=>{(jr[y]=jr[y]||{i:0,u:0,k:0,t:0}).g=Math.round(gg[y])})}
+ Object.values(jr).forEach(o=>{o.k=Math.round((IMP.hasFee?(o.fb||0)+(o.fv||0):(o.kt||0))+(o.fx||0)+(o.ks||0)+(o.ka||0)+(o.ko||0)+(o.r||0))});a.kosten=Object.values(jr).reduce((t,o)=>t+o.k,0);
+ JR=jr;STORT=a.stort;REAL.kosten=a.kosten;REAL.divbel=a.divbel;REAL.jaar={};let net=0;Object.keys(jr).forEach(y=>{REAL.jaar[y]=jr[y].i-jr[y].u;net+=jr[y].i-jr[y].u});REAL.netto=net;
+ const val=TOT,x=xirrOf(a.flows,NOW,val);if(x!=null)REAL.xirr=x;IMP.xirr=x;IMP.val=val;BROKER_WV=TOT-REAL.netto}
+applyImp();
+const saveImp=()=>{try{localStorage.setItem("pf_import",JSON.stringify(IMP))}catch(e){}};
+async function readFile(inp,kind){const f=inp.files&&inp.files[0];if(!f)return;IMP.err=IMP.err||{};
+ try{const txt=await f.text();if(kind==="acc"){const n=parseAccount(txt),o=IMP.acc;const keep=o?o.ev.filter(x=>x[0]<n.min||x[0]>n.max):[];const keepF=o&&o.fxl?o.fxl.filter(x=>x[0]<n.min||x[0]>n.max):[];IMP.acc={ev:keep.concat(n.ev).sort((p,q)=>p[0]<q[0]?-1:1),fxl:keepF.concat(n.fxl),nieuw:n.ev.length,min:n.min,max:n.max,oud:!!o}}else{const n=parseTrx(txt),o=IMP.trx;const keep=o?o.dd.filter(d=>d<n.min||d>n.max):[];const keepX=o&&o.x?o.x.filter(r=>r[0]<n.min||r[0]>n.max):[];IMP.trx={dd:keep.concat(n.dd).sort(),x:keepX.concat(n.x),fx:n.fx||(o&&o.fx),fee:n.fee||(o&&o.fee),nieuw:n.dd.length,min:n.min,max:n.max,oud:!!o}}IMP.err[kind]=null;IMP.at=new Date().toISOString();saveImp();applyImp()}
+ catch(e){IMP.err[kind]=e.message||"Kon het bestand niet lezen."}
+ render()}
+function impSlot(kind,nr,titel,bestand,waar,ok){const e=IMP.err&&IMP.err[kind],done=kind==="acc"?IMP.acc:IMP.trx;
+ return `<div class="tile" style="margin-top:12px"><div class="lbl">Stap ${nr}</div><div style="font-weight:600;font-size:16px;margin-top:2px">${titel}</div><div class="note" style="margin:4px 0 10px">Bestandsnaam: <b>${bestand}</b>. ${waar}</div>
+ <label class="chip" style="display:block;text-align:center;padding:12px;font-weight:600;cursor:pointer;${done?"":"background:var(--acc);color:var(--bg);border-color:var(--acc)"}">${done?"Nieuwe periode toevoegen":"Kies "+bestand}<input type="file" id="f_${kind}" accept=".csv,text/csv,text/plain" style="position:absolute;opacity:0;width:1px;height:1px"></label>
+ ${e?`<div class="note neg" style="margin-top:8px">${e}</div>`:""}${done?`<div class="note" style="margin-top:8px"><span class="pos">Geladen.</span> ${ok}</div>`:""}</div>`}
+function impAge(){if(!IMP.at)return null;return Math.floor((Date.now()-new Date(IMP.at).getTime())/864e5)}
+function vImport(){const a=IMP.aA,t=IMP.aT,age=impAge(),fm=d=>new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}),la=IMP.acc,lt=IMP.trx;
+ return impSlot("acc",1,"Rekeningoverzicht","Account.csv","In DeGiro op de website: Inbox, Rekeningoverzicht. De eerste keer vanaf je eerste dag, daarna alleen de nieuwe periode. Klik op Exporteren, CSV.",a?`Gegevens van ${a.van?new Date(a.van).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}):"?"} tot ${fm(la.max)}. Laatste bestand: ${fm(la.min)} t/m ${fm(la.max)}${la.oud?", samengevoegd met wat er al stond":""}.`:"")+
+ impSlot("trx",2,"Transacties","Transactions.csv","In DeGiro op de website: Inbox, Transacties. Zelfde periode als bij stap 1. Klik op Exporteren, CSV.",t?`${t.n} transacties in totaal. Laatste bestand: ${fm(lt.min)} t/m ${fm(lt.max)}${lt.oud?", samengevoegd met wat er al stond":""}.`:"")+
+ (a?`<div class="sec"><h2>Wat de app nu gebruikt</h2><div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr"><div><small>Totaal gestort (netto)</small><b class="num">${eur(REAL.netto)}</b></div><div><small>Rendement per jaar (XIRR)</small><b class="num">${IMP.xirr!=null?f1(IMP.xirr)+"%":"n.v.t."}</b></div><div><small>Kosten sinds start</small><b class="num">${eur(REAL.kosten)}</b></div><div><small>Dividendbelasting</small><b class="num">${eur(REAL.divbel)}</b></div></div><div class="note">XIRR rekent met je stortingen en opnames en een waarde van ${eur(IMP.val)} vandaag. Vul die waarde in bij Instellingen als je ze wilt aanpassen. Laatste import: ${age===0?"vandaag":age+" dagen geleden"}.</div></div></div>
+ <div class="sec"><button class="chip" id="impWis">Geïmporteerde gegevens wissen</button></div>`:"")+
+ `<div class="note">De bestanden worden alleen in je browser gelezen. Ze gaan nergens heen en ik zie ze niet. Importeer je later een nieuwe periode (bijvoorbeeld alleen de laatste maand), dan wordt die toegevoegd. Overlappende dagen worden vervangen, dus niets telt dubbel. Kom je een foutmelding tegen, stuur me dan de eerste twee regels van het bestand (zonder bedragen), dan pas ik de inleesroutine aan.</div>`}
+document.addEventListener("change",e=>{if(e.target.id==="f_acc")readFile(e.target,"acc");if(e.target.id==="f_trx")readFile(e.target,"trx")});
+document.addEventListener("click",e=>{if(e.target.id==="impWis"){IMP={acc:null,trx:null,at:null,err:{}};try{localStorage.removeItem("pf_import");localStorage.removeItem("pf_stort")}catch(x){}location.reload()}});
+render();

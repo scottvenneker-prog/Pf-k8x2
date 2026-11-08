@@ -1,0 +1,555 @@
+{
+ "versie": 2,
+ "doel_cagr": 15,
+ "grenzen": {
+  "weg": 10,
+  "sec": 35,
+  "tech": 50,
+  "overn": 25,
+  "ai": 15,
+  "nd": 2.5,
+  "pe": 1.3,
+  "peg": 1.5,
+  "sl_add": 4,
+  "sl_rem": 2,
+  "sl_wk": 2,
+  "sl_max": 20,
+  "sl_new": 2
+ },
+ "clusters": [
+  {
+   "naam": "Tech-cluster",
+   "sectoren": [
+    "Technologie",
+    "Halfgeleiders"
+   ],
+   "max": 50
+  },
+  {
+   "naam": "Overnemers",
+   "tickers": [
+    "CSU.TO",
+    "TOI.V",
+    "LMN.V",
+    "CHG.DE",
+    "TEQ.ST",
+    "ROKO-B.ST"
+   ],
+   "max": 25
+  }
+ ],
+ "vastgezet": [],
+ "posities": {
+  "III.L": {
+   "naam": "3i Group",
+   "sector": "Consument",
+   "land": "VK",
+   "munt": "GBP",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Beleggingsmaatschappij"
+   ]
+  },
+  "KSPI": {
+   "naam": "Kaspi.kz",
+   "sector": "Financieel",
+   "land": "KZ",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Betalen en marktplaats"
+   ]
+  },
+  "ADYEN.AS": {
+   "naam": "Adyen",
+   "sector": "Financieel",
+   "land": "NL",
+   "munt": "EUR",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Betalingen"
+   ]
+  },
+  "GOOGL": {
+   "naam": "Alphabet",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Gemengd"
+   ]
+  },
+  "AMZN": {
+   "naam": "Amazon",
+   "sector": "Consument",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    1,
+    "Cloud en winkel"
+   ]
+  },
+  "APH": {
+   "naam": "Amphenol",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Verbindingen"
+   ]
+  },
+  "ASM.AS": {
+   "naam": "ASM International",
+   "sector": "Halfgeleiders",
+   "land": "NL",
+   "munt": "EUR",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Apparatuur voor chipfabrieken"
+   ]
+  },
+  "ASML.AS": {
+   "naam": "ASML",
+   "sector": "Halfgeleiders",
+   "land": "NL",
+   "munt": "EUR",
+   "eigenaar": "bestuur",
+   "ai": [
+    2,
+    "Machines voor chipfabrieken"
+   ]
+  },
+  "ASRNL.AS": {
+   "naam": "ASR Nederland",
+   "sector": "Financieel",
+   "land": "NL",
+   "munt": "EUR",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Verzekeraar"
+   ]
+  },
+  "BESI.AS": {
+   "naam": "BE Semiconductor",
+   "sector": "Halfgeleiders",
+   "land": "NL",
+   "munt": "EUR",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Chipverpakking"
+   ]
+  },
+  "CAR.L": {
+   "naam": "Carclo",
+   "sector": "Industrie",
+   "land": "VK",
+   "munt": "GBP",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Kunststof en optiek"
+   ]
+  },
+  "CHG.DE": {
+   "naam": "Chapters Group",
+   "sector": "Technologie",
+   "land": "DE",
+   "munt": "EUR",
+   "eigenaar": "controleren",
+   "ai": [
+    -1,
+    "Software voor niches"
+   ]
+  },
+  "CSU.TO": {
+   "naam": "Constellation Software",
+   "sector": "Technologie",
+   "land": "CA",
+   "munt": "CAD",
+   "eigenaar": "controleren",
+   "ai": [
+    -1,
+    "Software voor niches"
+   ]
+  },
+  "RACE.MI": {
+   "naam": "Ferrari",
+   "sector": "Consument",
+   "land": "IT",
+   "munt": "EUR",
+   "eigenaar": "familie",
+   "ai": [
+    0,
+    "Luxe auto's"
+   ]
+  },
+  "FTNT": {
+   "naam": "Fortinet",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Gemengd"
+   ]
+  },
+  "HEI": {
+   "naam": "HEICO",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "familie",
+   "ai": [
+    0,
+    "Onderdelen voor de luchtvaart"
+   ]
+  },
+  "ISRG": {
+   "naam": "Intuitive Surgical",
+   "sector": "Zorg",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Operatierobots"
+   ]
+  },
+  "KNSL": {
+   "naam": "Kinsale Capital",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Verzekeraar"
+   ]
+  },
+  "LMN.V": {
+   "naam": "Lumine Group",
+   "sector": "Technologie",
+   "land": "CA",
+   "munt": "CAD",
+   "eigenaar": "bestuur",
+   "ai": [
+    -1,
+    "Software voor niches"
+   ]
+  },
+  "MELI": {
+   "naam": "MercadoLibre",
+   "sector": "Financieel",
+   "land": "AR",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Marktplaats en betalen"
+   ]
+  },
+  "MSFT": {
+   "naam": "Microsoft",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Platform en cloud"
+   ]
+  },
+  "NU": {
+   "naam": "Nu Holdings",
+   "sector": "Financieel",
+   "land": "BR",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    1,
+    "Digitale bank"
+   ]
+  },
+  "NVDA": {
+   "naam": "NVIDIA",
+   "sector": "Halfgeleiders",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    2,
+    "Levert de chips"
+   ]
+  },
+  "ROKO-B.ST": {
+   "naam": "Roko B",
+   "sector": "Industrie",
+   "land": "SE",
+   "munt": "SEK",
+   "eigenaar": "controleren",
+   "ai": [
+    0,
+    "Overnemer van allerlei bedrijven"
+   ]
+  },
+  "SPGI": {
+   "naam": "S&P Global",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Data en ratings"
+   ]
+  },
+  "TEQ.ST": {
+   "naam": "Teqnion",
+   "sector": "Industrie",
+   "land": "SE",
+   "munt": "SEK",
+   "eigenaar": "controleren",
+   "ai": [
+    0,
+    "Industriële overnemer"
+   ]
+  },
+  "TOI.V": {
+   "naam": "Topicus.com",
+   "sector": "Technologie",
+   "land": "CA",
+   "munt": "CAD",
+   "eigenaar": "bestuur",
+   "ai": [
+    -1,
+    "Software voor niches"
+   ]
+  }
+ },
+ "watchlist": {
+  "TSM": {
+   "naam": "Taiwan Semiconductor",
+   "sector": "Halfgeleiders",
+   "land": "TW",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    2,
+    "Maakt de chips"
+   ]
+  },
+  "AXP": {
+   "naam": "American Express",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Betalen en kaarten"
+   ]
+  },
+  "AXON": {
+   "naam": "Axon Enterprise",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    1,
+    "Technologie voor politie"
+   ]
+  },
+  "BN": {
+   "naam": "Brookfield Corp.",
+   "sector": "Financieel",
+   "land": "CA",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Vermogensbeheer en infrastructuur"
+   ]
+  },
+  "CPRT": {
+   "naam": "Copart",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "controleren",
+   "ai": [
+    0,
+    "Online autoveilingen"
+   ]
+  },
+  "COST": {
+   "naam": "Costco",
+   "sector": "Consument",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Winkels"
+   ]
+  },
+  "FAST": {
+   "naam": "Fastenal",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Distributie"
+   ]
+  },
+  "GE": {
+   "naam": "General Electric",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Energie en vliegtuigen"
+   ]
+  },
+  "IBKR": {
+   "naam": "Interactive Brokers",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    0,
+    "Broker"
+   ]
+  },
+  "LIFCO-B.ST": {
+   "naam": "Lifco B",
+   "sector": "Industrie",
+   "land": "SE",
+   "munt": "SEK",
+   "eigenaar": "familie",
+   "ai": [
+    0,
+    "Industriële overnemer"
+   ]
+  },
+  "LIN": {
+   "naam": "Linde",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Industriële gassen"
+   ]
+  },
+  "MA": {
+   "naam": "Mastercard",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Betaalnetwerk"
+   ]
+  },
+  "MCO": {
+   "naam": "Moody's",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Data en ratings"
+   ]
+  },
+  "SNPS": {
+   "naam": "Synopsys",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    1,
+    "Software voor chipontwerp"
+   ]
+  },
+  "V": {
+   "naam": "Visa",
+   "sector": "Financieel",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Betaalnetwerk"
+   ]
+  },
+  "ANET": {
+   "naam": "Arista Networks",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "oprichter",
+   "ai": [
+    2,
+    "Netwerken voor datacenters"
+   ]
+  },
+  "RMS.PA": {
+   "naam": "Hermès",
+   "sector": "Consument",
+   "land": "FR",
+   "munt": "EUR",
+   "eigenaar": "familie",
+   "ai": [
+    0,
+    "Luxe"
+   ]
+  },
+  "FICO": {
+   "naam": "Fair Isaac",
+   "sector": "Technologie",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "bestuur",
+   "ai": [
+    0,
+    "Kredietscores"
+   ]
+  },
+  "LLY": {
+   "naam": "Eli Lilly",
+   "sector": "Zorg",
+   "land": "VS",
+   "munt": "USD",
+   "eigenaar": "controleren"
+  },
+  "SPOT": {
+   "naam": "Spotify",
+   "sector": "Communicatie",
+   "land": "SE",
+   "munt": "USD",
+   "eigenaar": "oprichter"
+  }
+ }
+}

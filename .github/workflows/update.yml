@@ -1,0 +1,42 @@
+name: update
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6,15,21 * * 1-5"
+    - cron: "0 7 1 * *"
+permissions:
+  contents: write
+concurrency:
+  group: update
+jobs:
+  run:
+    if: github.event.schedule != '0 7 1 * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python fetch_data.py
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - run: |
+          git config user.name bot
+          git config user.email bot@users.noreply.github.com
+          git add data.json seen.json verkocht_map.json
+          git commit -m data || exit 0
+          git pull --rebase
+          git push
+  herinnering:
+    if: github.event.schedule == '0 7 1 * *'
+    runs-on: ubuntu-latest
+    steps:
+      - run: >
+          curl -s
+          -H "Title: DeGiro-export laden"
+          -H "Click: https://scottvenneker-prog.github.io/Pf-k8x2/"
+          -d "Nieuwe maand: laad je DeGiro-export in de app (Account.csv en Transactions.csv)."
+          "https://ntfy.sh/$NTFY_TOPIC"
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
