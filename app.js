@@ -384,6 +384,9 @@ function closedWin(){const C=closedList();if(!C.length)return "";
  l.sort((a,b)=>b.t-a.t);const mx=Math.max(...l.map(x=>Math.abs(x.t)),1);
  return `<div class="sec"><h2>Open en gesloten samen</h2><div class="tile">${kvs([["Open posities",eur(op),cls(op)],["Gesloten aandelen",eur(st),cls(st)],["Gesloten opties",eur(ot),cls(ot)],["Totaal",eur(op+st+ot),cls(op+st+ot)]])}<div class="note">Open posities: koerswinst plus geschat dividend. Gesloten: verkoop min aankoop, zonder dividend.</div></div></div>
  <div class="sec"><h2>Gesloten posities</h2><div class="tile">${l.map(x=>`<div class="hb"><span class="nm">${x.n}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.t)/mx*100)}%;background:var(--${x.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.t)}">${eur(x.t)}</b></div>`).join("")}</div></div>`}
+
+let winTab="open";
+function winSeg(){return `<div class="seg" style="margin-top:8px">${[["open","Open posities"],["gesloten","Gesloten posities"]].map(([k,t])=>`<button data-wt="${k}" aria-pressed="${winTab===k}">${t}</button>`).join("")}</div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -879,7 +882,7 @@ function winTile(r){const w=winD(r);return `<div class="chart"><h3>Winst op deze
 function inzWin(){const l=own.map(r=>({r,w:winD(r)})).sort((a,b)=>b.w.t-a.w.t),T=l.reduce((t,x)=>t+x.w.t,0),K=l.reduce((t,x)=>t+x.w.k,0),Dv=l.reduce((t,x)=>t+x.w.d,0),mx=Math.max(...l.map(x=>Math.abs(x.w.t)),1);
  const row=x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.w.t)/mx*100)}%;background:var(--${x.w.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.w.t)}">${eur(x.w.t)}</b></div>`;
  return fold("Winst per bedrijf",eur(T)+" op open posities",`<button data-s="winst" ${GOB}>${kvs([["Koerswinst",eur(K),cls(K)],["Dividend, geschat",eur(Dv)],["Totaal",eur(T),cls(T)]])}<div class="lbl" style="margin-top:12px">Draagt het meest bij</div>${l.slice(0,3).map(row).join("")}<div class="lbl" style="margin-top:10px">Draagt het minst bij</div>${l.slice(-3).reverse().map(row).join("")}${nt("Alleen je huidige posities. Wat je eerder verkocht staat in Waar je winst vandaan komt.")}${goRow("Alle bedrijven")}</button>`)}
-function winSub(){return winSub0()+closedWin()}
+function winSub(){return winSeg()+(winTab==="gesloten"?closedWin():winSub0())}
 function winSub0(){const l=own.map(r=>({r,w:winD(r)})).sort((a,b)=>b.w.t-a.w.t),mx=Math.max(...l.map(x=>Math.abs(x.w.t)),1);
  return `<div class="tile" style="margin-top:12px">${l.map(x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.w.t)/mx*100)}%;background:var(--${x.w.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.w.t)}">${eur(x.w.t)}</b></div>`).join("")}</div><div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">koers ${eur(x.w.k)} · dividend ${eur(x.w.d)}</div></span><span style="text-align:right"><div class="num ${cls(x.w.t)}">${eur(x.w.t)}</div><div class="m num ${cls(x.w.t)}">${pc(x.w.t/x.r.inkoop*100)}</div></span></button>`).join("")}</div></div>${nt("Koerswinst is waarde nu min inkoop en komt uit je export. Dividend is een schatting per bedrijf (inkoop maal rendement maal de tijd dat je het hebt), want je export geeft het dividend alleen per jaar. Later tel ik de echte uitbetalingen per bedrijf uit je rekeningoverzicht.")}`}
 
@@ -1095,6 +1098,7 @@ document.addEventListener("click",e=>{
  else if(b.id==="readAll"){READ=NWS.map(x=>x.id);try{localStorage.setItem("pf_read",JSON.stringify(READ))}catch(e){}render()}
  else if(b.dataset.f){filter=b.dataset.f;render()}
  else if(b.dataset.cs){cSort=b.dataset.cs;render()}
+ else if(b.dataset.wt){winTab=b.dataset.wt;render()}
  else if(b.dataset.dt){dtab=b.dataset.dt;render()}
  else if(b.dataset.it){inzTab=b.dataset.it;try{localStorage.setItem("pf_inz",inzTab)}catch(x){}render()}
  else if(b.dataset.kz){det=null;sub=null;tab="kand";kTab="short";slF="zone";render();window.scrollTo(0,0)}
