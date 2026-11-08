@@ -204,8 +204,8 @@ function vShort(){return `<p style="margin:8px 0 0;color:var(--mut)">Mijn lijst 
  <div class="sec"><h2>Alle bedrijven op de shortlist</h2>${slTable()}</div>
  <div class="note">De shortlist wordt elke zondag ververst. Wat erbij komt of eraf gaat, zie je hierboven onder Wat is er veranderd en krijg je als pushmelding. Voorbeeldcijfers.</div>`+demo}
 function vKand(){
- const kseg=`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div>`;
- if(kTab==="short")return head("Kandidaten")+kseg+vShort();if(kTab==="comp")return vComp();
+ const kseg=`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"],["guru","Beleggers"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div>`;
+ if(kTab==="short")return head("Kandidaten")+kseg+vShort();if(kTab==="comp")return vComp();if(kTab==="guru")return vGuru();
  const k=kandidaten();const nP=Math.max(1,Math.min(3,Math.floor(budget/1500))),perP=budget/nP;const top=k.slice(0,10).map(x=>Object.assign({},x,{s2:x.s-feeEst(x.r,perP).t/perP*150})).sort((a,b)=>b.s2-a.s2).slice(0,nP);
  const hierna=(r,a)=>(r.watch?a:r.waarde+a)/(TOT+budget)*100;
  let rest=budget;const alloc=top.map((x,i)=>{const deel=budget/top.length;const cap=Math.max(0,.10*(TOT+budget)-(x.r.watch?0:x.r.waarde));return Math.round(Math.min(deel,cap)/50)*50});
@@ -447,7 +447,7 @@ let cSel="alles";
 function vComp(){const L=rows.map(r=>({r,z:cscore(r.r||r)})).filter(x=>x.z.s>=7).sort((a,b)=>b.z.s-a.z.s);
  const ch=`<div class="chips" style="padding-top:8px">${[["alles","Alle"],["bezit","In bezit"],["watch","Niet in bezit"]].map(([k,t])=>`<button class="chip" data-cc="${k}" aria-pressed="${cSel===k}">${t}</button>`).join("")}</div>`;
  const l=L.filter(x=>cSel==="alles"||(cSel==="bezit")===!x.r.watch);
- return head("Kandidaten")+`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div><p style="margin:8px 0 0;color:var(--mut)">Zes eisen, elk 0 tot 2 punten: winstgroei, kasstroomgroei, lage schuld, hoge ROIC, eigenaarschap en waardering. Vanaf 9 van 12 is een bedrijf een compounder: onder €25 miljard beurswaarde "verborgen", erboven "gevestigd". Bij de seriële overnemers (CSU, Lifco, Lumine e.d.) telt kasstroom in plaats van winst. Een push komt zodra er een nieuwe naam doorheen komt.</p>${ch}`+
+ return head("Kandidaten")+`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"],["guru","Beleggers"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div><p style="margin:8px 0 0;color:var(--mut)">Zes eisen, elk 0 tot 2 punten: winstgroei, kasstroomgroei, lage schuld, hoge ROIC, eigenaarschap en waardering. Vanaf 9 van 12 is een bedrijf een compounder: onder €25 miljard beurswaarde "verborgen", erboven "gevestigd". Bij de seriële overnemers (CSU, Lifco, Lumine e.d.) telt kasstroom in plaats van winst. Een push komt zodra er een nieuwe naam doorheen komt.</p>${ch}`+
  (l.length?l.map(x=>`<div class="card"><div class="h"><div class="nm"><button class="back" data-d="${x.r.tk}" style="margin:0">${x.r.naam} ›</button><span>${x.r.sector}${x.z.tag?" · "+x.z.tag:""}${x.r.watch?"":" · in bezit"}</span></div><div style="text-align:right"><div class="num" style="font-weight:700;font-size:18px">${x.z.s}/12</div><span class="pill ${x.z.s>=9?"g":"n"}">${x.z.lab}</span></div></div>
  <div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px">${x.z.c.map(k=>`<div><small>${k.t}</small><b class="num ${k.p>=k.m?"pos":k.p===0?"neg":""}" style="font-size:13px">${k.v}</b></div>`).join("")}</div></div>`).join(""):`<div class="note" style="margin-top:12px">Op dit moment haalt niemand 7 van 12.</div>`)}
 /* ---- klap-test ---- */
@@ -455,6 +455,37 @@ function inzKlap(){try{const l=[...own].sort((a,b)=>b.w-a.w),W=l.reduce((t,r)=>t
  beta=own.reduce((t,r)=>t+r.w/W*((r.D&&r.D.beta!=null)?r.D.beta:1),0),vw=own.filter(r=>r.munt!=="EUR").reduce((t,r)=>t+r.w,0)/W*100,
  sc=[[`Je top 3 daalt 30%`,-w3*.3,t3.map(r=>r.naam).join(", ")],[`Beurs daalt 20%`,-20*beta,`met je gemiddelde beta van ${f1(beta)}`],[`Dollar en andere valuta 10% zwakker`,-vw*.1,`${Math.round(vw)}% van je portefeuille staat niet in euro`],[`Beide samen: beurs −20% en dollar −10%`,-20*beta-vw*.1*(1+beta*(-.2)),"worst case combinatie"]];
  return fold("Klap-test",f1(sc[1][1])+"% bij beurs −20%",sc.map(([t,p,n])=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><span>${t}</span><b class="num neg">${pc(p)}</b></div><div class="note" style="margin:2px 0 0">${eur(TOT*p/100)} · ${n}</div></div>`).join("")+nt("Vuistregel, geen voorspelling: de beta komt van Yahoo en de werkelijke daling kan groter of kleiner zijn."))}catch(e){return ""}}
+
+/* ---- grote beleggers (13F) ---- */
+const GNORM=n=>String(n||"").toLowerCase().replace(/\b(inc|corp|corporation|co|ltd|plc|nv|n v|sa|ag|se|class [a-c]|cl [a-c]|com|new|holdings|holding|group|the|adr|sponsored|ord|shs|del)\b/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+function gMatch(n){const g=GNORM(n);if(g.length<3)return null;const w=g.split(" ")[0];return rows.find(r=>{const a=GNORM(r.naam);return a===g||(w.length>=4&&a.split(" ")[0]===w&&(a.startsWith(g)||g.startsWith(a)))})||null}
+function vGuru(){const G=(DATA.gurus)||{},ks=Object.keys(G);
+ const seg=`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"],["guru","Beleggers"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div>`;
+ const intro=`<p style="margin:8px 0 0;color:var(--mut)">Wat grote beleggers kopen en verkopen, uit hun kwartaalmelding bij de SEC (13F). Dat is vertraagd: de melding komt tot 45 dagen na het kwartaal, en het zijn alleen Amerikaanse aandelen en opties. Gebruik het als inspiratie voor je eigen onderzoek, niet als koopsignaal. Chris Mayer meldt niets bij de SEC, dus hem kan ik niet volgen.</p>`;
+ if(!ks.length)return head("Kandidaten")+seg+intro+`<div class="note" style="margin-top:12px">De gegevens worden bij de volgende update opgehaald.</div>`;
+ const all={};ks.forEach(k=>G[k].top.forEach(x=>{(all[x.n]=all[x.n]||[]).push(k.split(" (")[0])}));
+ const dubbel=Object.entries(all).filter(([n,l])=>l.length>=2).map(([n,l])=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><b>${n}</b><div class="note" style="margin:0">${l.join(", ")}</div></div>`).join("");
+ const tag=n=>{const r=gMatch(n);return r?` <span class="pill ${r.watch?"n":"g"}">${r.watch?"op je lijst":"in bezit"}</span>`:""};
+ const dl={nieuw:"nieuw",meer:"meer",minder:"minder"};
+ return head("Kandidaten")+seg+intro+(dubbel?`<div class="tile" style="margin-top:10px"><div class="lbl">Meerdere beleggers hebben dit</div>${dubbel}</div>`:"")+
+ ks.map(k=>{const g=G[k],nw=g.top.filter(x=>x.d==="nieuw").slice(0,6);return `<div class="tile" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b>${k}</b><span class="note" style="margin:0">kwartaal ${g.periode}</span></div><div class="note" style="margin:2px 0 8px">${g.aantal} posities · gemeld op ${g.gemeld}</div>
+ ${nw.length?`<div class="lbl">Nieuw dit kwartaal</div><div style="margin-bottom:8px">${nw.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0"><span>${x.n}${tag(x.n)}</span><b class="num">${f1(x.p)}%</b></div>`).join("")}</div>`:""}
+ <div class="lbl">Grootste posities</div>${g.top.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0"><span>${x.n}${tag(x.n)}${x.d&&x.d!=="gelijk"&&x.d!=="nieuw"?` <span class="note" style="margin:0">(${dl[x.d]})</span>`:""}</span><b class="num">${f1(x.p)}%</b></div>`).join("")}
+ ${g.verkocht&&g.verkocht.length?`<div class="lbl" style="margin-top:8px">Helemaal verkocht</div><div class="note" style="margin:0">${g.verkocht.slice(0,6).map(x=>x.n).join(", ")}</div>`:""}</div>`}).join("")}
+
+/* ---- jaarbrieven ---- */
+const BRIEVEN=[
+ ["Mark Leonard (Constellation, Topicus, Lumine)","Alle brieven van de man achter je seriële overnemers. Leest als een handboek over kapitaal herinvesteren.","https://quartr.com/insights/business-philosophy/collection-mark-leonards-shareholder-letters"],
+ ["Constellation Software","Bedrijfssite: persberichten en de jaarlijkse brief aan aandeelhouders.","https://www.csisoftware.com/"],
+ ["Topicus.com","Bedrijfssite: verslagen en brieven, zoek onder investeerders.","https://www.topicus.com/"],
+ ["Lumine Group","Bedrijfssite: verslagen en brieven, zoek onder investeerders.","https://www.lumine.com/"],
+ ["Lifco","Zweedse overnemer: jaarverslagen met het voorwoord van de ceo.","https://www.lifco.se/"],
+ ["Warren Buffett (Berkshire Hathaway)","Alle brieven sinds 1977.","https://www.berkshirehathaway.com/letters/letters.html"],
+ ["Nick Sleep (Nomad)","De beroemde brieven over concentreren en lang vasthouden (2001 tot 2014).","https://suredividend.com/wp-content/uploads/2024/11/Nomad-Letters.pdf"],
+ ["Terry Smith (Fundsmith)","Halfjaar- en jaarbrieven over kwaliteitsbedrijven.","https://www.fundsmith.co.uk/"],
+ ["Chuck Akre","Brieven en presentaties over de driepotige kruk.","https://www.akrefund.com/"],
+ ["François Rochon (Giverny Capital)","Jaarlijkse brieven over kwaliteitsbedrijven met groeiende winst.","https://www.givernycapital.com/"]];
+function vBrieven(){return `<p style="margin:8px 0 0;color:var(--mut)">Brieven en verslagen om te lezen. Sommige zijn de officiële pagina van het bedrijf of fonds, daar zoek je zelf de nieuwste brief. Ik heb ze niet allemaal gelezen.</p>`+BRIEVEN.map(b=>`<a class="tile" href="${b[2]}" target="_blank" rel="noopener" style="display:block;margin-top:8px;text-decoration:none;color:inherit"><div style="font-weight:600">${b[0]} ›</div><div class="note" style="margin:2px 0 0">${b[1]}</div></a>`).join("")}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -509,7 +540,7 @@ function cluBars(){return CLU.map(c=>{const w=cluW(c),n=own.filter(c.f).length;r
 function secSec(){const secs=Object.entries(secW).sort((a,b)=>b[1]-a[1]);return `<div class="sec"><h2>Spreiding per sector</h2><button class="tile go" data-s="sector">${donut(secs.map(([n,v])=>({n,v,c:secVar[n]||'--cx'})))}${secs[0][1]>35?`<div class="note" style="color:var(--warn)">${secs[0][0]} is meer dan 35% van je portefeuille.</div>`:""}</button></div>`}
 function vAgenda(){
  const T0=new Date();
- const seg=`<div class="seg seg3" style="margin-top:4px"><button data-ag="alles" aria-pressed="${agTab==="alles"}">Alles</button><button data-ag="cijfers" aria-pressed="${agTab==="cijfers"}">Cijfers</button><button data-ag="dividend" aria-pressed="${agTab==="dividend"}">Dividend</button></div>`;
+ const seg=`<div class="seg" style="margin-top:4px;grid-template-columns:repeat(4,1fr)"><button data-ag="alles" aria-pressed="${agTab==="alles"}">Alles</button><button data-ag="cijfers" aria-pressed="${agTab==="cijfers"}">Cijfers</button><button data-ag="dividend" aria-pressed="${agTab==="dividend"}">Dividend</button><button data-ag="brieven" aria-pressed="${agTab==="brieven"}">Brieven</button></div>`;if(agTab==="brieven")return head("Agenda")+seg+vBrieven();
  if(agTab==="dividend"){const o=vDiv();return head("Agenda")+seg+o.slice(head("Dividend").length)}
  const ev=[];
  if(agTab!=="dividend")own.forEach(r=>{const d=earn(r);if(d-new Date()<150*864e5)ev.push({d,r,t:"cijfers"})});
