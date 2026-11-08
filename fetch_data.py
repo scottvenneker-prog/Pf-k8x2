@@ -351,7 +351,56 @@ try:
 except Exception as e:
     print("FOUT compounder", e)
 
+
+# --- grote beleggers: 13F-meldingen bij de SEC (publiek, per kwartaal)
+GURUS = {"Berkshire Hathaway": "1067983", "Stanley Druckenmiller (Duquesne)": "1536411",
+         "Mohnish Pabrai (Dalal Street)": "1549575", "Chris Hohn (TCI)": "1647251"}
+SEC_H = {"User-Agent": "PortefeuilleCockpit research script", "Accept-Encoding": "gzip, deflate"}
+def sec_get(u):
+    r = requests.get(u, headers=SEC_H, timeout=30); r.raise_for_status(); return r
+def parse_13f(cik, acc):
+    import xml.etree.ElementTree as ET
+    base = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}/"
+    items = sec_get(base + "index.json").json()["directory"]["item"]
+    xs = [i["name"] for i in items if i["name"].lower().endswith(".xml") and "primary_doc" not in i["name"].lower()]
+    best = {}
+    for nm in xs:
+        root = ET.fromstring(sec_get(base + nm).content)
+        for el in root.iter():
+            if el.tag.endswith("infoTable"):
+                g = lambda t: next((c.text for c in el.iter() if c.tag.endswith(t) and c.text), None)
+                try: v = float(g("value") or 0)
+                except Exception: continue
+                name = (g("nameOfIssuer") or "").strip()
+                if not name: continue
+                b = best.setdefault(name, dict(n=name, v=0.0)); b["v"] += v
+        if best: break
+    tot = sum(b["v"] for b in best.values()) or 1
+    return sorted([dict(n=b["n"], p=round(b["v"] / tot * 100, 2)) for b in best.values()], key=lambda x: -x["p"])
+GRU = {}
+for gname, cik in GURUS.items():
+    try:
+        sub = sec_get(f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json").json()
+        rc = sub["filings"]["recent"]
+        fl = [(rc["filingDate"][i], rc["accessionNumber"][i], rc["reportDate"][i]) for i in range(len(rc["form"])) if rc["form"][i] == "13F-HR"]
+        fl.sort(reverse=True)
+        if not fl: continue
+        cur = parse_13f(cik, fl[0][1]); prv = parse_13f(cik, fl[1][1]) if len(fl) > 1 else []
+        pm = {x["n"]: x["p"] for x in prv}; cm = {x["n"]: x["p"] for x in cur}
+        for x in cur:
+            o = pm.get(x["n"])
+            x["d"] = "nieuw" if o is None else "meer" if x["p"] > o * 1.1 else "minder" if x["p"] < o * .9 else "gelijk"
+        verk = [dict(n=n, p=p) for n, p in sorted(pm.items(), key=lambda kv: -kv[1]) if n not in cm][:10]
+        GRU[gname] = dict(naam=sub.get("name"), periode=fl[0][2], gemeld=fl[0][0], aantal=len(cur), top=cur[:15], verkocht=verk)
+        if "13f:init" in SEEN:
+            for x in cur[:30]:
+                if x["d"] == "nieuw" and x["p"] >= 1:
+                    notify(f'13f-{cik}-{fl[0][2]}-{x["n"]}', f"{gname}: nieuwe positie", f'{x["n"]} ({x["p"]}% van de portefeuille)')
+    except Exception as e:
+        print("FOUT 13F", gname, e)
+SEEN.add("13f:init")
+
 json.dump(clean(dict(bijgewerkt=dt.datetime.now(dt.timezone.utc).isoformat(), versie=2, doel_cagr=P.get("doel_cagr", 15),
-          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK)),
+          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU)),
           open("data.json", "w"), default=str)
 json.dump(sorted(SEEN)[-4000:], open("seen.json", "w"))
