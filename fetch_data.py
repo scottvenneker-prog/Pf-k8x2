@@ -356,7 +356,7 @@ except Exception as e:
 GURUS = {"Berkshire Hathaway": "1067983", "Stanley Druckenmiller (Duquesne)": "1536411",
          "Mohnish Pabrai (Dalal Street)": "1549575", "Chris Hohn (TCI)": "1647251",
          "Chuck Akre (Akre Capital)": "1112520", "Li Lu (Himalaya Capital)": "1709323"}
-SEC_H = {"User-Agent": "PortefeuilleCockpit/1.0 (persoonlijk onderzoek; github.com/scottvenneker-prog/Pf-k8x2)", "Accept-Encoding": "gzip, deflate"}
+SEC_H = {"User-Agent": "PortefeuilleCockpit rofite9480@boffweb.com", "Accept-Encoding": "gzip, deflate"}
 def sec_get(u):
     time.sleep(0.4)
     r = requests.get(u, headers=SEC_H, timeout=30); r.raise_for_status(); return r
