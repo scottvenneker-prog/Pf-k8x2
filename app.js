@@ -389,6 +389,21 @@ function closedWin(){const C=closedList();if(!C.length)return "";
 
 let winTab="open";
 function winSeg(){return `<div class="seg" style="margin-top:8px">${[["open","Open posities"],["gesloten","Gesloten posities"]].map(([k,t])=>`<button data-wt="${k}" aria-pressed="${winTab===k}">${t}</button>`).join("")}</div>`}
+
+function yrRecon(k){try{pfTWR(5);if(!window._PS||!_TD)return null;const ds=_TD,pos=window._PS,fl=window._FLW||[];
+ const ix=d=>{let r=-1;for(let i=0;i<ds.length;i++){if(ds[i]<=d)r=i;else break}return r};
+ const kb=ix((k-1)+"-12-31"),ke=ix(k+"-12-31");if(ke<1||ke<=kb)return null;const b0=kb<0?0:kb;
+ const ap=window._PX||[],val=(i,A)=>(A||pos).reduce((s,p)=>{const n=p.q[i];return s+(n>0&&isFinite(p.px[i])?n*p.px[i]:0)},0),vt=i=>val(i)+val(i,ap);
+ const begin=kb<0?0:vt(kb),eind=vt(ke),apx=Math.max(eind>0?val(ke,ap)/eind:0,begin>0&&kb>=0?val(kb,ap)/begin:0);
+ let buy=0,sell=0;const lo=(k-1)+"-12-31",hi=k+"-12-31";
+ PRIVE.imp.trx.x.forEach(x=>{if(x[0]>lo&&x[0]<=hi&&x[5]&&isFinite(x[6])){if(x[6]<0)buy-=x[6];else sell+=x[6]}});
+ let fs=0;for(let i=b0+1;i<=ke;i++)fs+=fl[i]||0;
+ const net=buy-sell,res=eind-begin-net+fs,tw=(typeof _TW!=="undefined"&&_TW[ke]&&_TW[b0])?(_TW[ke]/_TW[b0]-1)*100:null;
+ return {y:k,begin,eind,net,res,fs,tw,apx,dz:res/(begin+net/2)*100,ok:begin>=5000}}catch(e){return null}}
+function yrCard(k){const d=JR[k],r=yrRecon(+k);
+ if(!r||r.eind<=0)return `<div class="sec"><div class="tile"><div style="font-weight:600;font-size:14px">${k}</div>${kvs([["Gestort",eur(d.i)],["Opgenomen",eur(d.u)]])}<div class="note" style="margin-top:4px">Voor dit jaar ontbreken te veel koersen om het vermogen te reconstrueren.</div></div></div>`;
+ const pcs=v=>v==null||!isFinite(v)?"–":pc(v);
+ return `<div class="sec"><div class="tile"><div style="font-weight:600;font-size:14px;margin-bottom:6px">${k}</div>${kvs([["Vermogen 1 jan",r.begin>0?eur(r.begin):"–"],["Vermogen 31 dec",eur(r.eind)],["Gestort",eur(d.i)],["Opgenomen",eur(d.u)],["Resultaat aandelen",eur(r.res)],["Yield op beginvermogen",r.ok?pcs(r.res/r.begin*100):"n.v.t."],["Gecorrigeerd voor inleg",r.ok?pcs(r.dz):"n.v.t."],["Tijdgewogen",r.ok&&r.apx<0.1?pcs(r.tw):"n.v.t."]])}<div class="note" style="margin-top:6px">Gereconstrueerd uit je transacties en weekkoersen. Alleen aandelen: cash en opties zitten er niet in.${r.apx>0.02?" Voor "+Math.round(r.apx*100)+"% is de koers geschat uit je eigen koop- en verkoopprijzen (aandeel niet meer op de beurs).":""}${r.ok?"":" Het beginvermogen is te klein voor een zinvol percentage."}</div></div></div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -720,7 +735,7 @@ function inzGT(){const y=YRS[YRS.length-1];
  return fold("Geld- tegenover tijdgewogen",pc(REAL.xirr)+" per jaar",`<button data-s="gt" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${gtRow(y)}${nt("Je yield deelt het resultaat door het vermogen op 1 januari. Maar je stort het hele jaar door bij, en dat geld heeft maar een deel van het jaar gewerkt. Gecorrigeerd (Dietz) rekent die timing mee en is het eerlijke tijdgewogen rendement. Je "+pc(REAL.xirr)+" sinds 2016 is geldgewogen: het weegt zwaarder mee in jaren dat je veel had ingelegd.")}<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Voorgaande jaren</span><span>›</span></div></button>`)}
 function gtSub(){const ys=Object.keys(JR).sort().reverse();
  return `<div class="note" style="margin-top:12px">Per jaar de yield zoals jij die berekent (resultaat gedeeld door het beginvermogen) en het tijdgewogen rendement, gecorrigeerd voor je stortingen. Je geldgewogen rendement sinds ${REAL.start} is ${pc(REAL.xirr)} per jaar.</div>`+ys.map(k=>{const y=YRS.find(x=>x.y===+k),d=JR[k];
-  return y?`<div class="sec"><div class="tile">${gtRow(y)}${kvs([["Gestort",eur(d.i)],["Opgenomen",eur(d.u)],["Resultaat",eur(y.res)]])}</div></div>`:`<div class="sec"><div class="tile"><div style="font-weight:600;font-size:14px">${k}</div><div class="note" style="margin-top:4px">Netto inleg ${eur(d.i-d.u)}. Het vermogen op 1 januari en 31 december van dit jaar heb ik nog niet. Later reconstrueer ik dat uit je transacties en de koersen van die dagen, en dan staat hier ook het rendement.</div></div></div>`}).join("")}
+  return y?`<div class="sec"><div class="tile">${gtRow(y)}${kvs([["Gestort",eur(d.i)],["Opgenomen",eur(d.u)],["Resultaat",eur(y.res)]])}</div></div>`:yrCard(k)}).join("")}
 const optK=()=>{const r=rows.find(x=>x.tk==="BESI.AS");return r?r.waarde/r.qty:0};
 const ncdf=x=>{const t=1/(1+.2316419*Math.abs(x)),d=.3989423*Math.exp(-x*x/2),q=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-q:q};
 function optHtml(){const k=OPT.k,n=OPT.n,p=OPT.p,koers=optK(),afn=k*100*n,prem=p*100*n,maxv=afn-prem,be=k-p,afst=(koers/k-1)*100,tot=TOT,pct=afn/tot*100;
@@ -790,18 +805,18 @@ function pfTWR(L){if(!PRIVE||!PRIVE.imp||!PRIVE.imp.trx||!PRIVE.imp.trx.x)return
    if(!pp[isin].length)pp[isin]=rs.map(x=>[x[0],Math.abs(x[6]/x[5])])});
   const T=d=>Date.parse(d);
   const interp=(isin,d)=>{const a=pp[isin].slice().sort((p,q)=>p[0]<q[0]?-1:1);if(d<=a[0][0])return a[0][1];if(d>=a[a.length-1][0])return a[a.length-1][1];for(let i=1;i<a.length;i++){if(d<=a[i][0]){const t0=T(a[i-1][0]),t1=T(a[i][0]);return t1===t0?a[i][1]:a[i-1][1]+(a[i][1]-a[i-1][1])*(T(d)-t0)/(t1-t0)}}return a[a.length-1][1]};
-  const pos=[];let ben=0,tot=0;
+  const pos=[];window._PX=[];let ben=0,tot=0;
   Object.keys(tr).forEach(isin=>{const t=i2t[isin],r=t&&own.find(o=>o.tk===t),e=r&&r.D&&r.D.px_e;
    const q=ds.map(d=>tr[isin].reduce((s,z)=>z[0]<=d?s+z[1]:s,0)*sp[isin](d));if(!q.some(v=>v>0))return;
    const V=!e&&DATA.verkocht&&DATA.verkocht[isin],vp=d=>{const i=Math.round((T(d)-T(V.s))/6048e5);return V.v[Math.max(0,Math.min(V.v.length-1,i))]};
    const px=ds.map((d,k)=>{const m=e?e.length-N+k:-1;return(e&&m>=0&&isFinite(e[m]))?e[m]:V?vp(d):interp(isin,d)});
-   if(e||V||window.PF_SOLD)pos.push({q,px,real:!!e,ye:(r&&r.D&&r.D.px_ye)||null})});
+   if(!(e||V||window.PF_SOLD))window._PX.push({isin,q,px});if(e||V||window.PF_SOLD)pos.push({isin,q,px,real:!!e,ye:(r&&r.D&&r.D.px_ye)||null})});
   {const y0=new Date().getFullYear()+"-01-01",kj=ds.findIndex(d=>d>=y0);let a0=0,a1=0;if(kj>0)pos.forEach(p=>{const n=p.q[kj-1],e0=p.ye||p.px[kj-1];if(n>0&&e0){a0+=n*e0;a1+=n*p.px[kj]}});window._F0=a0>0?a1/a0:null}
   const A=PRIVE.imp.acc||{},fx={};(A.fxl||[]).forEach(f=>{(fx[f[1]]=fx[f[1]]||[]).push([f[0],f[2]])});Object.keys(fx).forEach(c=>fx[c].sort((p,q)=>p[0]<q[0]?-1:1));
   const toE=(a,c,d)=>{if(!c||c==="EUR"||!fx[c])return a;let r=fx[c][0][1];for(const z of fx[c]){if(z[0]<=d)r=z[1];else break}return a/r};
   const fl=new Array(N).fill(0);(A.ev||[]).forEach(e=>{const t=e[1];if(t!=="v"&&t!=="w"&&t!=="k"&&t!=="r")return;const d=e[0];if(d<=ds[0]||d>ds[N-1])return;let k=1;while(k<N&&ds[k]<d)k++;const m=toE(e[2],e[3],d);fl[k]+=t==="k"?-m:m});
   const idx=[100];for(let k=1;k<N;k++){let v0=0,v1=0;pos.forEach(p=>{const n=p.q[k-1];if(n>0){v0+=n*p.px[k-1];v1+=n*p.px[k]}});if(window._K0==null&&v0>=25000)window._K0=k;idx.push(idx[k-1]*(v0>0?(v1+fl[k])/v0:1))}
-  _TW=idx;_TD=ds}
+  _TW=idx;_TD=ds;window._PS=pos;window._FLW=fl}
  const l=Math.min(L,_TW.length),s=_TW.slice(-l);return s.map(v=>v/s[0]*100)}
 function pfIdx(L){return pfTWR(L)||pfSer(L)}
 function pfSer(L){const it=own.filter(r=>r.D&&(r.D.px_e||r.D.px_w)&&(r.D.px_e||r.D.px_w).length>=L);if(it.length<10)return null;const sw=r=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return r.w*a[0]/a[L-1]},tw=it.reduce((s,r)=>s+sw(r),0),pf=[];for(let i=0;i<L;i++)pf.push(it.reduce((s,r)=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return s+sw(r)*a[i]/a[0]},0)/tw*100);return pf}
