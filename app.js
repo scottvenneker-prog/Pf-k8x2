@@ -104,7 +104,7 @@ function kandidaten(){
   if(sw>PAR.sec){s-=3;warn.push(`sector ${r.sector} is al ${f1(sw)}% van je portefeuille`)}
   if(r.pe>r.peh*1.2)warn.push(`PE ${f1(r.pe)} ligt ver boven historisch ${f1(r.peh)}`);
   if(r.munt!=="EUR")warn.push(`valutarisico ${r.munt}`);
-  return {r,s,why,warn,v,q}}).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s);
+  {const z=cscore(r),F=fairV(r),M=MOAT[r.tk];if(z.s>=9){s+=2;why.unshift(`compounder-score ${z.s} van 12`)}else if(z.s>=7)s+=1;if(M&&/breed/i.test(M.s)){s+=1}if(M&&M.s==="Zwak"){s-=3;warn.push("de moat is zwak en het bedrijf is klein")}if(F){if(F.mid>15){s+=2;why.push(`volgens mijn rekenmodel ${Math.round(F.mid)}% onder redelijke waarde (indicatie)`)}else if(F.mid<-20){s-=2;warn.push(`volgens mijn rekenmodel ${Math.round(Math.abs(F.mid))}% boven redelijke waarde`)}}if(!r.watch&&r.w<2&&(z.s>=7||verdict(r).lab==="Behouden of bijkopen")){s+=1.5;why.unshift(`je positie is nog klein (${f1(r.w)}%): uitbouwen naar 3 tot 5% maakt echt verschil`)}}return {r,s,why,warn,v,q}}).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s);
  return out}
 function analyse(x,a){const r=x.r;const sec=secW[r.sector]||0;
  const wNu=r.watch?0:r.w,wNa=(r.watch?a:r.waarde+a)/(TOT+budget)*100;
