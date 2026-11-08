@@ -522,11 +522,12 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  const kw=cl(own.reduce((t,r)=>t+r.w*((r.roic==null||r.roic>=15?1:r.roic>=10?.5:0)*.5+((r.nd==null||r.nd<=2)?.5:(r.nd<=3?.25:0))),0)/W*10);
  const top5=[...own].sort((a,b)=>b.w-a.w).slice(0,5).reduce((t,r)=>t+r.w,0)/W*100,eff=effN(own.map(r=>r.w)),secMax=Math.max(...Object.values(secW));
  const smalls=own.filter(r=>r.w<2),smW=smalls.reduce((t,r)=>t+r.w,0)/W*100,spr=cl(((eff>=20?10:eff/20*10)+(secMax<=35?10:cl(10-(secMax-35)/3))+(top5<=45?10:cl(10-(top5-45)/4))+cl(10-smalls.length*1.2))/4);
- const peg=wa(r=>r.peg==null?null:Math.min(r.peg,4)),wd=cl(10-Math.max(0,peg-1)*3.3);
+ const peg=wa(r=>r.peg==null?null:Math.min(r.peg,4)),wdP=cl(10-Math.max(0,peg-1)*3.3);
+ const FV=own.map(r=>({r,f:fairV(r)})).filter(x=>x.f),FW=FV.reduce((t,x)=>t+x.r.w,0)||1,over=FV.filter(x=>x.f.mid<-15),under=FV.filter(x=>x.f.mid>15),overW=over.reduce((t,x)=>t+x.r.w,0)/FW*100,underW=under.reduce((t,x)=>t+x.r.w,0)/FW*100,avgM=FV.reduce((t,x)=>t+x.r.w*x.f.mid,0)/FW,wdF=cl(10-overW/5),wd=(wdP+wdF)/2;
  const xr=REAL.xirr,ren=cl(xr==null?5:xr/DOEL*8);
  const usd=own.filter(r=>r.munt!=="EUR").reduce((t,r)=>t+r.w,0)/W*100,beta=wa(r=>r.D&&r.D.beta!=null?r.D.beta:1),aiW=typeof aiProfitW==="function"?aiProfitW():0;
  const ris=cl(10-Math.max(0,beta-1)*5-Math.max(0,usd-50)/8-Math.max(0,aiW-45)/8);
- const C=[["Groei van de winst",gro,20,`gewogen winstgroei ${f1(eps)}% per jaar tegenover je doel van ${DOEL}%`],["Kwaliteit",kw,20,"ROIC en schuld van je bedrijven"],["Spreiding",spr,20,`${f1(eff)} effectieve posities, top 5 is ${f1(top5)}%, grootste sector ${f1(secMax)}%, ${smalls.length} posities onder de 2%`],["Waardering",wd,15,`gewogen PEG ${f1(peg)}`],["Rendement",ren,15,`${pc(xr)} per jaar sinds 2016 tegenover je doel van ${DOEL}%`],["Risico",ris,10,`beta ${f1(beta)}, ${Math.round(usd)}% buiten de euro, ${Math.round(aiW)}% AI-afhankelijk`]];
+ const C=[["Groei van de winst",gro,20,`gewogen winstgroei ${f1(eps)}% per jaar tegenover je doel van ${DOEL}%`],["Kwaliteit",kw,20,"ROIC en schuld van je bedrijven"],["Spreiding",spr,20,`${f1(eff)} effectieve posities, top 5 is ${f1(top5)}%, grootste sector ${f1(secMax)}%, ${smalls.length} posities onder de 2%`],["Waardering",wd,15,`gewogen PEG ${f1(peg)}; ${Math.round(overW)}% van je geld staat boven redelijke waarde, ${Math.round(underW)}% eronder`],["Rendement",ren,15,`${pc(xr)} per jaar sinds 2016 tegenover je doel van ${DOEL}%`],["Risico",ris,10,`beta ${f1(beta)}, ${Math.round(usd)}% buiten de euro, ${Math.round(aiW)}% AI-afhankelijk`]];
  const tot=C.reduce((t,c)=>t+c[1]*c[2],0)/100;
  const good=[],bad=[],better=[];
  [...C].sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(c=>{if(c[1]>=6.5)good.push(`${c[0]}: ${f1(c[1])}. ${c[3]}.`)});
@@ -535,7 +536,8 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  Object.entries(secW).filter(([k,v])=>v>PAR.sec).forEach(([k,v])=>better.push(`Sector ${k} is ${f1(v)}% van de portefeuille, boven je grens van ${PAR.sec}%.`));
  const st=own.filter(r=>verdict(r).k==="structureel");if(st.length)better.push(`${st.length} bedrijf${st.length>1?"ven staan":" staat"} op "Verkoop overwegen" (${st.map(r=>r.naam).join(", ")}, samen ${f1(st.reduce((t,r)=>t+r.w,0))}%). Dat geld werkt minder hard dan je doel.`);
  const lw=own.filter(r=>verdict(r).k==="licht");if(lw.length)better.push(`${lw.length} bedrijven groeien net onder je doel (${lw.slice(0,4).map(r=>r.naam).join(", ")}${lw.length>4?" e.a.":""}). Volg de komende kwartalen.`);
- const duur=own.filter(r=>{const f=fairV(r);return f&&f.mid<-20}).sort((a,b)=>b.w-a.w).slice(0,4);if(duur.length)better.push(`Volgens mijn rekenmodel staan ${duur.map(r=>r.naam).join(", ")} ruim boven redelijke waarde. Niet extra bijkopen.`);
+ if(over.length){const d=over.sort((a,b)=>b.r.w-a.r.w).slice(0,4);better.push(`${f1(overW)}% van je geld staat in bedrijven boven redelijke waarde, het grootst: ${d.map(x=>x.r.naam+" ("+f1(x.r.w)+"%, "+Math.round(x.f.mid)+"%)").join(", ")}. Niet extra bijkopen, en trimmen kan als de weging boven je grens zit.`)}
+ if(under.length&&underW>=20)good.push(`Waardering: ${f1(underW)}% van je geld staat in bedrijven onder redelijke waarde (indicatie), gemiddeld ${avgM>=0?"+":"−"}${Math.round(Math.abs(avgM))}% voor de hele portefeuille.`);
  if(usd>60)better.push(`${Math.round(usd)}% van je geld staat niet in euro. Een sterke euro kost je rendement.`);
  if(aiW>45)better.push(`${Math.round(aiW)}% van je portefeuille profiteert direct van AI-investeringen. Dat is een gedeeld risico.`);
  try{const L=closedList().filter(x=>x.na!=null);if(L.length>=10){const v=L.filter(x=>x.na>20).length;if(v/L.length>.5)better.push(`Je verkocht ${v} van ${L.length} aandelen te vroeg (koers daarna +20% of meer). Overweeg winnaars langer te houden.`)}}catch(e){}
