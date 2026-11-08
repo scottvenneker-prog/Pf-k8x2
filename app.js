@@ -18,6 +18,8 @@ function mk(tk,M,w){const D=DR[tk]||{};
  const pos=pct(D.pos52),yld=pct(D.yld)||0,dag=pct(D.dag)||0;
  const o={tk,naam:M.naam||D.naam||tk,sector:M.sector||D.sector||"Onbekend",land:M.land||D.land||"",munt:M.munt||"EUR",qty:0,waarde:0,inkoop:0,dag,eps,fcf,roic,pe,peh,nd,pos,yld,watch:w,epsF,D,M,eigenaar:M.eigenaar||null};
  o.peg=D.peg>0?D.peg:(pe&&eps>0?pe/eps:99);o.peg=Math.round(o.peg*100)/100;
+ o.dq=[];if(eps!=null&&eps>100)o.dq.push('winstgroei');if(fcf!=null&&fcf>100)o.dq.push('kasstroomgroei');if(roic!=null&&roic>150)o.dq.push('ROIC');if(pe!=null&&pe>150)o.dq.push('PE');
+ if(eps!=null&&eps>40&&pe>0)o.peg=Math.round(pe/40*100)/100;
  let s=0;if(eps!=null&&eps>=12)s++;if(roic!=null&&roic>=15)s++;if(fcf!=null&&fcf>=12)s++;if(o.peg<=1.5||(pe!=null&&peh!=null&&pe<peh))s++;if(nd==null||nd<=2.5)s++;
  ['eps','fcf','roic','pe','peh','nd','pos','yld'].forEach(k=>o[k]=r1x(o[k]));o.dag=Math.round(o.dag*100)/100;
  o.score=s;o.licht=s>=4?"g":s>=2?"a":"r";
@@ -301,7 +303,7 @@ function vDet(){
  const r=rows.find(x=>x.tk===det);const t=dtab;
  const tabs=[["analyse","Analyse"],["kwaliteit","Kwaliteit"],["trend","Trend"],["ai","AI"],["waardering","Waardering"],["moat","Moat en risico"],["dividend","Dividend"],["nieuws","Nieuws & insiders"],["positie","Positie"]];
  let body="";
- if(t==="analyse")body=analyseTab(r);if(t==="moat")body=moatTab(r);
+ if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=dqTile(r)+body;
  if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${r.eps}%</b><em>${r.epsF?"kasstroomgroei, overnames vertekenen de winst":"doel: 12% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
  ${((r.D||{}).eps||[]).length>1?`<div class="chart"><h3>Winst per aandeel (EPS)</h3><p>Per jaar, in de munt van het bedrijf</p>${barsR(r.D.eps,r.D.jaren)}</div>`:""}${((r.D||{}).fcf||[]).length>1?`<div class="chart"><h3>Vrije kasstroom (FCF)</h3><p>Per jaar, in miljoenen</p>${barsR(r.D.fcf,r.D.fjaren)}</div>`:""}${kwExtra(r)}`;
  if(t==="trend")body=`<div class="facts"><div class="fact"><small>Trend</small><b><span class="pill ${r.tc}">${r.trend}</span></b><em>50- en 200-daags gemiddelde</em></div><div class="fact"><small>Analisten koersdoel</small><b class="num ${cls(r.kd)}">${pc(r.kd,0)}</b><em>gemiddelde verwachting</em></div><div class="fact"><small>T.o.v. 50-daags</small><b class="num ${cls(r.v50)}">${pc(r.v50)}</b></div><div class="fact"><small>T.o.v. 200-daags</small><b class="num ${cls(r.v200)}">${pc(r.v200)}</b></div></div>
@@ -434,10 +436,11 @@ const CMEGA={Halfgeleiders:"Halfgeleiders en AI-chips",Technologie:"Digitaliseri
 function cscore(r){const D=r.D||{},ins=D.ins_pct==null?null:D.ins_pct*100,dil=D.dil==null?null:D.dil*100,c=[];let s=0;
  const add=(t,p,m,v,n)=>{s+=p;c.push({t,p,m,v,n})};
  const e=r.eps,f=r.fcf;
- add(r.epsF&&false?"":"Winstgroei",e==null?0:e>=15?2:e>=12?1:0,2,e==null?"–":f1(e)+"%","doel 15%");
- add("Kasstroomgroei",f==null?0:f>=15?2:f>=10?1:0,2,f==null?"–":f1(f)+"%","doel 15%");
+ const dqs=r.dq||[];
+ add(r.epsF&&false?"":"Winstgroei",e==null?0:Math.min(dqs.includes("winstgroei")?1:2,e>=15?2:e>=12?1:0),2,e==null?"–":f1(e)+"%","doel 15%");
+ add("Kasstroomgroei",f==null?0:Math.min(dqs.includes("kasstroomgroei")?1:2,f>=15?2:f>=10?1:0),2,f==null?"–":f1(f)+"%","doel 15%");
  add("Schuld",r.nd==null||r.nd<=1?2:r.nd<=2?1:0,2,r.nd==null?"n.v.t.":f1(r.nd)+"×","max 1× EBITDA");
- add("ROIC",r.roic==null?1:r.roic>=15?2:r.roic>=10?1:0,2,r.roic==null?"n.v.t.":r.roic+"%","doel 15%");
+ add("ROIC",r.roic==null||dqs.includes("ROIC")?1:r.roic>=15?2:r.roic>=10?1:0,2,r.roic==null?"n.v.t.":r.roic+"%","doel 15%");
  add("Eigenaarschap",(ins!=null&&ins>=5?1:0)+(dil!=null&&dil<=1?1:0),2,(ins==null?"–":f1(ins)+"% insiders")+(dil==null?"":", verwatering "+f1(dil)+"%"),"insiders 5%+, weinig verwatering");
  add("Waardering",r.peg==null?0:r.peg<=1.5?2:r.peg<=2?1:0,2,r.peg==null?"–":"PEG "+f1(r.peg),"PEG 1,5 of lager");
  const mc=D.mcap||0,lab=s>=9?(mc<25e9?"Verborgen compounder":"Gevestigde compounder"):s>=7?"Kandidaat-compounder":null;
@@ -493,7 +496,7 @@ const MOAT={"III.L": {"s": "Matig", "m": "Schaal en laagste prijs (Action, ruim 
 
 function dcfRel(y,g1,rr,gT){let F=y,pv=0;for(let t=1;t<=10;t++){const g=t<=5?g1:g1+(gT-g1)*(t-5)/5;F*=1+g;pv+=F/Math.pow(1+rr,t)}return pv+F*(1+gT)/(rr-gT)/Math.pow(1+rr,10)}
 function fairV(r){try{const D=r.D||{};if(!(r.pe>0))return null;const K=D.koers_eur,fin=r.sector==="Financieel";
- const fm=D.fmp,afw=(fm&&fm.afw)||[],epsE=r.eps!=null&&afw.includes("eps_cagr")&&fm.eps_cagr!=null?Math.min(r.eps,fm.eps_cagr*100):r.eps,fcfE=r.fcf!=null&&afw.includes("fcf_cagr")&&fm.fcf_cagr!=null?Math.min(r.fcf,fm.fcf_cagr*100):r.fcf;
+ const fm=D.fmp,afw=(fm&&fm.afw)||[],epsE=(r.eps!=null&&afw.includes("eps_cagr")&&fm.eps_cagr!=null?Math.min(r.eps,fm.eps_cagr*100):r.eps),fcfE0=r.fcf!=null&&afw.includes("fcf_cagr")&&fm.fcf_cagr!=null?Math.min(r.fcf,fm.fcf_cagr*100):r.fcf,dqf=r.dq||[],fcfE=dqf.includes("kasstroomgroei")?null:fcfE0;
  const long=Math.max(0,Math.min(25,epsE==null?0:epsE)),gF=typeof D.eps_fwd==="number"&&isFinite(D.eps_fwd)?Math.max(-10,Math.min(25,D.eps_fwd*100)):long*.8;
  const a=r.peh&&r.peh>0?Math.min(35,r.peh):null,b=long>=5?Math.min(35,1.5*long):null,l=[a,b].filter(x=>x!=null);
  let em=null;if(l.length){const fpe=r.pe/(1+gF/100),mid=l.reduce((t,x)=>t+x,0)/l.length;em=(mid/fpe-1)*100}
@@ -520,7 +523,7 @@ function moatTab(r){const M=MOAT[r.tk],F=fairV(r);
 
 /* ---- totale portefeuille-analyse ---- */
 function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce((t,r)=>{const v=f(r);return t+(v==null?0:r.w*v)},0)/W,cl=(x,a=0,b=10)=>Math.max(a,Math.min(b,x));
- const eps=wa(r=>Math.min(r.eps||0,40)),gro=cl(eps/DOEL*10);
+ const eps=wa(r=>(r.dq&&r.dq.includes("winstgroei"))?Math.min(r.eps||0,40):Math.min(r.eps||0,40)),gro=cl(eps/DOEL*10);
  const kw=cl(own.reduce((t,r)=>t+r.w*((r.roic==null||r.roic>=15?1:r.roic>=10?.5:0)*.5+((r.nd==null||r.nd<=2)?.5:(r.nd<=3?.25:0))),0)/W*10);
  const top5=[...own].sort((a,b)=>b.w-a.w).slice(0,5).reduce((t,r)=>t+r.w,0)/W*100,eff=effN(own.map(r=>r.w)),secMax=Math.max(...Object.values(secW));
  const smalls=own.filter(r=>r.w<2),smW=smalls.reduce((t,r)=>t+r.w,0)/W*100,secC=Math.min(secMax<=PAR.sec?10:cl(10-(secMax-PAR.sec)/3),...CLU.map(c=>{const w=cluW(c);return w<=c.lim?10:cl(10-(w-c.lim)/3)})),spr=cl(((eff>=20?10:eff/20*10)+secC+(top5<=45?10:cl(10-(top5-45)/4))+cl(10-smalls.length*1.2))/4);
@@ -545,6 +548,7 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  try{const G=gsel();if(G&&G.nCn>=10&&G.vroeg>60)better.push(`Bij ${Math.round(G.vroeg)}% van je verkochte aandelen deed de koers daarna beter dan de S&P 500 (meer dan 10 punten). Overweeg winnaars langer te houden.`);if(G&&G.omz>50)better.push(`Je verkoopt ${Math.round(G.omz)}% van je portefeuille per jaar. Rustiger handelen scheelt kosten. Zie je beleggersgedrag.`)}catch(e){}
  const kn=rows.filter(r=>r.watch&&cscore(r).s>=9).slice(0,3);if(kn.length)better.push(`Op je lijst met 9 of meer van 12 punten als compounder: ${kn.map(r=>r.naam).join(", ")}.`);
  try{const nb=notBroken();if(nb.length)better.unshift(`Je eigen verkoopregels zijn geraakt bij ${nb.map(x=>x.r.naam).join(", ")}. Lees je koopnotitie en kijk of de reden om te kopen nog klopt.`)}catch(e){}
+ try{const dn=dqNames();if(dn.length)better.push(`Bij ${dn.length} bedrijven is de data onzeker (${dn.slice(0,4).join(", ")}${dn.length>4?" e.a.":""}). Hun groeicijfers tellen voorzichtig mee. Check ze zelf bij de cijfers van het bedrijf.`)}catch(e){}
  if(!better.length)better.push("Geen grote aandachtspunten volgens je eigen regels.");
  const gr=tot>=8.5?"Uitstekend":tot>=7.5?"Goed":tot>=6.5?"Ruim voldoende":tot>=5.5?"Voldoende":"Aandacht nodig";
  const cs=r=>{const v=verdict(r),z=cscore(r);return v.k==='structureel'?['afbouwen of verkopen','r']:(z.s>=9||v.lab==='Behouden of bijkopen')?['uitbouwen naar 3 tot 5%','g']:['volgen, nog geen reden om bij te kopen','n']};
@@ -763,6 +767,9 @@ function gedragSub(){const L=gedragLijst(),G=gsel(),nieuw=gMode==='nieuw';
 
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-gm]");if(!b)return;gMode=b.dataset.gm;try{localStorage.setItem("pf_gmode",gMode)}catch(x){}render()});
 document.addEventListener("change",e=>{if(e.target.id!=="gstart")return;const v=e.target.value;if(/^\d{4}-\d{2}-\d{2}$/.test(v)){gStart=v;try{localStorage.setItem("pf_gstart",v)}catch(x){}render()}});
+
+function dqTile(r){const d=r.dq||[];if(!d.length)return "";return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c2)"><div class="lbl">Data onzeker</div><div>De ${d.join(", ")} van dit bedrijf ${d.length>1?"zijn":"is"} onwaarschijnlijk hoog (meestal een basiseffect: een jaar met bijna geen winst of kasstroom als begin). Ik reken er voorzichtig mee: de groei telt in de score niet voor het volle punt${d.includes("winstgroei")?", en de PEG rekent met maximaal 40% groei":""}.</div></div>`}
+function dqNames(){return rows.filter(r=>!r.watch&&r.dq&&r.dq.length).map(r=>r.naam)}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -937,7 +944,7 @@ function fv(rate,m,yrs){const g=Math.pow(1+rate/100,1/12);let v=TOT;const out=[v
 const mln=v=>v<1e6?"€ "+Math.round(v/1000)+"k":"€ "+(v/1e6).toFixed(2).replace(".",",")+" mln";
 function drawPrj(){const el=document.getElementById("prjOut");if(!el)return;const N=prj.y;
  const sets=[[8,"var(--cx)"],[prj.r,"var(--c3)"],[REAL.xirr,"var(--c1)"]].map(([r,c])=>({r,c,d:fv(r,prj.m,N)}));
- const mx=Math.max(...sets.map(x=>x.d[N])),W=320,H=170,L=6,R=44,T=10,B=22;
+ const mx=Math.max(...sets.map(x=>x.d[N]))||1,W=320,H=170,L=6,R=44,T=10,B=22;
  const X=i=>L+i/N*(W-L-R),Y=v=>T+(1-v/mx)*(H-T-B);
  const st=N<=10?2:N<=25?5:10;const ticks=[];for(let t=0;t<N;t+=st)ticks.push(t);if(N-ticks[ticks.length-1]<st*.6)ticks.pop();ticks.push(N);
  const half=Math.round(N/2);
@@ -1000,6 +1007,7 @@ function cmp(){const d=perData(per);const lastv=a=>a?a[a.length-1]-100:null;
  if(!d)return wrap(item("--c1","Jij",portPerf().p));
  if(d.num){const u=d.per?" per jaar":"";return wrap(item("--c1","Jij"+u,d.me)+item("--c2","S&P 500"+u,d.sp)+item("--c3","Wereld"+u,d.wr))+(d.per?`<div class="note">Max: jouw rendement per jaar sinds 2016 (inclusief stortingen en verkopen) naast het jaargemiddelde van de index in euro's.</div>`:"")}
  const S=d.ser,spu=S.spu?` <small>(in $: ${pc(lastv(S.spu))})</small>`:"";
+ if(!S.me||!S.me.every(Number.isFinite))return wrap(item("--c1","Jij",portPerf().p));
  const ser=[[S.me,"--c1","Jij"],[S.sp,"--c2","S&P 500"],[S.wr,"--c3","Wereld"]].filter(x=>x[0]);
  const leg=wrap(item("--c1","Jij",lastv(S.me))+item("--c2","S&P 500",lastv(S.sp),spu)+item("--c3","Wereld",lastv(S.wr)));
  const L=S.me.length,all=ser.flatMap(x=>x[0]),mx=Math.max(...all),mn=Math.min(...all,100),W=320,H=130,Lm=4,R=34,T=8,B=20,nn=L-1;
@@ -1030,7 +1038,7 @@ function stortCard(){const y=NOW.getFullYear(),m=NOW.getMonth(),g=sumM(y,m),ytd=
 function stortGem(){const y=NOW.getFullYear(),m=NOW.getMonth(),n=m+1,ytd=sumY(y),g=ytd/n,v=g-SDOEL;return `<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Gemiddeld per maand</small><b class="num">${eur(g)}</b></div><div><small>Maanddoel</small><b class="num">${eur(SDOEL)}</b></div><div><small>Verschil</small><b class="num ${cls(v)}">${v>=0?"+":""}${eur(v)}</b></div></div><div class="note" style="margin-top:6px">Gemiddelde over ${n} maanden (${MND[0]} t/m ${MND[m]}), inclusief maanden zonder storting.</div>`}
 function stortChart(){const y=NOW.getFullYear(),v=MND.map((_,i)=>sumM(y,i)),W=320,H=140,L=4,B=20,T=14,mx=Math.max(...v,SDOEL)*1.1,Y=a=>T+(1-a/mx)*(H-T-B),bw=(W-L)/12;
  return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Stortingen per maand tegenover het doel"><line class="g" x1="${L}" x2="${W}" y1="${H-B}" y2="${H-B}"/>${v.map((a,i)=>{const x=L+i*bw+bw*.15,w=bw*.7,fut=i>NOW.getMonth();return `<rect x="${x}" y="${Y(a)}" width="${w}" height="${Math.max(0,H-B-Y(a))}" rx="3" fill="var(${a>=SDOEL?"--good":"--c1"})" fill-opacity="${fut?.25:1}"><title>${MND[i]} ${hide?"":a}</title></rect>${a>=SDOEL*1.8?`<text x="${x+w/2}" y="${Y(a)-3}" text-anchor="middle">${hide?"":(a/1000).toFixed(1).replace(".",",")+"k"}</text>`:""}<text x="${x+w/2}" y="${H-5}" text-anchor="middle">${MND[i].slice(0,1).toUpperCase()}</text>`}).join("")}<line x1="${L}" x2="${W}" y1="${Y(SDOEL)}" y2="${Y(SDOEL)}" stroke="var(--fg)" stroke-width="1.2" stroke-dasharray="4 3" opacity=".6"/></svg>`}
-function yearCard(y){const d=JR[y.y],netto=d.i-d.u;let cum=0;Object.keys(JR).forEach(k=>cum+=JR[k].i-JR[k].u);
+function yearCard(y){if(!y)return "";const d=JR[y.y],netto=d.i-d.u;let cum=0;Object.keys(JR).forEach(k=>cum+=JR[k].i-JR[k].u);
  return `<div class="sec"><h2>${y.y}${y.lopend?" (tot nu)":""}</h2><button class="tile go" data-s="jaren"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Gestort</small><b class="num">${eur(d.i)}</b></div><div><small>Opgenomen</small><b class="num">${eur(d.u)}</b></div><div><small>Netto</small><b class="num">${eur(netto)}</b></div><div><small>Totaal inleg tot nu</small><b class="num">${eur(cum)}</b></div><div><small>Kosten</small><b class="num">${eur(d.k)}</b><small>${f1(d.k/y.begin*100)}% yield</small></div><div><small>Transacties</small><b class="num">${d.t}</b></div></div><div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Vermogen begin</small><b class="num">${eur(y.begin)}</b></div><div><small>Vermogen eind</small><b class="num">${eur(y.eind)}</b></div><div><small>Resultaat</small><b class="num ${cls(y.res)}">${eur(y.res)}</b></div><div><small>Yield</small><b class="num ${cls(y.res)}">${pc(y.res/y.begin*100)}</b></div></div><div class="note">Tik voor alle jaren sinds 2016.</div></button></div>`}
 function yearSec(){return "";}
 function yearSecOud(){const y=YRS[YRS.length-1];
@@ -1091,7 +1099,7 @@ function inzKwOud(){const M=[["e","EPS-groei","eps","%",1],["r","ROIC","roic","%
  <div class="note" style="margin-top:4px">Gewogen EPS-groei, laatste 12 maanden. Stippellijn is je doel van ${DOEL}%.</div>
  <div class="note" style="margin-top:8px">Gewogen gemiddelde van je posities. De winstgroei ${ok?"ligt boven":"ligt onder"} je doel van ${DOEL}% per jaar. Je betaalt gemiddeld ${Math.abs(Math.round(pr))}% ${pr>0?"meer":"minder"} dan het eigen historische PE van deze bedrijven, bij een PEG van ${f1(pg)}. Bij PE en schuld is een daling beter. De ontwikkeling is hier nog verzonnen. Later bewaar ik elke maand je cijfers, dan zie je hier echt de trend.</div><div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Ontwikkeling over 5 jaar</span><span>›</span></div></button>`)}
 const gtRow=y=>{const d=y.res/(y.begin+y.inleg/2)*100,s=y.res/y.begin*100,v=s-d;return `<div style="margin-bottom:10px"><div style="font-weight:600;font-size:14px">${y.y}${y.lopend?" (tot nu)":""}</div>${kvs([["Yield op beginvermogen",pc(s)],["Gecorrigeerd voor inleg",pc(d)],["Verschil",(v>=0?"−":"+")+f1(Math.abs(v))+" pt"]])}</div>`};
-function inzGT(){const y=YRS[YRS.length-1];
+function inzGT(){const y=YRS[YRS.length-1];if(!y)return "";
  return fold("Geld- tegenover tijdgewogen",pc(REAL.xirr)+" per jaar",`<button data-s="gt" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${gtRow(y)}${nt("Je yield deelt het resultaat door het vermogen op 1 januari. Maar je stort het hele jaar door bij, en dat geld heeft maar een deel van het jaar gewerkt. Gecorrigeerd (Dietz) rekent die timing mee en is het eerlijke tijdgewogen rendement. Je "+pc(REAL.xirr)+" sinds 2016 is geldgewogen: het weegt zwaarder mee in jaren dat je veel had ingelegd.")}<div class="m" style="margin-top:10px;display:flex;justify-content:space-between;font-size:14px;color:var(--fg);font-weight:600"><span>Voorgaande jaren</span><span>›</span></div></button>`)}
 function gtSub(){const ys=Object.keys(JR).sort().reverse();
  return `<div class="note" style="margin-top:12px">Per jaar de yield zoals jij die berekent (resultaat gedeeld door het beginvermogen) en het tijdgewogen rendement, gecorrigeerd voor je stortingen. Je geldgewogen rendement sinds ${REAL.start} is ${pc(REAL.xirr)} per jaar.</div>`+ys.map(k=>{const y=YRS.find(x=>x.y===+k),d=JR[k];
@@ -1274,7 +1282,7 @@ function vtSub(){const s=vtStat();
 
 /* gedrag, uit je export */
 function gedStat(){const ys=Object.keys(JR).sort(),k=y=>JR[y].t?JR[y].k/JR[y].t:0,dr=ys.reduce((m,y)=>JR[y].t>JR[m].t?y:m,ys[0]),yr=NOW.getFullYear(),m=NOW.getMonth(),gh=[...Array(m)].filter((_,i)=>sumM(yr,i)>=SDOEL).length;return {ys,k,dr,yr,m,gh,n:JR[yr]?JR[yr].t:0}}
-function inzGed(){const g=gedStat(),t=g.ys.map(y=>JR[y].t||0);
+function inzGed(){if(!Object.keys(JR).length)return "";const g=gedStat(),t=g.ys.map(y=>JR[y].t||0);
  return fold("Mijn gedrag",g.n+" transacties dit jaar",`<button data-s="ged" ${GOB}>${miniBars(t,g.ys.map(y=>y.slice(2)),"")}${kvs([["Dit jaar",g.n+" transacties"],["Kosten per transactie",eur(g.k(String(g.yr)),2)],["Stortdoel gehaald",g.gh+" van "+g.m+" mnd"]])}${nt(`Je drukste jaar was ${g.dr} met ${JR[g.dr].t} transacties en ${eur(JR[g.dr].k)} aan kosten. Dit jaar zit je op ${f1(g.n/(g.m+1))} transacties per maand. Echte cijfers uit je DeGiro-export.`)}${goRow("Per jaar")}</button>`)}
 function gedSub(){const g=gedStat();
  return `<div class="tile" style="margin-top:12px">${miniBars(g.ys.map(y=>JR[y].t||0),g.ys.map(y=>y.slice(2)),"")}</div><div class="sec"><h2>Per jaar</h2><div class="tile"><table class="t"><tr><th>Jaar</th><th>Transacties</th><th>Kosten</th><th>Per stuk</th></tr>${[...g.ys].reverse().map(y=>`<tr><td>${y}</td><td class="num">${JR[y].t}</td><td class="num">${eur(JR[y].k)}</td><td class="num">${eur(g.k(y),2)}</td></tr>`).join("")}</table></div></div><div class="sec"><h2>Regelmaat</h2><div class="tile">${kvs([["Stortdoel",eur(SDOEL)+" per maand"],["Gehaald",g.gh+" van "+g.m+" maanden"],["Dit jaar gestort",eur(sumY(g.yr))]])}${nt("Stortingen uit je eigen lijst en je export. Hoe regelmatiger je stort, hoe minder het uitmaakt wanneer de markt draait.")}</div></div>${nt("Veel transacties kosten geld en hebben zelden meer opgeleverd dan rustig bijkopen. Het is een spiegel, geen oordeel.")}`}
@@ -1329,7 +1337,7 @@ let BOX={p:0,s:0};try{BOX=Object.assign(BOX,JSON.parse(localStorage.getItem("pf_
 const saveBox=()=>{try{localStorage.setItem("pf_box",JSON.stringify(BOX))}catch(e){}};
 const B3={2025:{h:57684,rb:5.88,rs:1.37,res:YRS[0]},2026:{h:59357,rb:6.00,rs:1.28,res:YRS[1]}};
 function b3(y){const c=B3[y],V=c.res.begin,S=+BOX.s||0,H=c.h*(BOX.p?2:1),T=V+S,ret=V*c.rb/100+S*c.rs/100,fr=T>0?Math.max(0,T-H)/T:0,inc=ret*fr;return {V,S,H,T,ret,inc,tax:inc*.36,c}}
-function boxHtml(){const a=b3(2026),b=b3(2025),r25=YRS[0].res;
+function boxHtml(){if(!YRS.length)return "";const a=b3(2026),b=b3(2025),r25=YRS[0].res;
  return `${kvs([["Verwacht 2026",eur(a.tax)],["Aanslag 2025",eur(b.tax)],["Per € 10.000 extra",eur(10000*a.c.rb/100*.36)]])}
  <div style="margin-top:8px">${kvs([["Vermogen 1 jan 2026",eur(a.T)],["Heffingvrij",eur(a.H)],["Fictief rendement",eur(a.inc)]])}</div>
  <div class="lbl" style="margin-top:12px">Forfait tegenover wat je echt verdiende</div>${kvs([["Echt 2025",eur(r25),cls(r25)],["Forfait 2025",eur(b.ret)],["Aanslag in % van echt",f1(b.tax/r25*100)+"%"]])}
@@ -1337,7 +1345,7 @@ function boxHtml(){const a=b3(2026),b=b3(2025),r25=YRS[0].res;
  ${nt("Alleen 1 januari telt. Zet je op 31 december € 10.000 extra op je rekening, dan kost dat ongeveer "+eur(10000*a.c.rb/100*.36)+" belasting over dat jaar, ook als je het pas in januari belegt: geld op een bankrekening telt ook mee, dus het verschuift alleen. Is je werkelijke rendement in een slecht jaar lager dan het forfait, dan kun je dat aantonen (tegenbewijs). Sparen heeft een lager forfait.")}
  ${nt("Een rekenvoorbeeld op basis van je DeGiro-vermogen en de tarieven van het jaar, geen belastingadvies. Schulden, spaargeld en vermogen van je partner voeg je toe bij Ander vermogen. Controleer de definitieve bedragen bij de Belastingdienst.")}`}
 function drawBox(){const el=document.getElementById("bxOut");if(el)el.innerHTML=boxHtml()}
-function inzBox(){const a=b3(2026);
+function inzBox(){if(!YRS.length)return "";const a=b3(2026);
  return fold("Box 3",eur(a.tax)+" verwacht 2026",`<label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Ander vermogen in box 3 (€)<input id="bxS" type="number" inputmode="numeric" value="${BOX.s||""}" placeholder="0" ${IPT}></label><label class="sw2" style="padding:10px 0 0;border:0"><span class="grow"><div class="t" style="font-weight:600">Fiscaal partner</div><div class="m" style="font-size:13px;color:var(--mut)">Verdubbelt het heffingvrije bedrag</div></span><input type="checkbox" id="bxP" ${BOX.p?"checked":""}></label><div id="bxOut" style="margin-top:10px">${boxHtml()}</div>`)}
 const BRON={NL:[15,15],VS:[15,15],VK:[0,0],CA:[25,15],SE:[30,15],DE:[26.375,15],FR:[25,12.8],IT:[26,15],KZ:[15,15],BR:[0,0],AR:[7,7],TW:[21,21]};
 function bronData(){const m={};own.forEach(r=>{const d=r.waarde*(r.yld||0)/100;if(d<=0)return;(m[r.land]=m[r.land]||{d:0,l:[]});m[r.land].d+=d;m[r.land].l.push(r)});

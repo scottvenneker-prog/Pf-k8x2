@@ -1,0 +1,35 @@
+name: test
+on:
+  push:
+    branches: [main]
+    paths: ["app.js", "index.html", "ci/**", ".github/workflows/test.yml"]
+  workflow_dispatch:
+  schedule:
+    - cron: "45 15 * * 1-5"
+permissions:
+  contents: read
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Start server
+        run: |
+          python3 -m http.server 8080 >/dev/null 2>&1 &
+          sleep 2
+      - name: Test alle schermen
+        id: t
+        run: node ci/crawl.js
+        env:
+          PF_PW: ${{ secrets.PF_PW }}
+      - name: Push bij falen
+        if: failure()
+        run: >
+          curl -s -H "Title: App-test mislukt"
+          -H "Click: https://github.com/scottvenneker-prog/Pf-k8x2/actions"
+          -d "De automatische schermtest van de app is mislukt. Er is iets stuk."
+          "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}"
