@@ -391,9 +391,10 @@ for gname, cik in GURUS.items():
         pm = {x["n"]: x["p"] for x in prv}; cm = {x["n"]: x["p"] for x in cur}
         for x in cur:
             o = pm.get(x["n"])
+            x["o"] = o
             x["d"] = "nieuw" if o is None else "meer" if x["p"] > o * 1.1 else "minder" if x["p"] < o * .9 else "gelijk"
-        verk = [dict(n=n, p=p) for n, p in sorted(pm.items(), key=lambda kv: -kv[1]) if n not in cm][:10]
-        GRU[gname] = dict(naam=sub.get("name"), periode=fl[0][2], gemeld=fl[0][0], aantal=len(cur), top=cur[:15], verkocht=verk)
+        verk = [dict(n=n, o=p) for n, p in sorted(pm.items(), key=lambda kv: -kv[1]) if n not in cm][:15]
+        GRU[gname] = dict(naam=sub.get("name"), periode=fl[0][2], gemeld=fl[0][0], aantal=len(cur), top=cur[:40], verkocht=verk, vorig=(fl[1][2] if len(fl) > 1 else None))
         if "13f:init" in SEEN:
             for x in cur[:30]:
                 if x["d"] == "nieuw" and x["p"] >= 1:
