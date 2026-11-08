@@ -580,7 +580,8 @@ function waarom(r,a){try{const v=verdict(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],
  return `<div style="padding:0 0 10px"><div class="lbl">Waarom ${a[1]==="g"?"uitbouwen":a[1]==="r"?"afbouwen":"volgen"}</div><ul>${pro.map(t=>`<li>${t}</li>`).join("")}</ul><div class="lbl" style="margin-top:6px">Waarom misschien niet</div><ul>${con.map(t=>`<li>${t}</li>`).join("")||"<li>Geen grote bezwaren in de cijfers.</li>"}</ul><div class="note" style="margin:4px 0 0"><b>Praktisch:</b> ${stap}</div></div>`}catch(e){return ""}}
 
 function kandPick(bud){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9),nP=Math.max(1,Math.min(3,Math.floor(bud/1500))),perP=bud/nP;
- const k=kandidaten().filter(x=>x.r.w==null||x.r.w<8).filter(x=>!lim(x.r));
+ const strong=x=>{const z=cscore(x.r),F=fairV(x.r);return z.s>=9&&F&&F.mid>15};
+ const k=kandidaten().filter(x=>x.r.w==null||x.r.w<8).filter(x=>{if(!lim(x.r))return true;if(!strong(x))return false;const c=CLU.find(c=>c.f(x.r)&&cluW(c)>=c.lim*.9);x.warn=(x.warn||[]).concat([`je ${c.n.toLowerCase()} zit al bij ${f1(cluW(c))}% (limiet ${c.lim}%). Dit is een uitzonderlijk goede koop, dus ik laat het toe. Financier het liefst door een grotere positie in hetzelfde cluster (zoals ASML) terug te brengen`]);x.over=true;return true});
  const top=k.slice(0,10).map(x=>Object.assign({},x,{s2:x.s-feeEst(x.r,perP).t/perP*150})).sort((a,b)=>b.s2-a.s2).slice(0,nP);
  const alloc=top.map(x=>{const deel=bud/top.length,cap=Math.max(0,.10*(TOT+bud)-(x.r.watch?0:x.r.waarde));return Math.round(Math.min(deel,cap)/50)*50});
  return {top,alloc}}
