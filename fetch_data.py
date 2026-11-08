@@ -231,10 +231,57 @@ def notify(key, title, msg, url=None):
     if url and url.startswith("https://"): h["Click"] = url
     requests.post(f"https://ntfy.sh/{topic}", data=msg.encode("utf-8"), headers=h)
 
+# ---- tweede databron: Financial Modeling Prep (optioneel, alleen met FMP_KEY). Weekcache om binnen het gratis aantal aanroepen te blijven.
+FMPK = os.environ.get("FMP_KEY")
+FC = json.load(open("fmp_cache.json")) if os.path.exists("fmp_cache.json") else {}
+ALERTS = json.load(open("alerts.json")) if os.path.exists("alerts.json") else {}   # {ticker: instapkoers in euro}, gezet via de app of de chat
+
+def fmp_get(path, tk):
+    r = requests.get(f"https://financialmodelingprep.com/stable/{path}", params=dict(symbol=tk, limit=5, apikey=FMPK), timeout=20)
+    if r.status_code != 200: raise RuntimeError(f"{path} {r.status_code}")
+    j = r.json()
+    if not isinstance(j, list) or not j: raise RuntimeError(f"{path} leeg")
+    return sorted(j, key=lambda x: x.get("date", ""))
+
+def fmp_cagr(v):
+    v = [x for x in v if x is not None]
+    if len(v) < 3 or v[0] <= 0 or v[-1] <= 0: return None
+    return (v[-1] / v[0]) ** (1 / (len(v) - 1)) - 1
+
+def fmp_data(tk):
+    if not FMPK: return None
+    c = FC.get(tk); td = dt.date.today()
+    if c and (td - dt.date.fromisoformat(c["d"])).days < (30 if c.get("v") is None else 7): return c.get("v")
+    try:
+        inc, cf = fmp_get("income-statement", tk)[-4:], fmp_get("cash-flow-statement", tk)[-4:]
+        rv = inc[-1].get("revenue")
+        v = dict(eps_cagr=fmp_cagr([x.get("epsDiluted") for x in inc]), fcf_cagr=fmp_cagr([x.get("freeCashFlow") for x in cf]),
+                 om=(inc[-1].get("operatingIncome") / rv) if rv and inc[-1].get("operatingIncome") is not None else None)
+    except Exception as e:
+        print("FMP", tk, e); v = None
+    FC[tk] = dict(d=td.isoformat(), v=v)
+    time.sleep(0.3)
+    return v
+
+def fmp_check(r, v):
+    """Zet de FMP-cijfers naast die van Yahoo en markeer grote verschillen (groei meer dan 10 punten, marge meer dan 8)."""
+    if not v: return None
+    afw = []
+    for k, lim in (("eps_cagr", .10), ("fcf_cagr", .10), ("om", .08)):
+        a, b = r.get(k), v.get(k)
+        if a is not None and b is not None and abs(a - b) > lim: afw.append(k)
+    return dict(v, afw=afw)
+
 rows, today = [], dt.date.today().isoformat()
 for tk in list(H) + [w for w in WL if w not in H]:
     try:
         r = one(tk)
+        r["fmp"] = fmp_check(r, fmp_data(tk))
+        lv = ALERTS.get(tk)
+        if lv:
+            r["instap"] = lv
+            if r.get("koers_eur") and r["koers_eur"] <= lv:
+                notify(f"alert-{tk}-{lv}-{today[:7]}", "Instapkoers bereikt", f'{META.get(tk, {}).get("naam") or tk} staat op € {r["koers_eur"]:.0f}, je instapkoers is € {lv:g}', None)
         if tk in H:
             n = r["naam"]
             r.update(weging=H[tk].get("weging"), rend=H[tk].get("rend"))   # percentages, geen bedragen
@@ -375,10 +422,12 @@ def parse_13f(cik, acc):
                 except Exception: continue
                 name = (g("nameOfIssuer") or "").strip()
                 if not name: continue
-                b = best.setdefault(name, dict(n=name, v=0.0)); b["v"] += v
+                cu = (g("cusip") or "").strip().upper()[:6] or name
+                b = best.setdefault(cu, dict(n=name, v=0.0, big=0.0, c=cu)); b["v"] += v
+                if v > b["big"]: b["big"] = v; b["n"] = name
         if best: break
     tot = sum(b["v"] for b in best.values()) or 1
-    return sorted([dict(n=b["n"], p=round(b["v"] / tot * 100, 2)) for b in best.values()], key=lambda x: -x["p"])
+    return sorted([dict(n=b["n"], c=b["c"], p=round(b["v"] / tot * 100, 2)) for b in best.values()], key=lambda x: -x["p"])
 GRU = {}
 for gname, cik in GURUS.items():
     try:
@@ -388,17 +437,17 @@ for gname, cik in GURUS.items():
         fl.sort(reverse=True)
         if not fl: continue
         cur = parse_13f(cik, fl[0][1]); prv = parse_13f(cik, fl[1][1]) if len(fl) > 1 else []
-        pm = {x["n"]: x["p"] for x in prv}; cm = {x["n"]: x["p"] for x in cur}
+        pm = {x["c"]: x["p"] for x in prv}; cm = {x["c"]: x["p"] for x in cur}; pn = {x["c"]: x["n"] for x in prv}
         for x in cur:
-            o = pm.get(x["n"])
+            o = pm.get(x["c"])
             x["o"] = o
             x["d"] = "nieuw" if o is None else "meer" if x["p"] > o * 1.1 else "minder" if x["p"] < o * .9 else "gelijk"
-        verk = [dict(n=n, o=p) for n, p in sorted(pm.items(), key=lambda kv: -kv[1]) if n not in cm][:15]
+        verk = [dict(n=pn[c], o=p) for c, p in sorted(pm.items(), key=lambda kv: -kv[1]) if c not in cm][:15]
         GRU[gname] = dict(naam=sub.get("name"), periode=fl[0][2], gemeld=fl[0][0], aantal=len(cur), top=cur[:40], verkocht=verk, vorig=(fl[1][2] if len(fl) > 1 else None))
         if "13f:init" in SEEN:
             for x in cur[:30]:
                 if x["d"] == "nieuw" and x["p"] >= 1:
-                    notify(f'13f-{cik}-{fl[0][2]}-{x["n"]}', f"{gname}: nieuwe positie", f'{x["n"]} ({x["p"]}% van de portefeuille)')
+                    notify(f"13f-{cik}-{fl[0][2]}-{x['c']}", f"{gname}: nieuwe positie", f'{x["n"]} ({x["p"]}% van de portefeuille)')
     except Exception as e:
         print("FOUT 13F", gname, e)
 SEEN.add("13f:init")
@@ -407,3 +456,4 @@ json.dump(clean(dict(bijgewerkt=dt.datetime.now(dt.timezone.utc).isoformat(), ve
           grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU)),
           open("data.json", "w"), default=str)
 json.dump(sorted(SEEN)[-4000:], open("seen.json", "w"))
+if FMPK: json.dump(FC, open("fmp_cache.json", "w"))

@@ -1,0 +1,32 @@
+name: maandrapport
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 1 * *"
+permissions:
+  contents: write
+concurrency:
+  group: update
+jobs:
+  rapport:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+      - run: |
+          python3 -m http.server 8080 >/dev/null 2>&1 &
+          sleep 2
+          node digest.js
+        env:
+          PF_PW: ${{ secrets.PF_PW }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - run: |
+          git config user.name bot
+          git config user.email bot@users.noreply.github.com
+          git add maand.json
+          git commit -m "maandrapport" || exit 0
+          git pull --rebase
+          git push

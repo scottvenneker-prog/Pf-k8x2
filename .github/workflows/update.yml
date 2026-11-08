@@ -21,10 +21,12 @@ jobs:
       - run: python fetch_data.py
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          FMP_KEY: ${{ secrets.FMP_KEY }}
       - run: |
           git config user.name bot
           git config user.email bot@users.noreply.github.com
           git add data.json seen.json verkocht_map.json
+          if [ -f fmp_cache.json ]; then git add fmp_cache.json; fi
           git commit -m data || exit 0
           git pull --rebase
           git push
