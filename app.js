@@ -558,10 +558,26 @@ function rapportSub(){const R=rapport();if(!R)return `<div class="note">Nog niet
 
 function wegSec(R){const l=[...own].sort((a,b)=>b.w-a.w),pc2=x=>f1(x)+"%";
  const top=l.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${r.naam}</span><b class="num">${pc2(r.w)}</b></div>`).join("");
- const kl=R.klein.length?R.klein.map(x=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><span>${x.r.naam}</span><b class="num">${pc2(x.w)}</b></div><div class="note" style="margin:0">Een verdubbeling geeft +${f1(x.w)}% op je portefeuille. Advies: <span class="pill ${x.a[1]}">${x.a[0]}</span></div></div>`).join(""):`<div class="note">Geen posities onder de 2%.</div>`;
+ const kl=R.klein.length?R.klein.map(x=>`<details style="border-top:1px solid var(--line)"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><span>${x.r.naam} ›</span><b class="num">${pc2(x.w)}</b></div><div class="note" style="margin:0">Een verdubbeling geeft +${f1(x.w)}% op je portefeuille. Advies: <span class="pill ${x.a[1]}">${x.a[0]}</span></div></summary>${waarom(x.r,x.a)}</details>`).join(""):`<div class="note">Geen posities onder de 2%.</div>`;
  return `<div class="tile" style="margin-top:10px"><div class="lbl">Wegingen per aandeel</div><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Posities</small><b class="num">${R.n}</b></div><div><small>Mediaan</small><b class="num">${pc2(R.med)}</b></div><div><small>Onder 2%</small><b class="num">${R.klein.length} (${pc2(R.smW)})</b></div></div>
  <div class="lbl" style="margin-top:10px">Grootste vijf</div>${top}
  <div class="lbl" style="margin-top:10px">Te klein om het verschil te maken (onder 2%)</div><div class="note" style="margin:0 0 4px">Een positie moet ongeveer 3 tot 5% zijn om je rendement echt te bewegen. Kleiner kost wel aandacht, maar levert weinig op.</div>${kl}</div>`}
+
+function waarom(r,a){try{const v=verdict(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],pro=[],con=[];
+ const sec=secW[r.sector]||0,na=(r.waarde+TOT*.01)/TOT*100;
+ pro.push(`<b>Het bedrijf zelf:</b> ${v.uitleg}`);
+ if(z.s>=7)pro.push(`<b>Compounder-score ${z.s} van 12:</b> ${z.c.filter(k=>k.p>=k.m).map(k=>k.t.toLowerCase()+" ("+k.v+")").join(", ")||"geen onderdeel op de volle punten"}.`);
+ if(M)pro.push(`<b>Moat ${M.s.toLowerCase()}:</b> ${M.m.charAt(0).toLowerCase()+M.m.slice(1)}. Concurrenten: ${M.c.slice(0,3).join(", ")}.`);
+ if(F)pro.push(`<b>Waardering (indicatie):</b> ${F.mid>=0?"+":"−"}${Math.round(Math.abs(F.mid))}% ten opzichte van redelijke waarde, zekerheid van het model ${F.zeker.toLowerCase()}.${F.imp!=null?` De koers vraagt ${f1(F.imp)}% kasstroomgroei per jaar, mijn basisaanname is ${f1(F.sc.g1)}%.`:""}`);
+ pro.push(`<b>Trend:</b> ${r.trend.toLowerCase()}, afgelopen jaar ${pc(r.p&&r.p.y)}.`);
+ if(M)M.b.forEach(t=>con.push(t));
+ if(F&&F.mid<-15)con.push(`Volgens het rekenmodel staat de koers al boven redelijke waarde (${Math.round(F.mid)}%).`);
+ if(r.trend==="Downtrend")con.push("De koers staat onder het 50- en 200-daags gemiddelde.");
+ if(sec>PAR.sec-5)con.push(`Sector ${r.sector} is al ${f1(sec)}% van je portefeuille (grens ${PAR.sec}%).`);
+ if(r.munt!=="EUR")con.push(`Valutarisico in ${r.munt}.`);
+ if(r.nd!=null&&r.nd>2)con.push(`Schuld is ${f1(r.nd)}× EBITDA.`);
+ const stap=a[1]==="g"?`Bouw het uit in stappen van ongeveer € 750 tot € 1.500 per maand, zodat je niet in één keer op de duurste dag koopt. Doel: 3 tot 5% van je portefeuille.`:a[1]==="r"?"Overweeg deze positie af te bouwen en het geld naar een bedrijf te sturen waar je meer in gelooft. Reken belasting en kosten mee.":"Volg het bedrijf. Pas bijkopen als de winstgroei of de waardering beter wordt.";
+ return `<div style="padding:0 0 10px"><div class="lbl">Waarom ${a[1]==="g"?"uitbouwen":a[1]==="r"?"afbouwen":"volgen"}</div><ul>${pro.map(t=>`<li>${t}</li>`).join("")}</ul><div class="lbl" style="margin-top:6px">Waarom misschien niet</div><ul>${con.map(t=>`<li>${t}</li>`).join("")||"<li>Geen grote bezwaren in de cijfers.</li>"}</ul><div class="note" style="margin:4px 0 0"><b>Praktisch:</b> ${stap}</div></div>`}catch(e){return ""}}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
