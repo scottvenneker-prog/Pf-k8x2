@@ -567,7 +567,7 @@ function waarom(r,a){try{const v=verdict(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],
  const sec=secW[r.sector]||0,na=(r.waarde+TOT*.01)/TOT*100;
  pro.push(`<b>Het bedrijf zelf:</b> ${v.uitleg}`);
  if(z.s>=7)pro.push(`<b>Compounder-score ${z.s} van 12:</b> ${z.c.filter(k=>k.p>=k.m).map(k=>k.t.toLowerCase()+" ("+k.v+")").join(", ")||"geen onderdeel op de volle punten"}.`);
- if(M)pro.push(`<b>Moat ${M.s.toLowerCase()}:</b> ${M.m.charAt(0).toLowerCase()+M.m.slice(1)}. Concurrenten: ${M.c.slice(0,3).join(", ")}.`);
+ if(M)pro.push(`<b>Moat ${M.s.toLowerCase()}:</b> ${/^[A-Z]{2}/.test(M.m)?M.m:M.m.charAt(0).toLowerCase()+M.m.slice(1)}. Concurrenten: ${M.c.slice(0,3).join(", ")}.`);
  if(F)pro.push(`<b>Waardering (indicatie):</b> ${F.mid>=0?"+":"−"}${Math.round(Math.abs(F.mid))}% ten opzichte van redelijke waarde, zekerheid van het model ${F.zeker.toLowerCase()}.${F.imp!=null?` De koers vraagt ${f1(F.imp)}% kasstroomgroei per jaar, mijn basisaanname is ${f1(F.sc.g1)}%.`:""}`);
  pro.push(`<b>Trend:</b> ${r.trend.toLowerCase()}, afgelopen jaar ${pc(r.p&&r.p.y)}.`);
  if(M)M.b.forEach(t=>con.push(t));
