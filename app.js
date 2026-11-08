@@ -67,7 +67,7 @@ const perChip={d:"1D",v:"5D",m:"1M",h:"6M",ytd:"YTD",y:"1J",f:"5J",t:"Max"};
 const pv=r=>per==="t"?(r.watch||!HIST[r.tk]?r.p.f:HIST[r.tk].totaal):r.p[per];
 function portPerf(){
  if(per==="t"){return {e:BROKER_WV,p:REAL.xirr}}
- if(per==="ytd"&&PRIVE){const y=YRS.find(z=>z.lopend);if(y&&y.begin)return {e:y.res,p:y.res/y.begin*100}}
+ if(per==="ytd"&&PRIVE){const y=YRS.find(z=>z.lopend);if(y&&y.begin){const e=Math.abs(TOT-y.eind)<8000?TOT-y.begin-y.inleg:y.res;return {e:e,p:e/y.begin*100}}}
  if(PRIVE&&["v","m","h","ytd","y","f"].includes(per)){const x=perMe(per);if(x!=null)return {e:null,p:x}}
  const g=own.reduce((t,r)=>t+r.waarde*(r.p[per]||0)/(100+(r.p[per]||0)),0);return {e:g,p:g/(sumPos-g)*100}}
 const perChips=()=>`<div class="chips" style="padding-bottom:4px">${Object.keys(perChip).map(k=>`<button class="chip" data-p="${k}" aria-pressed="${per===k}">${perChip[k]}</button>`).join("")}</div>`;
