@@ -521,12 +521,12 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  const eps=wa(r=>Math.min(r.eps||0,40)),gro=cl(eps/DOEL*10);
  const kw=cl(own.reduce((t,r)=>t+r.w*((r.roic==null||r.roic>=15?1:r.roic>=10?.5:0)*.5+((r.nd==null||r.nd<=2)?.5:(r.nd<=3?.25:0))),0)/W*10);
  const top5=[...own].sort((a,b)=>b.w-a.w).slice(0,5).reduce((t,r)=>t+r.w,0)/W*100,eff=effN(own.map(r=>r.w)),secMax=Math.max(...Object.values(secW));
- const spr=cl(((eff>=20?10:eff/20*10)+(secMax<=35?10:cl(10-(secMax-35)/3))+(top5<=45?10:cl(10-(top5-45)/4)))/3);
+ const smalls=own.filter(r=>r.w<2),smW=smalls.reduce((t,r)=>t+r.w,0)/W*100,spr=cl(((eff>=20?10:eff/20*10)+(secMax<=35?10:cl(10-(secMax-35)/3))+(top5<=45?10:cl(10-(top5-45)/4))+cl(10-smalls.length*1.2))/4);
  const peg=wa(r=>r.peg==null?null:Math.min(r.peg,4)),wd=cl(10-Math.max(0,peg-1)*3.3);
  const xr=REAL.xirr,ren=cl(xr==null?5:xr/DOEL*8);
  const usd=own.filter(r=>r.munt!=="EUR").reduce((t,r)=>t+r.w,0)/W*100,beta=wa(r=>r.D&&r.D.beta!=null?r.D.beta:1),aiW=typeof aiProfitW==="function"?aiProfitW():0;
  const ris=cl(10-Math.max(0,beta-1)*5-Math.max(0,usd-50)/8-Math.max(0,aiW-45)/8);
- const C=[["Groei van de winst",gro,20,`gewogen winstgroei ${f1(eps)}% per jaar tegenover je doel van ${DOEL}%`],["Kwaliteit",kw,20,"ROIC en schuld van je bedrijven"],["Spreiding",spr,20,`${f1(eff)} effectieve posities, top 5 is ${f1(top5)}%, grootste sector ${f1(secMax)}%`],["Waardering",wd,15,`gewogen PEG ${f1(peg)}`],["Rendement",ren,15,`${pc(xr)} per jaar sinds 2016 tegenover je doel van ${DOEL}%`],["Risico",ris,10,`beta ${f1(beta)}, ${Math.round(usd)}% buiten de euro, ${Math.round(aiW)}% AI-afhankelijk`]];
+ const C=[["Groei van de winst",gro,20,`gewogen winstgroei ${f1(eps)}% per jaar tegenover je doel van ${DOEL}%`],["Kwaliteit",kw,20,"ROIC en schuld van je bedrijven"],["Spreiding",spr,20,`${f1(eff)} effectieve posities, top 5 is ${f1(top5)}%, grootste sector ${f1(secMax)}%, ${smalls.length} posities onder de 2%`],["Waardering",wd,15,`gewogen PEG ${f1(peg)}`],["Rendement",ren,15,`${pc(xr)} per jaar sinds 2016 tegenover je doel van ${DOEL}%`],["Risico",ris,10,`beta ${f1(beta)}, ${Math.round(usd)}% buiten de euro, ${Math.round(aiW)}% AI-afhankelijk`]];
  const tot=C.reduce((t,c)=>t+c[1]*c[2],0)/100;
  const good=[],bad=[],better=[];
  [...C].sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(c=>{if(c[1]>=6.5)good.push(`${c[0]}: ${f1(c[1])}. ${c[3]}.`)});
@@ -542,13 +542,24 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  const kn=rows.filter(r=>r.watch&&cscore(r).s>=9).slice(0,3);if(kn.length)better.push(`Op je lijst met 9 of meer van 12 punten als compounder: ${kn.map(r=>r.naam).join(", ")}.`);
  if(!better.length)better.push("Geen grote aandachtspunten volgens je eigen regels.");
  const gr=tot>=8.5?"Uitstekend":tot>=7.5?"Goed":tot>=6.5?"Ruim voldoende":tot>=5.5?"Voldoende":"Aandacht nodig";
- return {tot,gr,C,good,bad,better}}catch(e){return null}}
+ const cs=r=>{const v=verdict(r),z=cscore(r);return v.k==='structureel'?['afbouwen of verkopen','r']:(z.s>=9||v.lab==='Behouden of bijkopen')?['uitbouwen naar 3 tot 5%','g']:['volgen, nog geen reden om bij te kopen','n']};
+ const klein=[...smalls].sort((a,b)=>a.w-b.w).map(r=>({r,w:r.w,a:cs(r)})),med=[...own].map(r=>r.w).sort((a,b)=>a-b)[Math.floor(own.length/2)];
+ if(smalls.length>=3)better.push(`${smalls.length} van je ${own.length} posities zijn kleiner dan 2% (samen ${f1(smW)}%). Zelfs een verdubbeling van zo'n aandeel verandert je portefeuille met minder dan 2%. Bouw de goede uit of ruim de rest op.`);
+ return {tot,gr,C,good,bad,better,klein,smW,med,n:own.length}}catch(e){return null}}
 function inzRapport(){const R=rapport();if(!R)return "";return `<div class="tile hero2" style="margin-top:8px"><button data-s="rapport" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"><div class="lbl">Rapportcijfer portefeuille</div><div style="display:flex;align-items:baseline;gap:10px"><div class="big num">${f1(R.tot)}</div><span class="pill ${R.tot>=7.5?"g":R.tot>=6?"n":"a"}">${R.gr}</span></div><div class="note" style="margin:4px 0 0">Bekijk de volledige analyse ›</div></button></div>`}
 function rapportSub(){const R=rapport();if(!R)return `<div class="note">Nog niet genoeg gegevens.</div>`;
  return `<div class="tile" style="margin-top:12px"><div style="display:flex;align-items:baseline;gap:10px"><div class="big num">${f1(R.tot)}</div><span class="pill ${R.tot>=7.5?"g":R.tot>=6?"n":"a"}">${R.gr}</span></div><div class="note">Gewogen gemiddelde van zes onderdelen, getoetst aan je eigen doelen en grenzen. Het is een rekenmodel, geen oordeel over de toekomst.</div>${R.C.map(c=>`<div style="margin-top:10px"><div style="display:flex;justify-content:space-between"><span>${c[0]} <span class="note" style="margin:0">(${c[2]}%)</span></span><b class="num">${f1(c[1])}</b></div><div style="height:6px;border-radius:3px;background:var(--bg);overflow:hidden;margin-top:3px"><i style="display:block;height:100%;width:${c[1]*10}%;background:var(--${c[1]>=7?"c3":c[1]>=5.5?"c1":"c2"})"></i></div><div class="note" style="margin:2px 0 0">${c[3]}</div></div>`).join("")}</div>
  <div class="tile" style="margin-top:10px"><div class="lbl">Wat goed is</div><ul>${R.good.map(t=>`<li>${t}</li>`).join("")||"<li>Geen onderdeel scoort boven de 6,5.</li>"}</ul></div>
  <div class="tile" style="margin-top:10px"><div class="lbl">Zwakste punten en risico's</div><ul>${R.bad.map(t=>`<li>${t}</li>`).join("")||"<li>Geen onderdeel scoort onder de 7.</li>"}</ul></div>
+ ${wegSec(R)}
  <div class="tile" style="margin-top:10px"><div class="lbl">Wat beter kan</div><ul>${R.better.map(t=>`<li>${t}</li>`).join("")}</ul></div>`}
+
+function wegSec(R){const l=[...own].sort((a,b)=>b.w-a.w),pc2=x=>f1(x)+"%";
+ const top=l.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${r.naam}</span><b class="num">${pc2(r.w)}</b></div>`).join("");
+ const kl=R.klein.length?R.klein.map(x=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><span>${x.r.naam}</span><b class="num">${pc2(x.w)}</b></div><div class="note" style="margin:0">Een verdubbeling geeft +${f1(x.w)}% op je portefeuille. Advies: <span class="pill ${x.a[1]}">${x.a[0]}</span></div></div>`).join(""):`<div class="note">Geen posities onder de 2%.</div>`;
+ return `<div class="tile" style="margin-top:10px"><div class="lbl">Wegingen per aandeel</div><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Posities</small><b class="num">${R.n}</b></div><div><small>Mediaan</small><b class="num">${pc2(R.med)}</b></div><div><small>Onder 2%</small><b class="num">${R.klein.length} (${pc2(R.smW)})</b></div></div>
+ <div class="lbl" style="margin-top:10px">Grootste vijf</div>${top}
+ <div class="lbl" style="margin-top:10px">Te klein om het verschil te maken (onder 2%)</div><div class="note" style="margin:0 0 4px">Een positie moet ongeveer 3 tot 5% zijn om je rendement echt te bewegen. Kleiner kost wel aandacht, maar levert weinig op.</div>${kl}</div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
