@@ -323,6 +323,34 @@ for isin in SOLD:
         print("FOUT verkocht", isin, e)
 json.dump(SMAP, open("verkocht_map.json", "w"))
 
+
+# --- compounder-score (zelfde regels als de app) en push bij nieuwe kwalificatie
+SERIAL = ["CSU.TO","TOI.V","LMN.V","CHG.DE","TEQ.ST","ROKO-B.ST","LIFCO-B.ST"]
+def cscore(r):
+    n = lambda k: r.get(k) if isinstance(r.get(k), (int, float)) else None
+    eps, fcf, roic, nd, peg = n("eps_cagr"), n("fcf_cagr"), n("roic"), n("nd_ebitda"), n("peg")
+    ins, dil = n("ins_pct"), n("dil")
+    if r.get("t") in SERIAL and fcf is not None and (eps is None or eps < fcf): eps = fcf
+    s = 0
+    if eps is not None: s += 2 if eps >= .15 else 1 if eps >= .12 else 0
+    if fcf is not None: s += 2 if fcf >= .15 else 1 if fcf >= .10 else 0
+    s += 2 if nd is None or nd <= 1 else 1 if nd <= 2 else 0
+    s += 1 if roic is None else 2 if roic >= .15 else 1 if roic >= .10 else 0
+    s += (1 if (ins or 0) >= .05 else 0) + (1 if dil is not None and dil <= .01 else 0)
+    if peg is not None: s += 2 if peg <= 1.5 else 1 if peg <= 2 else 0
+    return s
+try:
+    first_c = "comp:init" not in SEEN
+    SEEN.add("comp:init")
+    for r in rows:
+        sc = cscore(r)
+        if sc >= 9:
+            lab = "Verborgen compounder" if (r.get("mcap") or 0) < 25e9 else "Gevestigde compounder"
+            if first_c: SEEN.add("comp:" + r["t"])
+            else: notify("comp:" + r["t"], "Nieuwe compounder", f'{r.get("naam") or r["t"]}: {lab}, score {sc} van 12')
+except Exception as e:
+    print("FOUT compounder", e)
+
 json.dump(clean(dict(bijgewerkt=dt.datetime.now(dt.timezone.utc).isoformat(), versie=2, doel_cagr=P.get("doel_cagr", 15),
           grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK)),
           open("data.json", "w"), default=str)
