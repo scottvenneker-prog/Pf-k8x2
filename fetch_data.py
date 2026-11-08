@@ -354,7 +354,8 @@ except Exception as e:
 
 # --- grote beleggers: 13F-meldingen bij de SEC (publiek, per kwartaal)
 GURUS = {"Berkshire Hathaway": "1067983", "Stanley Druckenmiller (Duquesne)": "1536411",
-         "Mohnish Pabrai (Dalal Street)": "1549575", "Chris Hohn (TCI)": "1647251"}
+         "Mohnish Pabrai (Dalal Street)": "1549575", "Chris Hohn (TCI)": "1647251",
+         "Chuck Akre (Akre Capital)": "1112520", "Li Lu (Himalaya Capital)": "1709323"}
 SEC_H = {"User-Agent": "PortefeuilleCockpit research script", "Accept-Encoding": "gzip, deflate"}
 def sec_get(u):
     r = requests.get(u, headers=SEC_H, timeout=30); r.raise_for_status(); return r
