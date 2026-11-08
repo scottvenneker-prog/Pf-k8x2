@@ -160,6 +160,11 @@ def one(tk):
                     pes.append(float(hist.asof(d) / e))
                 except Exception: pass
     hl = float(hist.iloc[-1])
+    try:   # koersen zonder dividendcorrectie (wel splitsingen) voor waardering in het verleden; de dividenden zitten apart in de kasstromen
+        ru = t.history(period="max", auto_adjust=False)["Close"].dropna()
+        histu = ru / 100 if info.get("currency") == "GBp" else ru
+        if len(histu) < 10: histu = hist
+    except Exception: histu = hist
     fwd = None
     try:
         g = t.earnings_estimate.loc["+1y", "growth"]       # verwachte winstgroei komend jaar (analisten)
@@ -208,7 +213,7 @@ def one(tk):
         fcf=[round(float(x) / 1e6) for x in fcf.values], fjaren=[str(d.year) for d in fcf.index],
         roic_reeks=[round(float(x), 3) for x in roic.values], rjaren=[str(d.year) for d in roic.index],
         ins_pct=info.get("heldPercentInsiders"), beta=info.get("beta"), ev_ebitda=info.get("enterpriseToEbitda"),
-        px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(hist.resample("W").last().dropna().tail(600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(hist, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
+        px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(histu.resample("W").last().dropna().tail(600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(histu, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
         dil=dil, vol=vol, dd5=dd5, om_reeks=[round(float(x), 3) for x in omr.values], omjaren=[str(d.year) for d in omr.index], er=er,
         nieuws=news(t), insiders=ins[:8],
         ins_koop=sum(i["type"] == "koop" and i["datum"] >= cut for i in ins),
@@ -372,7 +377,7 @@ for isin in SOLD:
             SMAP[isin] = sym
         if not sym: continue
         t = yf.Ticker(sym)
-        h = t.history(period="max", auto_adjust=True)["Close"].dropna()
+        h = t.history(period="max", auto_adjust=False)["Close"].dropna()
         if len(h) < 10: continue
         c = (t.history_metadata or {}).get("currency")
         w = h.resample("W").last().ffill().tail(600)
