@@ -584,6 +584,27 @@ function kandPick(bud){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9),nP=Ma
  const top=k.slice(0,10).map(x=>Object.assign({},x,{s2:x.s-feeEst(x.r,perP).t/perP*150})).sort((a,b)=>b.s2-a.s2).slice(0,nP);
  const alloc=top.map(x=>{const deel=bud/top.length,cap=Math.max(0,.10*(TOT+bud)-(x.r.watch?0:x.r.waarde));return Math.round(Math.min(deel,cap)/50)*50});
  return {top,alloc}}
+
+function streef(r){try{const v=verdict(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why;
+ if(v.k==="structureel"){t=0;tier="afbouwen";why="staat op Verkoop overwegen"}
+ else if(z.s>=9&&M&&/breed/i.test(M.s)){t=5;tier="uitbouwen";why=`compounder ${z.s}/12 met ${M.s.toLowerCase()}e moat`}
+ else if(z.s>=7||v.lab==="Behouden of bijkopen"){t=4;tier="uitbouwen";why=z.s>=7?`compounder ${z.s}/12`:"voldoet en de waardering is gunstig"}
+ else if(v.k==="licht"||v.lab==="Volgen"){t=Math.min(cur,2.5);tier="vasthouden";why="groeit net onder je doel, dus volgen"}
+ else {t=3;tier="vasthouden";why="voldoet aan je doel, geen reden voor meer"}
+ if(M&&M.s==="Zwak"&&t>cur){t=cur;tier="vasthouden";why="heeft een zwakke moat en is klein, dus geen extra geld"}
+ if(duur&&t>cur&&tier==="uitbouwen"){t=cur;tier="vasthouden";why+=`, maar ${Math.round(Math.abs(F.mid))}% boven redelijke waarde (indicatie): niet extra kopen`}
+ if(cur>cap){t=duur?Math.min(cap,cur):cap;tier="trimmen";why=`weging boven je grens van ${cap}%${duur?" en boven redelijke waarde":""}`}
+ else if(t<cur&&tier!=="afbouwen"){t=cur;tier="vasthouden"}
+ if(Math.abs(t-cur)<0.4&&tier==="uitbouwen")tier="vasthouden";
+ return {t,d:t-cur,tier,why,z:z.s}}catch(e){return null}}
+function streefSec(){const L=own.map(r=>({r,s:streef(r)})).filter(x=>x.s).sort((a,b)=>b.s.d>0.4&&a.s.d>0.4?(b.s.z-a.s.z)||(b.s.d-a.s.d):b.s.d-a.s.d),sum=L.reduce((t,x)=>t+x.s.t,0);
+ const tot=L.reduce((t,x)=>t+x.r.w,0)||100,up=L.filter(x=>x.s.d>0.4),dn=L.filter(x=>x.s.d<-0.4);
+ const mnd=x=>INLEG>0?Math.max(1,Math.round(x.s.d/100*TOT/INLEG)):null;
+ const rij=x=>`<details style="border-top:1px solid var(--line)"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><span>${x.r.naam} ›</span><span class="num" style="white-space:nowrap">${f1(x.r.w)}% → <b>${f1(x.s.t)}%</b></span></div><div class="note" style="margin:0"><span class="pill ${x.s.tier==="uitbouwen"?"g":x.s.tier==="vasthouden"?"n":"a"}">${x.s.tier}</span> ${x.s.d>0.4?"+"+f1(x.s.d)+" pt, ongeveer "+eur(x.s.d/100*TOT)+(mnd(x)?" (zo'n "+mnd(x)+" maand"+(mnd(x)>1?"en":"")+" van je hele inleg)":""):x.s.d<-0.4?f1(x.s.d)+" pt, ongeveer "+eur(-x.s.d/100*TOT)+" minder":"geen verandering"}</div></summary><div class="note" style="margin:0 0 10px">Reden: ${x.r.naam} ${x.s.why}.</div>${waarom(x.r,[x.s.tier==="uitbouwen"?"uitbouwen":x.s.tier==="afbouwen"||x.s.tier==="trimmen"?"afbouwen":"volgen",x.s.tier==="uitbouwen"?"g":x.s.tier==="vasthouden"?"n":"r"])}</details>`;
+ return `<div class="sec"><h2>Waar de weging naartoe kan</h2><div class="tile"><div class="note" style="margin:0 0 8px">Een streefweging per bedrijf, afgeleid van mijn koopadvies: compounder-score, moat, redelijke waarde (indicatie) en je eigen regels. Bedrijven die goed scoren groeien naar 4 of 5%, bedrijven boven je grens van ${PAR.weg}% gaan terug, en wie op Verkoop overwegen staat gaat naar 0%. Alles daartussen houdt zijn weging. De volgorde bij Uitbouwen is de volgorde van prioriteit: de hoogste compounder-score eerst.</div>
+ <div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Uitbouwen</small><b class="num">${up.length}</b></div><div><small>Terug of weg</small><b class="num">${dn.length}</b></div><div><small>Streef totaal</small><b class="num">${f1(sum)}%</b></div></div>
+ ${up.length?`<div class="lbl" style="margin-top:10px">Uitbouwen</div>${up.map(rij).join("")}`:""}${dn.length?`<div class="lbl" style="margin-top:10px">Afbouwen of terug naar de grens</div>${dn.map(rij).join("")}`:""}
+ <div class="note" style="margin:10px 0 0">Het totaal van de streefwegingen is niet 100%. Wat overblijft is ruimte voor nieuwe namen. Is het totaal meer dan 100%, dan betekent het dat niet alles tegelijk kan groeien en kies je zelf de volgorde. Dit is een rekenvoorbeeld op je eigen regels, geen advies.</div></div></div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1248,7 +1269,7 @@ function vSub(){
  if(k==="sector"){title="Spreiding per sector";body=Object.entries(secW).sort((a,b)=>b[1]-a[1]).map(([sec,w])=>{const l=own.filter(r=>r.sector===sec).sort((a,b)=>b.w-a.w);const avg=l.reduce((t,r)=>t+r.eps*r.w,0)/l.reduce((t,r)=>t+r.w,0);
    return `<details class="tile" style="margin-top:8px;padding:0"${w>35?" open":""}><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span><b>${sec}</b> <span class="num" style="color:var(--mut)">${l.length} bedrijven</span></span><span class="num ${w>35?"neg":""}">${f1(w)}%</span></summary><div style="padding:0 12px 12px"><div class="note" style="margin:0 0 6px">Gemiddelde winstgroei (gewogen): ${f1(avg)}% per jaar${w>35?". Boven je grens van 35%.":"."}</div>${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:r.licht})),0,"%")}</div></details>`}).join("")}
  if(k==="bedrijven"){title="Weging per bedrijf";const l=[...own].sort((a,b)=>b.w-a.w);
-  body=`<div class="tile">${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:r.w>=10?"a":"n"})),10,"%")}<div class="note">De streep is je grens van 10%. Oranje staat erboven.</div></div><div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.sector} · ${r.land} · ${r.munt}</div></span><span style="text-align:right"><div class="num">${f1(r.w)}%</div><div class="m num">${eur(r.waarde)}</div></span></button>`).join("")}</div></div>`}
+  body=`<div class="tile">${hbars(l.map(r=>({n:r.tk.replace(/\\..*/,""),v:r.w,k:r.w>=10?"a":"n"})),10,"%")}<div class="note">De streep is je grens van 10%. Oranje staat erboven.</div></div>${streefSec()}<div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.sector} · ${r.land} · ${r.munt}</div></span><span style="text-align:right"><div class="num">${f1(r.w)}%</div><div class="m num">${eur(r.waarde)}</div></span></button>`).join("")}</div></div>`}
  if(k==="kwal"){title="Kwaliteit over 5 jaar";body=kwalSub()}
  if(k==="gt"){title="Geld- tegenover tijdgewogen";body=gtSub()}if(k==="rapport"){title="Portefeuille-analyse";body=rapportSub()}
  if(k==="conc"){title="Concentratie";body=concSub()}
