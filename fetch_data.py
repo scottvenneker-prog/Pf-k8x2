@@ -1,5 +1,5 @@
 """Haalt koersen + fundamentals (Yahoo Finance via yfinance) voor portfolio.json, schrijft data.json, stuurt ntfy-pushes."""
-import json, os, datetime as dt
+import json, os, time, datetime as dt
 import pandas as pd, requests, yfinance as yf
 
 P = json.load(open("portfolio.json"))
@@ -356,8 +356,9 @@ except Exception as e:
 GURUS = {"Berkshire Hathaway": "1067983", "Stanley Druckenmiller (Duquesne)": "1536411",
          "Mohnish Pabrai (Dalal Street)": "1549575", "Chris Hohn (TCI)": "1647251",
          "Chuck Akre (Akre Capital)": "1112520", "Li Lu (Himalaya Capital)": "1709323"}
-SEC_H = {"User-Agent": "PortefeuilleCockpit research script", "Accept-Encoding": "gzip, deflate"}
+SEC_H = {"User-Agent": "PortefeuilleCockpit/1.0 (persoonlijk onderzoek; github.com/scottvenneker-prog/Pf-k8x2)", "Accept-Encoding": "gzip, deflate"}
 def sec_get(u):
+    time.sleep(0.4)
     r = requests.get(u, headers=SEC_H, timeout=30); r.raise_for_status(); return r
 def parse_13f(cik, acc):
     import xml.etree.ElementTree as ET
