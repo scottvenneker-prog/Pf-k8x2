@@ -10,6 +10,7 @@ HELD = set(P["posities"]) | set(P.get("watchlist", {}))
 DUBBEL = {"GOOG": "GOOGL", "GOOGL": "GOOG", "FOX": "FOXA", "FOXA": "FOX", "NWS": "NWSA", "NWSA": "NWS", "UA": "UAA", "UAA": "UA", "BF-A": "BF-B", "BF-B": "BF-A"}   # twee aandelensoorten van hetzelfde bedrijf
 HELD |= {DUBBEL[x] for x in HELD if x in DUBBEL}
 UA = {"User-Agent": "Mozilla/5.0 (portefeuille-cockpit wekelijkse scan)"}
+SKIP_IND = ("airline", "drug manufacturer", "biotechnology", "pharmac", "auto manufacturer")
 MAXN = 10                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
 EPSMAX = .40                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
 RULE = dict(eps=.15, roic=.20, peg=1.5, nd=1.0, rmin=.15)   # toevoegen
@@ -110,6 +111,8 @@ def universe():
 def metrics(tk):
     t = yf.Ticker(tk); info = t.info or {}
     mc = info.get("marketCap"); sec = info.get("sector")
+    ind0 = (info.get("industry") or "").lower()
+    if any(w in ind0 for w in SKIP_IND): return "skip"   # geen airlines, farma of autofabrikanten
     cu0 = info.get("financialCurrency") or info.get("currency")
     if cu0 == "GBp": cu0 = "GBP"
     if not mc or mc * FXUSD.get(cu0, 1) < MINCAP or not sec or sec in SKIP_SEC: return "skip"

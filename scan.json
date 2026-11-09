@@ -19,7 +19,7 @@
   "Brussel": 29
  },
  "gescand": 3296,
- "voldoen": 40,
+ "voldoen": 5,
  "max": 10,
  "regels": {
   "eps": 0.15,
@@ -92,20 +92,6 @@
    "pe": 18.32659,
    "sinds": "2026-11-09",
    "bron": "S&P 500"
-  },
-  {
-   "tk": "AF.PA",
-   "naam": "AIR FRANCE -KLM",
-   "sector": "Industrie",
-   "land": "FR",
-   "munt": "EUR",
-   "eps": 0.21059905868662354,
-   "roic": 0.5173450173221927,
-   "peg": 0.13868621817280294,
-   "nd": 0.02732148843446195,
-   "pe": 2.9207187,
-   "sinds": "2026-11-09",
-   "bron": "Parijs"
   },
   {
    "tk": "META",
