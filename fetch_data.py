@@ -201,6 +201,27 @@ def one(tk):
         ttm = float(dv[dv.index > pd.Timestamp.now(tz=dv.index.tz) - pd.Timedelta(days=365)].sum())
         dvd = dict(div_ttm=ttm, div_cagr=cagr(full) if len(full) >= 3 else None, div_reeks=[round(float(x), 3) for x in full.values],
                    div_jaren=[str(i) for i in full.index], div_laatste_datum=str(dv.index[-1])[:10], div_laatste_bedrag=round(float(dv.iloc[-1]), 4))
+    # omzet, uitkering en kasstroomkwaliteit (gerapporteerde cijfers, in de rapportagevaluta)
+    ni = row(inc, "Net Income Common Stockholders", "Net Income")
+    rv = rev.dropna() if rev is not None else pd.Series(dtype=float)
+    rev_g, rev_gt = (cagr(rv) if len(rv) >= 2 else None), None
+    try:
+        tr, mq = info.get("totalRevenue"), info.get("mostRecentQuarter")
+        if same and tr and mq and len(rv) >= 2 and tr > 0 and float(rv.iloc[-1]) > 0:
+            qd = pd.Timestamp(mq, unit="s")
+            if .5 <= tr / float(rv.iloc[-1]) <= 3 and qd > rv.index[-1].tz_localize(None) + pd.Timedelta(days=60):
+                pr = rv[rv > 0]; yrs = (qd - pr.index[0].tz_localize(None)).days / 365.25
+                if yrs >= 1.5: rev_gt = float((tr / float(pr.iloc[0])) ** (1 / yrs) - 1)
+    except Exception as e: print("REV", tk, e)
+    fl_ = float(fcf.dropna().iloc[-1]) if len(fcf.dropna()) else None
+    rl_ = float(rv.iloc[-1]) if len(rv) else None
+    nl_ = float(ni.dropna().iloc[-1]) if len(ni.dropna()) else None
+    dpd = row(cf, "Cash Dividends Paid", "Common Stock Dividend Paid", "Dividends Paid")
+    dl_ = abs(float(dpd.dropna().iloc[-1])) if len(dpd.dropna()) else None
+    fcf_marge = fl_ / rl_ if (fl_ is not None and rl_) else None
+    fcf_conv = fl_ / nl_ if (fl_ is not None and nl_ and nl_ > 0) else None
+    uit_fcf = dl_ / fl_ if (dl_ is not None and fl_ and fl_ > 0 and dl_ > 0) else None
+    uit_ni = dl_ / nl_ if (dl_ is not None and nl_ and nl_ > 0 and dl_ > 0) else None
     rate = 1.0 if cur == "EUR" else FX.get(cur)
     pe, g = info.get("trailingPE"), cagr(eps)
     g_fy, eps_ttm, ttm_d = g, None, None
@@ -220,7 +241,7 @@ def one(tk):
     ins = insiders(t); cut = (dt.date.today() - dt.timedelta(days=180)).isoformat()
     out = dict(naam=META.get(tk, {}).get("naam") or info.get("shortName") or tk, t=tk, sector=info.get("sector"), land=info.get("country"),
         px=px, dag=day, pe=pe, fpe=info.get("forwardPE"), pe_hist=sum(pes)/len(pes) if pes else None, pe_n=len(pes),
-        peg=(pe / (g * 100)) if pe and g and g > 0 else None, eps_cagr=g, eps_cagr_fy=g_fy, eps_ttm=eps_ttm, eps_ttm_d=ttm_d, fcf_cagr=cagr(fcf), roic=last(roic),
+        peg=(pe / (g * 100)) if pe and g and g > 0 else None, rev_cagr=rev_g, rev_cagr_ttm=rev_gt, rev_reeks=[round(float(x) / 1e6) for x in rv.values], rev_jaren=[str(d.year) for d in rv.index], fin_munt=info.get("financialCurrency") or cur, fcf_marge=fcf_marge, fcf_conv=fcf_conv, uit_fcf=uit_fcf, uit_ni=uit_ni, ni_last=(round(nl_ / 1e6) if nl_ is not None else None), eps_cagr=g, eps_cagr_fy=g_fy, eps_ttm=eps_ttm, eps_ttm_d=ttm_d, fcf_cagr=cagr(fcf), roic=last(roic),
         bm=last(gp) / last(rev) if last(gp) is not None and last(rev) else None,
         om=last(ebit) / last(rev) if last(ebit) is not None and last(rev) else None,
         nd_ebitda=nd / eb if (nd is not None and eb and eb > 0 and not fin) else None,
