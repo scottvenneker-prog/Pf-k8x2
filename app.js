@@ -1080,7 +1080,7 @@ function vDoel(){
  const verk=v.filter(x=>x.v.k==="structureel");
  const vrij=verk.reduce((t,x)=>t+x.r.waarde,0);
  const kd=kandidaten().filter(x=>!verk.some(y=>y.r.tk===x.r.tk)).slice(0,3);
- const item=x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><div class="note" style="margin:6px 0 0">Winst ${x.r.eps}%/jr · koers 5 jr ${f1(cg5(x.r))}%/jr · weging ${f1(x.r.w)}%</div><div class="note num" style="margin:2px 0 0">PE ${f1(x.r.pe)} vs ${f1(x.r.peh)} historisch · PEG ${f1(x.r.peg)}</div></div><span class="pill ${x.v.cl}">${x.v.lab}</span></div><details ${x.v.k==="structureel"?"open":""}><summary>Analyse</summary><div class="an"><h4>Waarom</h4><p>${x.v.uitleg}</p><h4>Wat ik zou doen</h4><p>${x.v.wat}</p></div></details></div>`;
+ const item=x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><div class="note" style="margin:6px 0 0">Winst ${x.r.eps}%/jr · koers 5 jr ${f1(cg5(x.r))}%/jr · weging ${f1(x.r.w)}%</div><div class="note num" style="margin:2px 0 0">PE ${f1(x.r.pe)} vs ${f1(x.r.peh)} historisch · PEG ${f1(x.r.peg)}</div></div><span class="pill ${x.v.cl}">${x.v.lab}</span></div><details><summary>Analyse</summary><div class="an"><h4>Waarom</h4><p>${x.v.uitleg}</p><h4>Wat ik zou doen</h4><p>${x.v.wat}</p></div></details></div>`;
 
  const gr=[["Voldoet","g",v.filter(x=>["voldoet","tijdelijk"].includes(x.v.k))],["Volgen","a",v.filter(x=>["duur","licht"].includes(x.v.k))],["Heroverwegen","r",verk]].map(([n,c,l])=>({n,c,l,w:l.reduce((t,x)=>t+x.r.w,0)}));
  const tw=gr.reduce((t,g)=>t+g.w,0);
