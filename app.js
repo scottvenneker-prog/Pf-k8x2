@@ -1705,12 +1705,17 @@ function render0(){
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
  nav();
  if(det){s.hidden=false;s.innerHTML=vDet()}else if(sub){s.hidden=false;s.innerHTML=vSub()}else{s.hidden=true}
+ try{histSync()}catch(x){}
 }
+let histN=0,histIgn=0;
+function goBack(){if(subStack.length){const p=subStack.pop();sub=p.s;det=p.d;dtab=p.t}else{det=null;sub=null}}
+function histSync(){const d=(sub||det)?subStack.length+1:0;while(histN<d){history.pushState({pf:1},"");histN++}if(histN>d){const n=histN-d;histN=d;histIgn++;history.go(-n)}}
+window.addEventListener("popstate",()=>{if(histIgn>0){histIgn=0;return}if(histN>0){histN--;goBack();render()}});
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
  if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;subStack=[];render();window.scrollTo(0,0)}
  else if(b.dataset.d){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
- else if(b.id==="bk"){if(subStack.length){const p=subStack.pop();sub=p.s;det=p.d;dtab=p.t}else{det=null;sub=null}render()}
+ else if(b.id==="bk"){goBack();render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
  else if(b.dataset.del!==undefined){STORT.splice(+b.dataset.del,1);saveS();render()}
  else if(b.dataset.s){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub=b.dataset.s;det=null;render();document.getElementById("sheet").scrollTop=0}
