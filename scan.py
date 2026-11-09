@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wekelijkse scan: loopt S&P 500, Nasdaq-100, AEX en AMX langs op de regels uit portfolio.json
+"""Wekelijkse scan: loopt S&P 500, AEX en AMX langs op de regels uit portfolio.json
 en schrijft scan.json (lijst met kandidaten + logboek van wat erbij kwam of eraf ging)."""
 import io, json, os, time, datetime as dt
 import pandas as pd, requests, yfinance as yf
