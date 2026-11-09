@@ -1134,7 +1134,7 @@ function pgT(v){return v==null||!(v>0)||v>=90?"n.v.t.":f1(v)}
 function verdict(r){const v=verdict0(r);if(v&&v.lab==="Behouden of bijkopen"){const s=streef(r);if(s&&s.tier!=="uitbouwen")return Object.assign({},v,{lab:"Behouden",cl:"g",wat:v.wat.replace(/bijkopen kan/,"bijkopen hoeft nu niet")+" "+(s.why?"Reden: "+r.naam+" "+s.why+".":"")})}return v}
 
 let advTab="ov";
-function advTabs(){const T=[["ov","Overzicht"],["nu","Wat nu"],["aand","Per aandeel"],["pf","Portefeuille"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;overflow-x:auto;display:flex;gap:0">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="flex:1 0 auto;padding:8px 12px;white-space:nowrap">${t}</button>`).join("")}</div>`}
+function advTabs(){const T=[["ov","Overzicht"],["nu","Wat nu"],["aand","Per aandeel"],["pf","Portefeuille"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
 function advActs(){const L=own.map(r=>({r,v:verdict(r),s:streef(r)})).filter(x=>x.s);
  const up=L.filter(x=>x.s.d>0.4&&x.s.tier==="uitbouwen").sort((a,b)=>(b.s.z-a.s.z)||(b.s.d-a.s.d));
  const dn=L.filter(x=>x.s.d<-0.4&&x.s.tier!=="afbouwen").sort((a,b)=>a.s.d-b.s.d);
