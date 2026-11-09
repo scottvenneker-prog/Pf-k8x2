@@ -375,6 +375,14 @@ for tk in list(H) + [w for w in WL if w not in H] + SCT:
 def _wk(sym, start=None, n=None):
     z = yf.Ticker(sym).history(period="max", auto_adjust=True)["Close"].dropna()
     w = z.resample("W").last().dropna()
+    # Is de week van vandaag er nog niet (bv. maandagochtend voor de Amerikaanse opening), dan de laatste koers
+    # doorzetten, zodat de index op dezelfde weekas staat als de aandelen (anders schuift hij een week op)
+    try:
+        t0 = dt.date.today(); eind = t0 + dt.timedelta(days=(6 - t0.weekday()))
+        while len(w) and w.index[-1].date() < eind:
+            w = pd.concat([w, pd.Series([w.iloc[-1]], index=[w.index[-1] + pd.Timedelta(days=7)])])
+    except Exception as e:
+        print("FOUT pad", e)
     if start: w = w[w.index >= start]
     if n: w = w.tail(n)
     return w
