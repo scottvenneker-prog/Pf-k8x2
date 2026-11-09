@@ -660,30 +660,34 @@ function kandPick(bud){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9),nP=Ma
  return {top,alloc}}
 
 const UITG={};
-const RULES={eps:15,roic:15,roicIn:20,peg:1.5,nd:1,mega:40};
+const RULES={eps:15,roic:15,roicIn:20,peg:1.5,nd:1,mega:40,bk:{peg:1,roic:20,eps:20,rmin:15,extra:10,plus:2}};
+function buitenkans(r){const b=RULES.bk,rm=rmin3(r);return r.peg>0&&r.peg<=b.peg&&r.roic!=null&&r.roic>=b.roic&&r.eps>=b.eps&&rm!=null&&rm>=b.rmin}
 function aiShare(){const W=own.reduce((t,r)=>t+r.w,0)||100;return own.filter(r=>/^AI /.test(MEGA[r.tk]||"")).reduce((t,r)=>t+r.w,0)/W*100}
-function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why;
+function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why,ex=false;
  if(v.k==="structureel"){t=0;tier="afbouwen";why="staat op Verkoop overwegen"}
  else if(z.s>=9&&M&&/breed/i.test(M.s)){t=5;tier="uitbouwen";why=`compounder ${z.s}/12 met ${M.s.toLowerCase()}e moat`}
  else if(z.s>=7||v.lab==="Behouden of bijkopen"){t=4;tier="uitbouwen";why=z.s>=7?`compounder ${z.s}/12`:"voldoet en de waardering is gunstig"}
  else if(v.k==="licht"||v.lab==="Volgen"){t=Math.min(cur,2.5);tier="vasthouden";why="groeit net onder je doel, dus volgen"}
  else {t=3;tier="vasthouden";why="voldoet aan je doel, geen reden voor meer"}
  if(M&&M.s==="Zwak"&&t>cur){t=cur;tier="vasthouden";why="heeft een zwakke moat en is klein, dus geen extra geld"}
- if(tier==="uitbouwen"){const rm=rmin3(r);let nee=null;
+ if(tier==="uitbouwen"){const rm=rmin3(r);let nee=null,exc=null;
   if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
   else if(v.lab==="Volgen"||v.lab==="Behouden, let op")nee="staat op "+v.lab.toLowerCase()+", dus geen extra geld";
   else if(r.eps!=null&&r.eps<RULES.eps)nee="groeit onder je doel van "+RULES.eps+"%, dus geen extra geld";
   else if(r.roic!=null&&r.roic<RULES.roic)nee="heeft een ROIC van "+f1(r.roic)+"%, onder je grens van "+RULES.roic+"%, dus geen extra geld";
   else if(rm!=null&&rm<10)nee="had in de jaren ervoor een ROIC onder 10%, dus geen extra geld";
-  else if(CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9)){const c=CLU.find(c=>c.f(r)&&cluW(c)>=c.lim*.9);nee="zit in het "+c.n.toLowerCase()+", dat al "+f1(cluW(c))+"% van je portefeuille is (grens "+c.lim+"%), dus geen extra geld"}
-  else if(secW[r.sector]>=PAR.sec*.9)nee="zit in de sector "+r.sector+", die al "+f1(secW[r.sector])+"% van je portefeuille is (grens "+PAR.sec+"%), dus geen extra geld"
-  else if(/^AI /.test(MEGA[r.tk]||"")&&aiShare()>=RULES.mega)nee="zit in AI-thema's, die samen al "+f1(aiShare())+"% van je portefeuille zijn (grens "+RULES.mega+"%)";
-  if(nee){t=cur;tier="vasthouden";why=nee}}
+  else{const G=[];CLU.forEach(c=>{if(c.f(r)&&cluW(c)>=c.lim*.9)G.push(["het "+c.n.toLowerCase(),cluW(c),c.lim])});
+   if(secW[r.sector]>=PAR.sec*.9)G.push(["de sector "+r.sector,secW[r.sector],PAR.sec]);
+   if(/^AI /.test(MEGA[r.tk]||"")&&aiShare()>=RULES.mega)G.push(["de AI-thema's",aiShare(),RULES.mega]);
+   if(G.length){const hard=G.find(g=>g[1]>=g[2]+RULES.bk.extra);
+    if(buitenkans(r)&&!hard){exc="buitenkans: PEG "+pgT(r.peg)+", ROIC "+f1(r.roic)+"% en winstgroei "+f1(r.eps)+"%. Dit mag boven je grens van "+G.map(g=>g[0]+" ("+f1(g[1])+"% van "+g[2]+"%)").join(" en ")+" uit, tot "+RULES.bk.extra+" punten erboven, en dan voorzichtig (maximaal +"+RULES.bk.plus+" punt per aandeel)"}
+    else{const g=hard||G[0];nee="zit in "+g[0]+", dat al "+f1(g[1])+"% van je portefeuille is (grens "+g[2]+"%)"+(hard?" en daarmee ook boven de harde grens van "+(g[2]+RULES.bk.extra)+"%":buitenkans(r)?"":", dus geen extra geld")}}}
+  if(nee){t=cur;tier="vasthouden";why=nee}else if(exc){t=Math.min(t,cur+RULES.bk.plus);why=exc;ex=true}}
  if(duur&&t>cur&&tier==="uitbouwen"){t=cur;tier="vasthouden";why+=`, maar ${Math.round(Math.abs(F.mid))}% boven redelijke waarde (indicatie): niet extra kopen`}
  if(cur>cap){t=duur?Math.min(cap,cur):cap;tier="trimmen";why=`weging boven je grens van ${cap}%${duur?" en boven redelijke waarde":""}`}
  else if(t<cur&&tier!=="afbouwen"){t=cur;tier="vasthouden"}
  if(Math.abs(t-cur)<0.4&&tier==="uitbouwen")tier="vasthouden";
- return {t,d:t-cur,tier,why,z:z.s}}catch(e){return null}}
+ return {t,d:t-cur,tier,why,z:z.s,ex}}catch(e){return null}}
 function streefSec(){const L=own.map(r=>({r,s:streef(r)})).filter(x=>x.s).sort((a,b)=>b.s.d>0.4&&a.s.d>0.4?(b.s.z-a.s.z)||(b.s.d-a.s.d):b.s.d-a.s.d),sum=L.reduce((t,x)=>t+x.s.t,0);
  const tot=L.reduce((t,x)=>t+x.r.w,0)||100,up=L.filter(x=>x.s.d>0.4),dn=L.filter(x=>x.s.d<-0.4);
  const mnd=x=>INLEG>0?Math.max(1,Math.round(x.s.d/100*TOT/INLEG)):null;
@@ -1125,7 +1129,7 @@ function filoData(){const W=own.reduce((t,r)=>t+r.w,0)||100,sh=f=>own.filter(f).
  ["Toekomstbestendig tegen AI",f1(s11)+"% van je geld zit in bedrijven die netto niet kwetsbaar zijn voor AI, na hun eigen verweer. Ook dit is mijn oordeel over het bedrijfsmodel.",g(s11,80,60)],
  ["Overzicht: maximaal "+MAXPOS+" aandelen",own.length+" aandelen nu.",own.length<=MAXPOS?"g":"a"]]}
 function filoBlok(){const D=filoData(),n=D.filter(x=>x[2]==="g").length;return `<button class="tile go" data-s="filo" style="margin-top:8px;width:100%;text-align:left"><div class="lbl">Jouw beleggingsfilosofie</div><div class="v num">${n} van ${D.length} <span style="font-size:14px;font-weight:500">principes op groen</span></div><div class="note" style="margin:4px 0 0">Tik voor hoe je portefeuille scoort op groei, moat, prijs, rust, schuld, kasstroom en eigenaarschap ›</div></button>`}
-function filoSub(){const D=filoData();return `<div class="note" style="margin-top:8px">Lang beleggen in echte winnaars met een duidelijke moat, tegen een redelijke prijs, met weinig schuld, groeiende kasstroom en winst en een bestuur met eigen geld erin. Weinig kopen en verkopen. Doel: ${DOEL}% per jaar. Hieronder zie je hoe je portefeuille nu scoort, op echte cijfers.</div>${(()=>{const J=/^(Duidelijke moat|Megatrend|Toekomstbestendig)/,rw=x=>`<div class="row" style="align-items:flex-start"><span class="dot ${x[2]}" style="margin-top:6px"></span><span class="grow"><div class="t">${x[0]}</div><div class="m" style="white-space:normal">${x[1]}</div></span></div>`;return `<div class="lbl" style="margin-top:12px">Op echte cijfers</div><div class="list">${D.filter(x=>!J.test(x[0])).map(rw).join("")}</div><div class="lbl" style="margin-top:12px">Mijn inschatting (geen cijfers)</div><div class="list">${D.filter(x=>J.test(x[0])).map(rw).join("")}</div>`})()}${megaH()}<div class="sec"><h2>Jouw regels op één plek</h2><div class="tile"><div class="note" style="margin:0">Alle schermen gebruiken dezelfde regels: winstgroei vanaf ${RULES.eps}%, ROIC vanaf ${RULES.roic}% (nieuwe kandidaten vanaf ${RULES.roicIn}%), PEG tot ${RULES.peg}, schuld tot ${RULES.nd}× EBITDA voor kandidaten, maximaal ${MAXPOS} aandelen, AI-thema's samen hooguit ${RULES.mega}% en niet meer dan ${PAR.weg}% per bedrijf. Een aandeel krijgt alleen extra geld als het aan al deze regels voldoet.</div></div></div><div class="note">Groen, oranje of rood is mijn eigen drempel (bijvoorbeeld groen vanaf 70% van je geld). Het zijn richtlijnen en geen regels.</div>`}
+function filoSub(){const D=filoData();return `<div class="note" style="margin-top:8px">Lang beleggen in echte winnaars met een duidelijke moat, tegen een redelijke prijs, met weinig schuld, groeiende kasstroom en winst en een bestuur met eigen geld erin. Weinig kopen en verkopen. Doel: ${DOEL}% per jaar. Hieronder zie je hoe je portefeuille nu scoort, op echte cijfers.</div>${(()=>{const J=/^(Duidelijke moat|Megatrend|Toekomstbestendig)/,rw=x=>`<div class="row" style="align-items:flex-start"><span class="dot ${x[2]}" style="margin-top:6px"></span><span class="grow"><div class="t">${x[0]}</div><div class="m" style="white-space:normal">${x[1]}</div></span></div>`;return `<div class="lbl" style="margin-top:12px">Op echte cijfers</div><div class="list">${D.filter(x=>!J.test(x[0])).map(rw).join("")}</div><div class="lbl" style="margin-top:12px">Mijn inschatting (geen cijfers)</div><div class="list">${D.filter(x=>J.test(x[0])).map(rw).join("")}</div>`})()}${megaH()}<div class="sec"><h2>Jouw regels op één plek</h2><div class="tile"><div class="note" style="margin:0">Alle schermen gebruiken dezelfde regels: winstgroei vanaf ${RULES.eps}%, ROIC vanaf ${RULES.roic}% (nieuwe kandidaten vanaf ${RULES.roicIn}%), PEG tot ${RULES.peg}, schuld tot ${RULES.nd}× EBITDA voor kandidaten, maximaal ${MAXPOS} aandelen, AI-thema's samen hooguit ${RULES.mega}% en niet meer dan ${PAR.weg}% per bedrijf. Een aandeel krijgt alleen extra geld als het aan al deze regels voldoet. Uitzondering voor buitenkansen: een aandeel met PEG tot ${RULES.bk.peg}, ROIC vanaf ${RULES.bk.roic}%, winstgroei vanaf ${RULES.bk.eps}% en een ROIC van minstens ${RULES.bk.rmin}% in alle drie de laatste jaren mag boven de grens van een cluster, sector of AI-thema's uit, tot ${RULES.bk.extra} procentpunt erboven. Dan voeg je maximaal ${RULES.bk.plus} punt weging toe. Daarboven blijft het dicht.</div></div></div><div class="note">Groen, oranje of rood is mijn eigen drempel (bijvoorbeeld groen vanaf 70% van je geld). Het zijn richtlijnen en geen regels.</div>`}
 
 function megaH(){const W=own.reduce((t,r)=>t+r.w,0)||100,G={};own.forEach(r=>{const k=MEGA[r.tk]||"Geen duidelijke megatrend";(G[k]=G[k]||[]).push(r)});
  const E=Object.entries(G).map(([k,l])=>[k,l,l.reduce((t,r)=>t+r.w,0)/W*100]).sort((a,b)=>(a[0]==="Geen duidelijke megatrend")-(b[0]==="Geen duidelijke megatrend")||b[2]-a[2]);
@@ -1147,7 +1151,7 @@ function advNu(){const {L,up,dn,rv}=advActs(),VP=vervangPairs(),nr=(x,i)=>`<span
  const tg=x=>rv.some(y=>y.r.tk===x.r.tk)?x.r.w:x.s.t,T=L.reduce((t,x)=>t+(up.some(y=>y.r.tk===x.r.tk)||dn.some(y=>y.r.tk===x.r.tk)?x.s.t:x.r.w),0)||100;
  const ai1=aiShare(),ai2=L.filter(x=>/^AI /.test(MEGA[x.r.tk]||"")).reduce((t,x)=>t+(up.some(y=>y.r.tk===x.r.tk)||dn.some(y=>y.r.tk===x.r.tk)?x.s.t:x.r.w),0)/T*100;
  let h=`<div class="note" style="margin:4px 0 0">Concrete stappen volgens je eigen regels, in volgorde van belang. Bedragen zijn de weging maal je portefeuillewaarde.</div>`;
- h+=up.slice(0,5).map(x=>kaart(x,x.r.naam+" bijkopen",f1(x.r.w)+"% → "+f1(x.s.t)+"%",`<div style="margin-top:4px;font-size:14px;font-weight:400">ongeveer ${eur(x.s.d/100*TOT)} erbij${INLEG>0?", ongeveer "+(m=>m+(m===1?" maand":" maanden"))(Math.max(1,Math.round(x.s.d/100*TOT/INLEG)))+" van je storting":""}</div><div class="note" style="margin:4px 0 0;font-weight:400">${x.r.naam} ${x.s.why}.</div>`)).join("");
+ h+=up.slice(0,5).map(x=>kaart(x,x.r.naam+" bijkopen"+(x.s.ex?' <span class="pill a">buitenkans</span>':""),f1(x.r.w)+"% → "+f1(x.s.t)+"%",`<div style="margin-top:4px;font-size:14px;font-weight:400">ongeveer ${eur(x.s.d/100*TOT)} erbij${INLEG>0?", ongeveer "+(m=>m+(m===1?" maand":" maanden"))(Math.max(1,Math.round(x.s.d/100*TOT/INLEG)))+" van je storting":""}</div><div class="note" style="margin:4px 0 0;font-weight:400">${x.r.naam} ${x.s.why}.</div>`)).join("");
  h+=dn.map(x=>kaart(x,x.r.naam+" verkleinen",f1(x.r.w)+"% → "+f1(x.s.t)+"%",`<div style="margin-top:4px;font-size:14px;font-weight:400">ongeveer ${eur(-x.s.d/100*TOT)} minder</div><div class="note" style="margin:4px 0 0;font-weight:400">${x.r.naam} ${x.s.why}. Het vrijgekomen geld kan naar je bijkopen.</div>`)).join("");
  h+=rv.map(x=>{const i=VP.findIndex(p=>p.A.tk===x.r.tk);return kaart(x,x.r.naam+" heroverwegen",f1(x.r.w)+"%",`<div class="note" style="margin:4px 0 0;font-weight:400">${x.v.wat}${i>=0?" Zie het vervangingsvoorstel bij Vervangen.":""}</div>`)}).join("");
  if(!n)h+=`<div class="tile" style="margin-top:10px"><div class="note" style="margin:0">Op dit moment geen actie nodig volgens je regels.</div></div>`;
