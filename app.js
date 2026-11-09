@@ -294,6 +294,7 @@ function oordeelR(r){
  if(dn>=0&&dn<=14)when.push(`Na de cijfers op ${dstr(earn(r))}.`);
  if(!when.length)when.push("Bij nieuwe cijfers, of als weging, waardering of trend verandert.");
  if(ow&&S0&&S0.tier!=="uitbouwen"&&S0.why&&!min.some(x=>x.m===S0.why))min.unshift({t:S0.tier==="vasthouden"?"Geen extra geld erbij":"Waarom geen extra geld",m:r.naam+" "+S0.why+".",c:"a"});
+ if(ow&&S0&&S0.tier!=="uitbouwen"&&S0.meer&&S0.meer.length)S0.meer.filter(x=>{const w=x.split(/[ :,]/)[0].toLowerCase();return !min.some(y=>y.t.toLowerCase().includes(w)||y.m.toLowerCase().startsWith(w))}).forEach(x=>min.push({t:"Ook een reden",m:x.charAt(0).toUpperCase()+x.slice(1)+".",c:"a"}));
  return {head,hc,dash,plus,min,soft,adv,when}}
 function melTile(r,a){const pin=r.watch?`<label class="sw2" style="margin-top:8px"><span class="grow"><div class="t" style="font-weight:600">Vastzetten op de shortlist</div><div class="m" style="font-size:13px;color:var(--mut)">Dan haal ik dit bedrijf er niet automatisch af, ook niet als het onder je grenzen zakt.</div></span><input type="checkbox" data-pin="${r.tk}" ${PINS.includes(r.tk)?"checked":""}></label>`:"";const muted=MUTE.includes(r.tk),kans=a.head.startsWith("Bijkopen aantrekkelijk")||a.head==="Kopen overwegen",verk=a.head==="Verkoop overwegen";
  return `<div class="sec"><h2>Melding</h2><div class="list"><label class="sw2"><span class="grow"><div class="t" style="font-weight:600">Push bij wijziging van het oordeel</div><div class="m" style="font-size:13px;color:var(--mut)">Je krijgt één melding als het oordeel voor ${r.naam} verandert naar Bijkopen aantrekkelijk of Verkoop overwegen. Verandert het daarna niet, dan blijft het stil.</div></span><input type="checkbox" data-mu="${r.tk}" ${muted?"":"checked"}></label></div>${pin}
@@ -698,7 +699,7 @@ function epsOk(r){return !(r.dq||[]).some(d=>/winstgroei/i.test(d))}
 function epsT(r){return r.eps==null||!epsOk(r)?"n.v.t.":f1(r.eps)+"%"}
 function buitenkans(r){const b=RULES.bk,rm=rmin3(r);return epsOk(r)&&r.peg>0&&r.peg<=b.peg&&r.roic!=null&&r.roic>=b.roic&&r.eps>=b.eps&&rm!=null&&rm>=b.rmin}
 function aiShare(){const W=own.reduce((t,r)=>t+r.w,0)||100;return own.filter(r=>/^AI /.test(MEGA[r.tk]||"")).reduce((t,r)=>t+r.w,0)/W*100}
-function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why,ex=false;
+function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why,ex=false,meer=[];
  if(v.k==="structureel"){t=0;tier="afbouwen";why="staat op Verkoop overwegen"}
  else if(z.s>=CS_COMP&&M&&/breed/i.test(M.s)){t=5;tier="uitbouwen";why=`compounder ${z.s}/10 met ${M.s.toLowerCase()}e moat`}
  else if(z.s>=CS_KAND||v.lab==="Behouden of bijkopen"){t=4;tier="uitbouwen";why=z.s>=CS_KAND?`compounder ${z.s}/10`:"voldoet en de waardering is gunstig"}
@@ -723,12 +724,22 @@ function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],c
    if(G.length){const hard=G.find(g=>g[1]>=g[2]+RULES.bk.extra);
     if(buitenkans(r)&&!hard){exc="buitenkans: PEG "+pgT(r.peg)+", ROIC "+f1(r.roic)+"% en winstgroei "+f1(r.eps)+"%. Dit mag boven je grens van "+G.map(g=>g[0]+" ("+f1(g[1])+"% van "+g[2]+"%)").join(" en ")+" uit, tot "+RULES.bk.extra+" punten erboven, en dan voorzichtig (maximaal +"+RULES.bk.plus+" punt per aandeel)"}
     else{const g=hard||G[0];nee="zit in "+g[0]+", dat al "+f1(g[1])+"% van je portefeuille is (grens "+g[2]+"%)"+(hard?" en daarmee ook boven de harde grens van "+(g[2]+RULES.bk.extra)+"%":buitenkans(r)?"":", dus geen extra geld")}}}
+  const AL=[];if(UITG[r.tk])AL.push("sector: "+UITG[r.tk]);
+  if(v.lab==="Behouden, let op")AL.push("analisten verwachten volgend jaar maar "+f1(r.epsF)+"% winstgroei");
+  if(v.lab==="Volgen")AL.push("groeit net onder je doel");
+  if(!sr&&r.peg>RULES.peg&&pgT(r.peg)!=="n.v.t.")AL.push("PEG "+pgT(r.peg)+", boven "+String(RULES.peg).replace(".",","));
+  if(r.fin){if(r.roe==null)AL.push("ROE onbekend");else if(r.roe<RULES.roe)AL.push("ROE "+f1(r.roe)+"%, onder "+RULES.roe+"%")}
+  else{if(r.nd==null)AL.push("schuldcijfer onbekend");else if(r.nd>1.5)AL.push("schuld "+f1(r.nd)+"× EBITDA, boven 1,5×")}
+  if(r.eps!=null&&r.eps<RULES.eps)AL.push("winstgroei "+f1(r.eps)+"%, onder "+RULES.eps+"%");
+  if(r.roic!=null&&r.roic<(sr?10:RULES.roic))AL.push("ROIC "+f1(r.roic)+"%, onder "+(sr?10:RULES.roic)+"%");
+  if(!sr&&rm!=null&&rm<10)AL.push("ROIC in eerdere jaren onder 10%");
+  if(nee)meer=AL.slice(1);
   if(nee){t=cur;tier="vasthouden";why=nee}else if(exc){t=Math.min(t,cur+RULES.bk.plus);why=exc;ex=true}}
  if(duur&&t>cur&&tier==="uitbouwen"){t=cur;tier="vasthouden";why+=`, maar ${Math.round(Math.abs(F.mid))}% boven redelijke waarde (indicatie): niet extra kopen`}
  if(cur>cap){t=cur;tier="vasthouden";why=`weging boven ${cap}%: niet extra kopen, de winnaar laat je doorlopen`}
  else if(t<cur&&tier!=="afbouwen"){t=cur;tier="vasthouden"}
  if(Math.abs(t-cur)<0.4&&tier==="uitbouwen")tier="vasthouden";
- return {t,d:t-cur,tier,why,z:z.s,ex}}catch(e){return null}}
+ return {t,d:t-cur,tier,why,z:z.s,ex,meer}}catch(e){return null}}
 function streefSec(){const L=own.map(r=>({r,s:streef(r)})).filter(x=>x.s).sort((a,b)=>b.s.d>0.4&&a.s.d>0.4?(b.s.z-a.s.z)||(b.s.d-a.s.d):b.s.d-a.s.d),sum=L.reduce((t,x)=>t+x.s.t,0);
  const tot=L.reduce((t,x)=>t+x.r.w,0)||100,up=L.filter(x=>x.s.d>0.4),dn=L.filter(x=>x.s.d<-0.4);
  const mnd=x=>INLEG>0?Math.max(1,Math.round(x.s.d/100*TOT/INLEG)):null;
