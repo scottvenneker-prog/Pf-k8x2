@@ -159,7 +159,7 @@ function vStart(){
  const kl={Technologie:"#13705c",Financieel:"#3b6ea5",Industrie:"#b07d2b",Communicatie:"#7a5aa6",Consument:"#c0584a",Zorg:"#4d9a8a",Halfgeleiders:"#2e8b3d",Overig:"#8aa0a8"};
  const secs=Object.entries(secW).sort((a,b)=>b[1]-a[1]);
  const top=kandidaten().filter(x=>x.r.w==null||true).slice(0,3);
- return head("Portefeuille")+`<div class="tile hero2" style="margin-top:8px"><button data-s="gt" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"><div class="lbl">Totale waarde</div><div class="big num">${eur(TOT)}</div>
+ return head("Portefeuille")+brkStart()+`<div class="tile hero2" style="margin-top:8px"><button data-s="gt" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"><div class="lbl">Totale waarde</div><div class="big num">${eur(TOT)}</div>
  <div class="split"><i style="flex:${REAL.netto};background:var(--c1)" title="Gestort"></i><i style="flex:${BROKER_WV};background:var(--c3)" title="Winst"></i></div>
  <div class="s" style="display:flex;gap:14px;flex-wrap:wrap"><span><span class="sw3" style="background:var(--c1)"></span>Gestort ${f1(REAL.netto/(REAL.netto+BROKER_WV)*100)}%</span><span><span class="sw3" style="background:var(--c3)"></span>Winst ${f1(BROKER_WV/(REAL.netto+BROKER_WV)*100)}%</span></div>
  <div class="stat3"><div><small>Totaal gestort</small><b class="num">${eur(REAL.netto)}</b></div><div><small>Totale winst</small><b class="num pos">${eur(BROKER_WV)}</b></div><div><small>Per jaar (2016)</small><b class="num pos">${pc(REAL.xirr)}</b></div></div>
@@ -308,7 +308,7 @@ function vDet(){
  const r=rows.find(x=>x.tk===det);const t=dtab;
  const tabs=[["analyse","Analyse"],["kwaliteit","Kwaliteit"],["trend","Trend"],["ai","AI"],["waardering","Waardering"],["moat","Moat en risico"],["dividend","Dividend"],["nieuws","Nieuws & insiders"],["positie","Positie"]];
  let body="";
- if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=omsTile(r)+dqTile(r)+ettmTile(r)+kasTile(r)+body;
+ if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=brkDet(r)+omsTile(r)+dqTile(r)+ettmTile(r)+kasTile(r)+body;
  if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${r.eps}%</b><em>${r.epsF?"kasstroomgroei, overnames vertekenen de winst":"doel: 12% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
  ${((r.D||{}).eps||[]).length>1?`<div class="chart"><h3>Winst per aandeel (EPS)</h3><p>Per jaar, in de munt van het bedrijf</p>${barsR(r.D.eps,r.D.jaren)}</div>`:""}${((r.D||{}).fcf||[]).length>1?`<div class="chart"><h3>Vrije kasstroom (FCF)</h3><p>Per jaar, in miljoenen</p>${barsR(r.D.fcf,r.D.fjaren)}</div>`:""}${kwExtra(r)}`;
  if(t==="trend")body=`<div class="facts"><div class="fact"><small>Trend</small><b><span class="pill ${r.tc}">${r.trend}</span></b><em>50- en 200-daags gemiddelde</em></div><div class="fact"><small>Analisten koersdoel</small><b class="num ${cls(r.kd)}">${pc(r.kd,0)}</b><em>gemiddelde verwachting</em></div><div class="fact"><small>T.o.v. 50-daags</small><b class="num ${cls(r.v50)}">${pc(r.v50)}</b></div><div class="fact"><small>T.o.v. 200-daags</small><b class="num ${cls(r.v200)}">${pc(r.v200)}</b></div></div>
@@ -669,7 +669,8 @@ function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],c
  else {t=3;tier="vasthouden";why="voldoet aan je doel, geen reden voor meer"}
  if(M&&M.s==="Zwak"&&t>cur){t=cur;tier="vasthouden";why="heeft een zwakke moat en is klein, dus geen extra geld"}
  if(tier==="uitbouwen"){const rm=rmin3(r);let nee=null,exc=null;
-  if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
+  if(brkVoor(r.tk).some(x=>x.ernst!=="laag"))nee="staat onder uitzonderlijk nieuws ("+brkVoor(r.tk)[0].titel.toLowerCase()+"), dus geen extra geld tot de uitkomst bekend is";
+  else if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
   else if(v.lab==="Volgen"||v.lab==="Behouden, let op")nee="staat op "+v.lab.toLowerCase()+", dus geen extra geld";
   else if(r.eps!=null&&r.eps<RULES.eps)nee="groeit onder je doel van "+RULES.eps+"%, dus geen extra geld";
   else if(r.roic!=null&&r.roic<RULES.roic)nee="heeft een ROIC van "+f1(r.roic)+"%, onder je grens van "+RULES.roic+"%, dus geen extra geld";
@@ -1168,6 +1169,13 @@ function advSheet(){return advTabs()+advBody()}
 function vDoel(){const h=head("Doelcheck");if(advTab==="ov"){let s=vDoel0();if(s.startsWith(h))s=s.slice(h.length);return h+advTabs()+s}return h+advTabs()+advBody()}
 
 try{window.__parse={parseAccount,parseTrx}}catch(e){}
+
+function brkAll(){try{const L=(window.DATA&&window.DATA.uitzonderlijk)||[],nu=Date.now();return L.filter(x=>x&&x.tk&&x.datum&&(nu-new Date(x.datum).getTime())<=21*864e5)}catch(e){return []}}
+function brkVoor(tk){return brkAll().filter(x=>x.tk===tk)}
+function brkKaart(x,kort){const nm=(rows.find(r=>r.tk===x.tk)||{}).naam||x.naam||x.tk;const dt=new Date(x.datum).toLocaleDateString("nl-NL",{day:"numeric",month:"long"});
+ return `<div class="tile" style="margin-top:10px;border-left:4px solid var(--bad,#c0392b)"><div class="lbl" style="color:var(--bad,#c0392b);font-weight:700">Uitzonderlijk nieuws · ${nm} · ${dt}</div><div class="t" style="margin-top:4px;white-space:normal">${x.titel}</div><div class="note" style="margin:6px 0 0">${kort?x.tekst.split(". ")[0]+". Tik voor de details.":x.tekst}</div>${kort?"":`<div class="note" style="margin:8px 0 0"><b>Wat het betekent voor je advies:</b> ${x.advies||"Geen extra geld tot de uitkomst bekend is."}</div>${(x.bronnen||[]).length?`<div class="note" style="margin:8px 0 0">Bronnen: ${x.bronnen.map(b=>`<a href="${b.url}" target="_blank" rel="noopener">${b.naam}</a>`).join(" · ")}</div>`:""}`}${x.auto?`<div class="note" style="margin:6px 0 0">Automatisch herkend: ${x.reden||""}</div>`:""}</div>`}
+function brkStart(){const L=brkAll();if(!L.length)return "";return `<div class="sec" style="margin-top:8px">${L.map(x=>`<button data-d="${x.tk}" style="display:block;width:100%;text-align:left;border:0;background:none;padding:0">${brkKaart(x,true)}</button>`).join("")}</div>`}
+function brkDet(r){const L=brkVoor(r.tk);return L.length?`<div class="sec" style="margin-top:8px">${L.map(x=>brkKaart(x,false)).join("")}</div>`:""}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}

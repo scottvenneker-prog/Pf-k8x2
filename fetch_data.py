@@ -539,8 +539,42 @@ for gname, cik in GURUS.items():
         print("FOUT 13F", gname, e)
 SEEN.add("13f:init")
 
+
+# --- uitzonderlijk nieuws: handmatig (uitzonderlijk.json) plus automatisch herkend ---
+BK = ("spy", "spion", "scandal", "affair", "arrest", "indict", "raid", "sanction", "fraud", "investigation", "probe", "bankrupt", "resigns", "steps down",
+      "recall", "hack", "breach", "short seller", "delist", "criminal", "charged", "subpoena", "ban ")
+def _tijd(x):
+    try:
+        x = str(x)
+        if x.isdigit(): return dt.datetime.fromtimestamp(int(x), dt.timezone.utc)
+        return dt.datetime.fromisoformat(x.replace("Z", "+00:00"))
+    except Exception: return None
+def uitzonderlijk(rows):
+    out = {}
+    try:
+        for m in json.load(open("uitzonderlijk.json")): out[m["tk"]] = m
+    except Exception: pass
+    nu = dt.datetime.now(dt.timezone.utc)
+    for r in rows:
+        try:
+            if r["tk"] in out or r.get("watch"): continue
+            nm = (r.get("naam") or "").split()[0].lower().strip(",."); tk0 = r["tk"].split(".")[0].lower()
+            hits = []
+            for nw in r.get("nieuws") or []:
+                t = _tijd(nw.get("tijd")); ti = (nw.get("titel") or "").lower()
+                if t and (nu - t).total_seconds() <= 48 * 3600 and (nm in ti or tk0 in ti) and any(k in ti for k in BK): hits.append(nw)
+            dag = r.get("dag") or 0
+            if len(hits) >= 3 or (hits and dag <= -.08):
+                out[r["tk"]] = dict(tk=r["tk"], naam=r.get("naam"), datum=nu.date().isoformat(), ernst="hoog", auto=True,
+                    reden=f"{len(hits)} berichten in 48 uur" + (f" en koers {dag*100:+.1f}% vandaag" if dag <= -.08 else ""),
+                    titel=hits[0]["titel"], tekst="Meerdere nieuwsberichten in korte tijd over een ingrijpend onderwerp. Lees de bronnen zelf voor de details.",
+                    advies="Geen extra geld tot duidelijk is wat er speelt.", bronnen=[dict(naam=h.get("bron") or "bron", url=h.get("url")) for h in hits[:3] if h.get("url")])
+                notify(f"uit-{r['tk']}-{nu.date()}", f"{r.get('naam')}: uitzonderlijk nieuws", hits[0]["titel"], hits[0].get("url"))
+        except Exception as e: print("uitzonderlijk", r.get("tk"), e)
+    return list(out.values())
+UIT = uitzonderlijk(rows)
 json.dump(clean(dict(bijgewerkt=dt.datetime.now(dt.timezone.utc).isoformat(), versie=2, doel_cagr=P.get("doel_cagr", 15),
-          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU, scan=SC)),
+          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU, scan=SC, uitzonderlijk=UIT)),
           open("data.json", "w"), default=str)
 json.dump(sorted(SEEN)[-4000:], open("seen.json", "w"))
 if FMPK: json.dump(FC, open("fmp_cache.json", "w"))
