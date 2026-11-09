@@ -204,6 +204,9 @@ def one(tk):
     # omzet, uitkering en kasstroomkwaliteit (gerapporteerde cijfers, in de rapportagevaluta)
     ni = row(inc, "Net Income Common Stockholders", "Net Income")
     rv = rev.dropna() if rev is not None else pd.Series(dtype=float)
+    if len(rv) >= 3:   # boekhoudkundige knik in de reeks (bijv. Adyen: bruto omzet tot 2022, netto daarna): alleen het laatste consistente stuk gebruiken
+        br = [i for i in range(1, len(rv)) if rv.iloc[i - 1] > 0 and not .33 <= float(rv.iloc[i] / rv.iloc[i - 1]) <= 3]
+        if br: rv = rv.iloc[br[-1]:]
     rev_g, rev_gt = (cagr(rv) if len(rv) >= 2 else None), None
     try:
         tr, mq = info.get("totalRevenue"), info.get("mostRecentQuarter")
