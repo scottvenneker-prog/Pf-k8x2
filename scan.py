@@ -10,10 +10,10 @@ HELD = set(P["posities"]) | set(P.get("watchlist", {}))
 DUBBEL = {"GOOG": "GOOGL", "GOOGL": "GOOG", "FOX": "FOXA", "FOXA": "FOX", "NWS": "NWSA", "NWSA": "NWS", "UA": "UAA", "UAA": "UA", "BF-A": "BF-B", "BF-B": "BF-A"}   # twee aandelensoorten van hetzelfde bedrijf
 HELD |= {DUBBEL[x] for x in HELD if x in DUBBEL}
 UA = {"User-Agent": "Mozilla/5.0 (portefeuille-cockpit wekelijkse scan)"}
-MAXN = 30                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
-EPSMAX = .60                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
-RULE = dict(eps=.15, roic=.20, peg=1.5, nd=G.get("nd", 2.5), rmin=.15)   # toevoegen
-STAY = dict(eps=.10, roic=.15, peg=2.0, nd=3.5, rmin=.10)             # blijven staan (marge, tegen heen-en-weer)
+MAXN = 10                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
+EPSMAX = .40                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
+RULE = dict(eps=.15, roic=.20, peg=1.5, nd=1.0, rmin=.15)   # toevoegen
+STAY = dict(eps=.10, roic=.15, peg=2.0, nd=1.5, rmin=.10)             # blijven staan (marge, tegen heen-en-weer)
 MINCAP = 2e9                                                  # in dollars: ook middelgrote bedrijven, daar zitten de verborgen parels
 FXUSD = {"USD": 1, "EUR": 1.1, "GBP": 1.3, "SEK": .095, "DKK": .147, "NOK": .092, "CHF": 1.12, "CAD": .73}
 SKIP_SEC = ("Financial Services", "Real Estate")             # ROIC en schuld/EBITDA zeggen daar weinig
@@ -140,7 +140,7 @@ def metrics(tk):
 
 def ok(m, R):
     return (m["eps"] is not None and R["eps"] <= m["eps"] <= EPSMAX and m["roic"] is not None and m["roic"] >= R["roic"] and m.get("rmin") is not None and m["rmin"] >= R["rmin"]
-            and m["peg"] is not None and 0 < m["peg"] < R["peg"] and (m["nd"] is None or m["nd"] <= R["nd"]))
+            and m["peg"] is not None and 0 < m["peg"] < R["peg"] and m["nd"] is not None and m["nd"] <= R["nd"])
 
 
 def waarden(m):
@@ -148,7 +148,7 @@ def waarden(m):
 
 
 def rang(m):
-    return min(m["roic"], .4) / .15 + min(m["eps"], .4) / .12 + (2 - m["peg"])
+    return min(m["roic"], .4) / .15 + min(m["eps"], .4) / .12 + (2 - m["peg"]) + min(max(-m["nd"], 0), 1) - max(0, m["nd"] - .5) * .5   # netto cash telt mee, schuld kost punten
 
 
 if __name__ == "__main__":

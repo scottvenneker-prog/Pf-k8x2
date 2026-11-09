@@ -1008,6 +1008,24 @@ function winTileN(r){const x=winData().find(z=>z.r.tk===r.tk);if(!x)return "";re
 function inzWinN(){const l=winData(),S=k=>l.reduce((t,x)=>t+x[k],0),T=S("tot"),mx=Math.max(...l.map(x=>Math.abs(x.tot)),1);
  const row=x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.tot)/mx*100)}%;background:var(--${x.tot>=0?"good":"bad"})"></i></div><b class="num ${cls(x.tot)}">${eur(x.tot)}</b></div>`;
  return fold("Winst per bedrijf",eur(T)+" op open posities",`<button data-s="winst" ${GOB}>${kvs([["Nog in bezit",eur(S("unr")),cls(S("unr"))],["Al verzilverd",eur(S("ver")),cls(S("ver"))],["Dividend, netto",eur(S("div"))],["Totaal",eur(T),cls(T)]])}<div class="lbl" style="margin-top:12px">Draagt het meest bij</div>${l.slice(0,3).map(row).join("")}<div class="lbl" style="margin-top:10px">Draagt het minst bij</div>${l.slice(-3).reverse().map(row).join("")}${nt("Alleen aandelen die je nog hebt, inclusief wat je ervan al verkocht. Gesloten aandelen staan in het volgende scherm.")}${goRow("Alle bedrijven")}</button>`)}
+
+const MAXPOS=25;const f0=v=>String(Math.round(v));
+function rangR(r){const nd=r.nd==null?null:r.nd,peg=(r.peg&&r.peg<50)?r.peg:2;return Math.min(Math.max((r.roic||0)/100,0),.4)/.15+Math.min(Math.max((r.eps||0)/100,0),.4)/.12+(2-peg)+(nd==null?0:Math.min(Math.max(-nd,0),1)-Math.max(0,nd-.5)*.5)}
+function vervangPairs(){
+ const oo=own.filter(r=>r.eps!=null&&r.roic!=null&&r.peg!=null).map(r=>({r,s:rangR(r)})).sort((a,b)=>a.s-b.s);
+ const cc=rows.filter(r=>r.watch&&r.eps!=null&&r.eps>=DOEL&&r.roic!=null&&r.roic>=20&&r.peg>0&&r.peg<1.5&&r.nd!=null&&r.nd<=1).map(r=>({r,s:rangR(r)})).sort((a,b)=>b.s-a.s);
+ const used=new Set(),out=[];
+ for(const o of oo.slice(0,6)){if(out.length>=3)break;const c=cc.find(x=>!used.has(x.r.tk)&&x.s-o.s>=1);if(!c)continue;used.add(c.r.tk);
+  const A=o.r,B=c.r,w=[];
+  if(B.eps>A.eps)w.push(`winstgroei ${f0(B.eps)}% per jaar tegenover ${f0(A.eps)}%`);
+  if(B.roic>A.roic)w.push(`ROIC ${f0(B.roic)}% tegenover ${f0(A.roic)}%`);
+  if(A.peg<50&&B.peg<A.peg)w.push(`PEG ${f1(B.peg)} tegenover ${f1(A.peg)}`);else if(A.peg>=50)w.push(`PEG ${f1(B.peg)}, bij ${A.naam} is die niet te berekenen`);
+  const bn=B.nd<=0?"netto cash":"schuld "+f1(B.nd)+"× EBITDA";if(A.nd!=null&&A.nd>B.nd)w.push(`${bn} tegenover ${A.nd<=0?"netto cash":f1(A.nd)+"×"} bij ${A.naam}`);else if(A.nd==null)w.push(bn);
+  out.push({A,B,w,pt:c.s-o.s})}
+ return out}
+function vervangHTML(){const P=vervangPairs(),n=own.length;
+ const kop=n>MAXPOS?`Je hebt ${n} aandelen en wilt naar maximaal ${MAXPOS}. Dat zijn er ${n-MAXPOS} te veel: verkoop eerst, koop daarna pas iets nieuws.`:`Je hebt ${n} aandelen en wilt er maximaal ${MAXPOS}.${n===MAXPOS?" Je zit op je maximum: koop alleen iets nieuws als je er één verkoopt.":""}`;
+ return `<div class="note" style="margin:0 0 8px">${kop}</div>`+(P.length?P.map(x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div class="note" style="margin:0">Vervang <button class="back" data-d="${x.A.tk}">${x.A.naam} ›</button> door <button class="back" data-d="${x.B.tk}">${x.B.naam} ›</button></div></div><ul>${x.w.map(t=>`<li>${t}</li>`).join("")}</ul><div class="note" style="margin:4px 0 0">${x.A.naam} weegt ${f1(x.A.w)}% van je portefeuille.</div></div>`).join(""):`<div class="note">Op dit moment is geen enkele kandidaat duidelijk sterker dan je zwakste aandelen.</div>`)+`<div class="note">Dit rekent met je eigen regels: winstgroei, ROIC, PEG en schuld, met cash als pluspunt. Het is geen beleggingsadvies. Kosten van verkopen en kopen tellen mee, en een bedrijf met een slecht jaar kan terugkomen.</div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1144,7 +1162,6 @@ function vDoel(){
  const vrij=verk.reduce((t,x)=>t+x.r.waarde,0);
  const kd=kandidaten().filter(x=>!own.some(y=>y.tk===x.r.tk)).slice(0,3);
  const dsec=(k,t,m,h)=>{const o=!!dOpen["ds"+k];return `<div class="list" style="margin-top:12px"><button class="row" data-dx="ds${k}" aria-expanded="${o}"><span class="grow"><div class="t">${t}</div><div class="m">${m}</div></span><span class="m">${o?"˄":"˅"}</span></button></div>${o?`<div style="margin:8px 0 0 14px;padding:2px 0 2px 12px;border-left:2px solid var(--line)">${h}</div>`:""}`};
- const verH=kd.length?`${kd.map((x,i)=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><span class="pill n">Kopen overwegen</span></div><ul><li>${x.why.slice(0,3).join("</li><li>")}</li>${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul></div>`).join("")}<div class="note">Met ${eur(vrij+INLEG)} (opbrengst plus de inleg van deze maand) kun je de bovenste twee of drie kopen en blijft elk aandeel onder 10%.</div>`:`<div class="note">Geen bedrijven buiten je portefeuille die nu aan je regels voldoen.</div>`;
  const advL=v.filter(x=>["structureel","duur","licht","tijdelijk"].includes(x.v.k));
  const item=x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><div class="note" style="margin:6px 0 0">Winst ${x.r.eps}%/jr · koers 5 jr ${f1(cg5(x.r))}%/jr · weging ${f1(x.r.w)}%</div><div class="note num" style="margin:2px 0 0">PE ${f1(x.r.pe)} vs ${f1(x.r.peh)} historisch · PEG ${f1(x.r.peg)}</div></div><span class="pill ${x.v.cl}">${x.v.lab}</span></div><details><summary>Analyse</summary><div class="an"><h4>Waarom</h4><p>${x.v.uitleg}</p><h4>Wat ik zou doen</h4><p>${x.v.wat}</p></div></details></div>`;
 
@@ -1156,7 +1173,7 @@ function vDoel(){
  <div class="s" style="margin-top:8px">${f1(boven)}% van je portefeuille groeit zelf ${DOEL}% of meer.${verk.length?` ${verk.length} aandelen om te heroverwegen${vrij?`, samen ${eur(vrij)}`:""}.`:" Niets om direct te heroverwegen."}</div></div>
  ${dsec("a","Alle bedrijven in één overzicht",own.length+" bedrijven",scoreCard(v))}
  ${dsec("b","Advies per aandeel",advL.length+" aandelen",advL.map(item).join("")||'<div class="note">Geen advies nodig.</div>')}
- ${verk.length?dsec("c","Mogelijke vervangers",kd.length?kd.length+" bedrijven die je nog niet hebt":"geen",verH):""}
+ ${dsec("c","Vervangen",vervangPairs().length+" voorstellen · "+own.length+" van max "+MAXPOS+" aandelen",vervangHTML())}
  <div class="note">Dit is een screening die jouw eigen regels toepast op de cijfers. De uitleg is een samenvatting van die cijfers, geen persoonlijk beleggingsadvies. Jij beslist, en belasting en kosten tellen mee bij elke wissel.</div>`+demo}
 function bedrijvenSec(){const l=[...own].sort((a,b)=>b.w-a.w);const top=l.slice(0,7),rest=l.slice(7);
  const items=top.map((r,i)=>({n:r.naam,v:r.w,c:"--c"+(i+1)}));items.push({n:`Overig (${rest.length} bedrijven)`,v:rest.reduce((t,r)=>t+r.w,0),c:"--cx"});
