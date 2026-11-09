@@ -5,7 +5,9 @@ const _ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const TOTBASE=(+_ls("pf_totaal")||0)||100000;
 let CASH,PUT,BROKER_WV=0,DOEL=PF.doel_cagr||15,INLEG=PRIVE&&PRIVE.sdoel?PRIVE.sdoel:1000;
 const SERIAL=["CSU.TO","TOI.V","LMN.V","CHG.DE","TEQ.ST","ROKO-B.ST","LIFCO-B.ST"];
-const WKD=(()=>{const N=53,u=new Date(DATA.bijgewerkt),last=new Date(Date.UTC(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()));last.setUTCDate(last.getUTCDate()+((7-last.getUTCDay())%7));const ds=[];for(let k=0;k<N;k++){const x=new Date(last);x.setUTCDate(x.getUTCDate()-7*(N-1-k));ds.push(x.toISOString().slice(0,10))}return ds})();
+const LASTWK=(()=>{const u=new Date(DATA.bijgewerkt),f=new Date(Date.UTC(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()));f.setUTCDate(f.getUTCDate()+((7-f.getUTCDay())%7));
+ try{const L=DATA.indices&&DATA.indices.lang,s=L&&L.start,n=L&&L.sp500&&L.sp500.length;if(s&&n){const a=new Date(s+"T00:00:00Z");if(!isNaN(a)){a.setUTCDate(a.getUTCDate()+7*(n-1));return a}}}catch(e){}return f})();
+const WKD=(()=>{const N=53,u=new Date(DATA.bijgewerkt),last=new Date(LASTWK);const ds=[];for(let k=0;k<N;k++){const x=new Date(last);x.setUTCDate(x.getUTCDate()-7*(N-1-k));ds.push(x.toISOString().slice(0,10))}return ds})();
 const KY=Math.max(0,WKD.findIndex(d=>d>=new Date().getFullYear()+"-01-01"));
 const DR={};DATA.rows.forEach(x=>DR[x.t]=x);
 const pct=v=>v==null||!isFinite(v)?null:v*100;
@@ -1235,7 +1237,7 @@ function inzVolg(){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9);
  return fold("Waar de volgende "+eur(INLEG)+" heen kan",k.length?k.map(x=>x.r.naam).join(" + "):"geen kandidaat",`${k.map((x,i)=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${eur(KP.alloc[i])} in ${x.r.naam}</div><div class="m">${x.r.w!=null?"weging nu "+f1(x.r.w)+"%":"nog geen positie"} · PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`).join("")}${nt("Bij "+eur(INLEG)+" koop ik liefst "+(nmax===1?"alles in één aandeel":"hooguit "+nmax+" aandelen")+", want elke aankoop kost je vast geld. Jouw gemiddelde is "+eur(perT,2)+" per transactie (kosten, valuta en beurstaks). Dat is ongeveer "+f1(pc1)+"% van dit bedrag in één aandeel"+(nmax>1?" en "+f1(pcN)+"% verdeeld over "+nmax:"")+". Kleine plukjes onder ongeveer € 1.000 per aandeel zijn dan zonde. Zonder bedrijven boven 8% weging en zonder clusters die bij hun limiet zitten. Een rekenvoorbeeld, geen advies. Tik op Kandidaten voor de volledige afweging.")}`)}
 let _TW=null,_TD=null;
 function pfTWR(L){if(!PRIVE||!PRIVE.imp||!PRIVE.imp.trx||!PRIVE.imp.trx.x)return null;
- if(!_TW){const N=(DATA.indices&&DATA.indices.lang&&DATA.indices.lang.sp500&&DATA.indices.lang.sp500.length)||261,u=new Date(DATA.bijgewerkt),last=new Date(Date.UTC(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate()));last.setUTCDate(last.getUTCDate()+((7-last.getUTCDay())%7));
+ if(!_TW){const N=(DATA.indices&&DATA.indices.lang&&DATA.indices.lang.sp500&&DATA.indices.lang.sp500.length)||261,u=new Date(DATA.bijgewerkt),last=new Date(LASTWK);
   const ds=[];for(let k=0;k<N;k++){const x=new Date(last);x.setUTCDate(x.getUTCDate()-7*(N-1-k));ds.push(x.toISOString().slice(0,10))}
   const i2t={};Object.keys(PRIVE.hold).forEach(t=>i2t[PRIVE.hold[t].isin]=t);
   const raw={};PRIVE.imp.trx.x.forEach(x=>{if(x[5]&&isFinite(x[6]))(raw[x[4]]=raw[x[4]]||[]).push(x)});
