@@ -108,7 +108,7 @@ function kandidaten(){
   if(!r.watch){const vv=verdict(r);if(vv&&vv.k==="structureel")return {r,s:-1,out:"Staat op Heroverwegen"}}
   const sw=secW[r.sector]||0;
   if(sw>PAR.sec){s-=3;warn.push(`sector ${r.sector} is al ${f1(sw)}% van je portefeuille`)}
-  if(r.pe>r.peh*1.2)warn.push(`PE ${f1(r.pe)} ligt ver boven historisch ${f1(r.peh)}`);
+  if(r.peh!=null&&r.pe>r.peh*1.2)warn.push(`PE ${f1(r.pe)} ligt ver boven historisch ${f1(r.peh)}`);
   if(r.munt!=="EUR")warn.push(`valutarisico ${r.munt}`);
   {const z=cscore(r),F=fairV(r),M=MOAT[r.tk];if(z.s>=9){s+=2;why.unshift(`compounder-score ${z.s} van 12`)}else if(z.s>=7)s+=1;if(M&&/breed/i.test(M.s)){s+=1}if(M&&M.s==="Zwak"){s-=3;warn.push("de moat is zwak en het bedrijf is klein")}if(F){if(F.mid>15){s+=2;why.push(`volgens mijn rekenmodel ${Math.round(F.mid)}% onder redelijke waarde (indicatie)`)}else if(F.mid<-20){s-=2;warn.push(`volgens mijn rekenmodel ${Math.round(Math.abs(F.mid))}% boven redelijke waarde`)}}{const st=!r.watch?streef(r):null;if(st&&st.tier==="uitbouwen"){s+=1.5;why.unshift(`je positie is nog klein (${f1(r.w)}%): het advies is uitbouwen naar ${f1(st.t)}%`)}}}return {r,s,why,warn,v,q}}).filter(x=>x.s>=0).sort((a,b)=>b.s-a.s);
  return out}
@@ -913,15 +913,15 @@ let kOpen={};
 function kCard(x,top){const r=x.r;return `<div class="cand"><div class="top2"><div><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0">${r.tk} · ${r.sector}${r.ontdekt?" · ontdekt door scan":r.watch?" · mijn shortlist":""}</div></div></div>${brkBand(r)}<ul>${[...x.why].slice(0,4).map(t=>`<li>${t}</li>`).join("")}${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul>${analyse(x,0)}</div>`}
 function kRij(x,sub){const o=!!kOpen[x.r.tk];return `<button class="row" data-kx="${x.r.tk}" aria-expanded="${o}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${sub}</div></span>${x.s>=0?`<span class="pill n num">${f1(x.s)}</span>`:""}<span class="m">${o?"˄":"˅"}</span></button>`}
 function vMaand(kseg){
- const k=kandV(),top=k.slice(0,3);
- const ov=k.slice(3,9).map(x=>kRij(x,`PEG ${pgT(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}${secW[x.r.sector]>35?" · sector vol":""}`)+(kOpen[x.r.tk]?kCard(x):"")).join("");
- const af=rows.filter(r=>!r.watch&&r.w>=PAR.weg).map(r=>{const x={r,s:-1},o=!!kOpen[r.tk];return kRij(x,`Weging al ${f1(r.w)}%, grens is ${PAR.weg}%`)+(o?`<div class="cand"><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0 0 6px">${r.tk} · ${r.sector}</div><ul><li>Je hebt al ${f1(r.w)}% in dit bedrijf; je grens is ${PAR.weg}%, dus bijkopen past nu niet.</li><li>PEG ${pgT(r.peg)}, PE ${f1(r.pe)} tegenover ${f1(r.peh)} historisch</li>${r.roic!=null?`<li>ROIC ${r.roic}%</li>`:""}<li>EPS-groei ${r.eps}% per jaar</li></ul></div>`:"")}).join("");
- return head("Kandidaten")+kseg+`<p style="margin:8px 0 0;color:var(--mut)">Welke bedrijven zijn nu mooi geprijsd? Dit is een screening op je eigen regels, geen beleggingsadvies.</p>
- <div class="sec"><h2>Top ${top.length} deze maand</h2>`+top.map(x=>kCard(x)).join("")+`</div>
- <div class="sec"><h2>Ontdekt door de scan</h2><div class="note" style="margin:0 0 8px">Elke zondag loop ik ${scUniTxt()} langs op je regels: ${scRegelTxt()}. De beste die nog niet in je lijst staan, komen hier en in je shortlist.</div><div class="list">${scL(k)}</div>${scNote2()}</div>
- <div class="sec"><h2>Overige, op volgorde</h2><div class="list">${ov}</div></div>
- <div class="sec"><h2>Afgevallen</h2><div class="list">${af}</div></div>
- <div class="note">Tik op een bedrijf om de uitleg te openen. Score = waardering (PEG, PE t.o.v. historie, 52-wekenpositie) plus kwaliteit (ROIC, EPS-groei, FCF-groei, schuld). Een sector boven 35% krijgt 3 punten aftrek. De uitleg per bedrijf is een samenvatting van de cijfers.</div>`+demo}
+ const k=kandV(),eigen=k.filter(x=>!x.r.watch),P=vervangPairs();
+ const af=rows.filter(r=>!r.watch&&r.w>=PAR.weg).map(r=>{const x={r,s:-1},o=!!kOpen[r.tk];return kRij(x,`Weging al ${f1(r.w)}%, niet extra bijkopen`)+(o?`<div class="cand"><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0 0 6px">${r.tk} · ${r.sector}</div><ul><li>Je hebt al ${f1(r.w)}% in dit bedrijf; boven je grens van ${PAR.weg}% koop je niet extra bij. Je laat de winnaar doorlopen.</li><li>PEG ${pgT(r.peg)}</li>${r.roic!=null?`<li>ROIC ${r.roic}%</li>`:""}<li>Winstgroei ${epsT(r)} per jaar</li></ul></div>`:"")}).join("");
+ const nieuw=P.length?P.map(x=>`<div class="note" style="margin:8px 0 4px"><b>Zou ${x.A.naam} kunnen vervangen</b> (compounder-score ${cscore(x.B).s} tegenover ${cscore(x.A).s} van 12): ${x.w.join(", ")}.</div>`+(k.find(y=>y.r.tk===x.B.tk)?kCard(k.find(y=>y.r.tk===x.B.tk)):"")).join(""):`<div class="tile"><div class="note" style="margin:0">Geen nieuwe naam nodig. Er is op dit moment geen bedrijf dat aanzienlijk beter is dan wat je al hebt.</div></div>`;
+ return head("Kandidaten")+kseg+`<p style="margin:8px 0 0;color:var(--mut)">Je eigen bedrijven gaan voor. Een nieuwe naam komt er alleen in als hij duidelijk beter is dan een aandeel dat je al hebt.</p>
+ <div class="sec"><h2>Je eigen bedrijven om bij te kopen</h2>${eigen.length?eigen.map(x=>kCard(x)).join(""):`<div class="tile"><div class="note" style="margin:0">Op dit moment past bijkopen bij geen van je bedrijven binnen je regels.</div></div>`}</div>
+ <div class="sec"><h2>Nieuwe naam, alleen bij een aanzienlijke upgrade</h2>${nieuw}<div class="note">Eisen: compounder-score minstens 10 van 12, PEG tot 1, ROIC vanaf 20% (ook de laatste 3 jaar vanaf 15%), betrouwbare winstgroei vanaf 20%, en minstens 3 punten hoger op de compounder-score dan het aandeel dat hij vervangt, met hogere winstgroei, hogere ROIC en lagere PEG.</div></div>
+ <div class="sec"><button class="chip" data-dx="scanLijst" aria-expanded="${!!dOpen.scanLijst}" style="width:100%;text-align:left">Wat de scan verder vond (geen advies) ${dOpen.scanLijst?"˄":"˅"}</button>${dOpen.scanLijst?`<div class="note" style="margin:8px 0">Elke zondag loop ik ${scUniTxt()} langs op je regels: ${scRegelTxt()}.</div><div class="list">${scL(k)}</div>${scNote2()}`:""}</div>
+ <div class="sec"><h2>Niet extra bijkopen</h2><div class="list">${af}</div></div>
+ <div class="note">De score is de compounder-score van 12 punten (groei, ROIC, kasstroom, schuld, bestuur, waardering). Een aandeel dat je al hebt komt hier bij een goede score en past binnen je regels.</div>`+demo}
 
 let gOpen={};
 
@@ -1039,20 +1039,20 @@ const aiOf=r=>{const x=AIX[r.tk]||(r.ai&&r.ai[1]!=="Nog te beoordelen"?r.ai:null
 const AIV={"BKNG":[0,"Booking heeft veel reisdata, een enorm aanbod, een sterk merk en eigen AI-planners, en werkt samen met AI-bedrijven. Maar de klant begint steeds vaker bij een AI-assistent of Google, en Booking heeft die ingang niet in eigen hand."],"NFLX":[1,"Netflix heeft eigen content, kijkdata van een zeer groot aantal abonnees en schaal om AI zelf in te zetten voor productie en aanbevelingen. Een nieuwkomer heeft geen vergelijkbare catalogus en klantbasis."],"META":[1,"Meta bouwt eigen AI-modellen, heeft miljarden gebruikers en de eigen advertentiedata. Het kan AI direct in zijn eigen apps zetten."],"STRL":[0,"Een bouwbedrijf kan AI vooral inzetten voor planning en kosten. Het voordeel zit in uitvoering en capaciteit, niet in technologie."],"SFM":[0,"AI helpt bij inkoop en voorraad, maar het voordeel zit in winkels en assortiment, niet in technologie."],"AF.PA":[0,"AI helpt bij roosters en onderhoud. Het voordeel zit in vliegtuigen, slots en netwerk, en die kan AI niet nabouwen."],"BESI.AS":[1,"Besi leidt in hybrid bonding en klanten zijn voor deze techniek sterk van hen afhankelijk. Een nieuwkomer heeft jaren nodig om daar te komen."],"CHG.DE":[-1,"Ik zie geen duidelijk eigen AI-voordeel: het bedrijf is vooral een tussenpersoon, en juist dat kan AI goedkoper doen."],"ASRNL.AS":[0,"Een verzekeraar heeft veel eigen schadedata en risicomodellen, wat AI sterker maakt. Maar prijsvergelijking via AI-assistenten kan de marge onder druk zetten."]};
 const aiN=r=>{const x=aiOf(r),v=AIV[r.tk];if(!x)return 0;const s=x[0],w=v?v[0]:0;return s<0?(w>=1?s+1:s):(w<0?s-1:s)};
 const aiS=aiN;const f0=v=>String(Math.round(v));
-function rangR(r){const nd=r.nd==null?null:r.nd,peg=(r.peg&&r.peg<50)?r.peg:2;return Math.min(Math.max((r.roic||0)/100,0),.4)/.15+Math.min(Math.max((r.eps||0)/100,0),.4)/.12+(2-peg)+(nd==null?0:Math.min(Math.max(-nd,0),1)-Math.max(0,nd-.5)*.5)}
+function rangR(r){const z=cscore(r).s;return z+Math.min(Math.max((r.roic||0)/100,0),.4)*.2+Math.min(Math.max((r.eps||0)/100,0),.4)*.2}
 const holdM=r=>{const h=PRIVE&&PRIVE.hold&&PRIVE.hold[r.tk];if(!h||!h.eerste)return null;return (Date.now()-Date.parse(h.eerste))/2629800000};
 const rmin3=r=>{const a=r.D&&r.D.roic_reeks;return a&&a.length?Math.min(...a.slice(-3))*100:null};
 function vervangPairs(){
  const oo=own.filter(r=>r.eps!=null&&r.roic!=null&&r.peg!=null&&(holdM(r)==null||holdM(r)>=12)&&(r.eps<DOEL||(rmin3(r)!=null&&rmin3(r)<15))).map(r=>({r,s:rangR(r)})).sort((a,b)=>a.s-b.s);
- const cc=rows.filter(r=>r.watch&&r.eps!=null&&r.eps>=DOEL&&r.roic!=null&&r.roic>=20&&r.peg>0&&r.peg<1.5&&r.nd!=null&&r.nd<=1&&rmin3(r)!=null&&rmin3(r)>=15).map(r=>({r,s:rangR(r)})).sort((a,b)=>b.s-a.s);
+ const cc=rows.filter(r=>r.watch&&buitenkans(r)&&cscore(r).s>=10&&(r.fin?r.roe!=null&&r.roe>=RULES.roe:r.nd!=null&&r.nd<=1)).map(r=>({r,s:rangR(r)})).sort((a,b)=>b.s-a.s);
  const used=new Set(),out=[];
- for(const o of oo.slice(0,6)){if(out.length>=2)break;const c=cc.find(x=>!used.has(x.r.tk)&&x.s-o.s>=2&&aiS(x.r)>=0&&aiS(x.r)>=aiS(o.r));if(!c)continue;used.add(c.r.tk);
+ for(const o of oo.slice(0,6)){if(out.length>=2)break;const c=cc.find(x=>!used.has(x.r.tk)&&cscore(x.r).s-cscore(o.r).s>=3&&x.r.eps>o.r.eps&&x.r.roic>o.r.roic&&(o.r.peg>=50||x.r.peg<o.r.peg)&&aiS(x.r)>=0&&aiS(x.r)>=aiS(o.r));if(!c)continue;used.add(c.r.tk);
   const A=o.r,B=c.r,w=[];
   if(B.eps>A.eps)w.push(`winstgroei ${f0(B.eps)}% per jaar tegenover ${f0(A.eps)}%`);
   if(B.roic>A.roic)w.push(`ROIC ${f0(B.roic)}% tegenover ${f0(A.roic)}%`);
   if(A.peg<50&&B.peg<A.peg)w.push(`PEG ${pgT(B.peg)} tegenover ${pgT(A.peg)}`);else if(A.peg>=50)w.push(`PEG ${pgT(B.peg)}, bij ${A.naam} is die niet te berekenen`);
   const bn=B.nd<=0?"netto cash":"schuld "+f1(B.nd)+"× EBITDA";if(A.nd!=null&&A.nd>B.nd)w.push(`${bn} tegenover ${A.nd<=0?"netto cash":f1(A.nd)+"×"} bij ${A.naam}`);else if(A.nd==null)w.push(bn);
-  out.push({A,B,w,pt:c.s-o.s})}
+  out.push({A,B,w,pt:cscore(B).s-cscore(A).s})}
  return out}
 function vervangHTML(){const P=vervangPairs(),n=own.length;
  const kop=n>MAXPOS?`Je hebt ${n} aandelen en wilt naar maximaal ${MAXPOS}. Dat zijn er ${n-MAXPOS} te veel: verkoop eerst, koop daarna pas iets nieuws.`:`Je hebt ${n} aandelen en wilt er maximaal ${MAXPOS}.${n===MAXPOS?" Je zit op je maximum: koop alleen iets nieuws als je er één verkoopt.":""}`;
@@ -1102,7 +1102,7 @@ function elab(x){return x.v.lab==="Behouden of bijkopen"&&x.s&&x.s.tier!=="uitbo
 function n12(){try{const c=new Date(Date.now()-365*864e5).toISOString().slice(0,10);return PRIVE.imp.trx.x.filter(x=>x[0]>=c&&x[8]!==0).length}catch(e){return null}}
 function rustBlok(){const n=n12(),lim=2*own.length;if(n==null||n<=lim)return "";return `<div class="tile" style="margin-top:10px;border-left:4px solid var(--a,#d9822b)"><div class="lbl">Rust in je portefeuille</div><div class="note" style="margin:4px 0 0">${n} trades in de laatste 12 maanden. Je eigen richtlijn is hooguit 2 per aandeel, dus ${lim}. Doe even rustig aan met kopen en verkopen: vaak handelen kost geld en past niet bij lang vasthouden.</div></div>`}
 document.addEventListener("click",e=>{try{const t=e.target.closest("[data-at]");if(t){advTab=t.dataset.at;e.stopPropagation();render();return}const q=e.target.closest("[data-atset]");if(q)advTab=q.dataset.atset}catch(x){}},true);
-function kandV(){const k=kandidaten(),VB=vervangPairs().map(x=>x.B.tk);return k.filter(x=>x.r.watch?(own.length<MAXPOS||VB.includes(x.r.tk)):(()=>{const s=streef(x.r);return s&&s.tier==="uitbouwen"})())}
+function kandV(){const k=kandidaten().sort((a,b)=>cscore(b.r).s-cscore(a.r).s||b.s-a.s),VB=vervangPairs().map(x=>x.B.tk);return k.filter(x=>x.r.watch?VB.includes(x.r.tk):(()=>{const s=streef(x.r);return s&&s.tier==="uitbouwen"})())}
 function adviesBlok(){const {up,dn,rv}=advActs(),VP=vervangPairs();
  const rows=[...up.slice(0,2).map(x=>[x.r.naam+" bijkopen"+(x.s.ex?" (buitenkans)":""),f1(x.r.w)+"% → "+f1(x.s.t)+"%","g"]),...dn.slice(0,1).map(x=>[x.r.naam+" verkleinen",f1(x.r.w)+"% → "+f1(x.s.t)+"%","a"]),...rv.slice(0,1).map(x=>{const i=VP.findIndex(p=>p.A.tk===x.r.tk);return [x.r.naam+" heroverwegen",i>=0?"vervanger: "+VP[i].B.naam:f1(x.r.w)+"%","r"]})];
  const tot=up.length+dn.length+rv.length,rest=tot-rows.length;
