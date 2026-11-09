@@ -852,7 +852,7 @@ function kasTile(r){const v=r.rv;if(!v)return "";const pp=n=>n==null||!isFinite(
  o2=`<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px">${cell("FCF-marge",pp(v.fm),"van de omzet")}${cell("FCF ÷ winst",xx(v.fc),"kasstroom per € winst")}${cell("Uitkering",v.uf!=null||v.un!=null?pp(v.un)+" / "+pp(v.uf):"geen dividend","van winst / van FCF")}</div>`;
  return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c3)"><div class="lbl">Omzet, kasstroom en uitkering</div>${o1}${o2}<div class="note">Alles gerapporteerd over het laatste boekjaar (omzetgroei ook t/m de laatste 12 maanden), in de rapportagevaluta. FCF ÷ winst: boven 1× betekent dat de winst volledig in kas terechtkomt. Uitkering: welk deel van de winst en van de vrije kasstroom als dividend is uitgekeerd; structureel boven 100% is niet vol te houden.</div></div>`}
 function slBlok(){const w=rows.filter(r=>r.watch),risk=w.filter(slRisk),ad=SLOG.filter(x=>x.t==="add"&&sl30(x)).length,rm=SLOG.filter(x=>x.t==="rm"&&sl30(x)).length,
- rw=(k,t,n)=>`<button class="row" data-s="${k}"><span class="grow"><div class="t">${t}</div></span><span class="m">${n?n+" ":""}›</span></button>`;
+ rw=(k,t,n)=>`<button class="row" data-sx="${k}" aria-expanded="${!!sOpen[k]}"><span class="grow"><div class="t">${t}</div></span><span class="m">${n?n+" ":""}${sOpen[k]?"˄":"˅"}</span></button>${sOpen[k]?`<div style="padding:4px 12px 12px">${({sl_wijz:slWijzSub,sl_sect:slSectSub,sl_uitleg:slUitlegSub})[k]()}</div>`:""}`;
  return `<div class="tile" style="margin-top:8px">${kvs([["Op de lijst",String(w.length)],["Nieuw, 30 dagen",String(ad)],["Eraf, 30 dagen",String(rm)]])}</div>
  <div class="list" style="margin-top:8px">${rw("sl_wijz","Wat is er veranderd",SLOG.length+risk.length)}${rw("sl_sect","Welke sectoren vullen je aan","")}${rw("sl_uitleg","Zo werkt de shortlist","")}</div>`}
 function vShort(){return slBlok()+`<div class="sec"><h2>Alle bedrijven op de shortlist</h2>${slTable()}</div>`+demo}
@@ -910,8 +910,11 @@ function scNote2(){const n=rows.filter(r=>r.ontdekt).length;return n>5?`<div cla
 /* ---- Agenda: dividend, echt ---- */
 function divCome(){const out=[],now=new Date(),ty=now.getFullYear();
  if(!PRIVE)return out;
- own.forEach(r=>{const D=r.D||{},h=D.div_12m;if(!h||!r.qty)return;const rate=r.munt==="EUR"?1:D.rate;if(!rate)return;
-  h.forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd.getFullYear()===ty)out.push({r,dt:dd,eur:a*r.qty/rate})})});
+ own.forEach(r=>{const D=r.D||{};if(!r.qty)return;const rate=r.munt==="EUR"?1:D.rate;if(!rate)return;
+  let yd=null;const pk=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+"T12:00:00");return isNaN(d)?null:d};
+  const pay=pk(D.div_volgende),ex=pk(D.ex_div);yd=pay&&pay>now?pay:ex&&ex>now?ex:null;
+  if(yd&&yd.getFullYear()===ty&&D.div_laatste_bedrag)out.push({r,dt:yd,eur:D.div_laatste_bedrag*r.qty/rate,y:true});
+  (D.div_12m||[]).forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd.getFullYear()===ty&&(!yd||Math.abs(dd-yd)>45*864e5))out.push({r,dt:dd,eur:a*r.qty/rate})})});
  return out.sort((a,b)=>a.dt-b.dt)}
 function divGot(){const m=Array(12).fill(0),ty=String(new Date().getFullYear());let ok=false;
  try{for(const [d,t,a,cu] of IMP.acc.ev){if(t!=="v"||d.slice(0,4)!==ty)continue;ok=true;let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}m[+d.slice(5,7)-1]+=e}}catch(e){}
@@ -926,9 +929,11 @@ function vDiv(){
  if(!PRIVE)return head("Dividend")+`<div class="note" style="margin-top:12px">Het dividend van je portefeuille zie je zodra je met je wachtwoord bent ingelogd.</div>`+demo;
  const G=divGot(),come=divCome(),got=G.m.reduce((s,x)=>s+x,0),exp=come.reduce((s,x)=>s+x.eur,0),tot=got+exp;
  const geenDat=own.some(r=>r.yld>0&&r.qty&&!(r.D&&r.D.div_12m));
- return head("Dividend")+`<div class="tile" style="margin-top:8px">${kvs([["Ontvangen dit jaar",eur(got)],["Nog te ontvangen",eur(exp)],["Verwacht heel jaar",eur(tot)]])}<div class="note" style="margin:6px 0 0">Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting: wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div></div>
- ${divChart(G.m,come)}<div class="sec"><h2>Nog te ontvangen</h2><div class="list">${come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">rond ${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note">Dit jaar verwacht ik niets meer.</div>'}</div></div>`+
+ return head("Dividend")+`<div class="tile" style="margin-top:8px">${kvs([["Ontvangen dit jaar",eur(got)],["Nog te ontvangen",eur(exp)],["Verwacht heel jaar",eur(tot)]])}<div class="note" style="margin:6px 0 0">Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting. Is er al een datum aangekondigd (Yahoo), dan gebruik ik die met het laatste dividend per aandeel. De rest is wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div></div>
+ ${divChart(G.m,come)}<div class="sec"><h2>Nog te ontvangen</h2><div class="list">${come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.y?"aangekondigd, ":"verwacht rond "}${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note">Dit jaar verwacht ik niets meer.</div>'}</div></div>`+
  (geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">De datum is de verwachte ex-datum van vorig jaar plus een jaar; de uitbetaling zelf volgt meestal een paar weken later. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`+demo}
+
+let sOpen={};
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1653,7 +1658,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dc){docF=b.dataset.dc;render()}
  else if(b.dataset.dk){docC=b.dataset.dk;render()}
  else if(b.dataset.bt){bTab=b.dataset.bt;render()}else if(b.dataset.cc){cSel=b.dataset.cc;render()}else if(b.dataset.kt){kTab=b.dataset.kt;render();window.scrollTo(0,0)}
- else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
+ else if(b.dataset.sx){sOpen[b.dataset.sx]=!sOpen[b.dataset.sx];render()}else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
  else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
