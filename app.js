@@ -1702,12 +1702,12 @@ function render0(){
 }
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
- if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;render();window.scrollTo(0,0)}
- else if(b.dataset.d){sub=null;det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
- else if(b.id==="bk"){if(det)det=null;else sub=subStack.length?subStack.pop():null;render()}
+ if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;subStack=[];render();window.scrollTo(0,0)}
+ else if(b.dataset.d){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
+ else if(b.id==="bk"){if(subStack.length){const p=subStack.pop();sub=p.s;det=p.d;dtab=p.t}else{det=null;sub=null}render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
  else if(b.dataset.del!==undefined){STORT.splice(+b.dataset.del,1);saveS();render()}
- else if(b.dataset.s){if(sub)subStack.push(sub);else subStack=[];sub=b.dataset.s;render();document.getElementById("sheet").scrollTop=0}
+ else if(b.dataset.s){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub=b.dataset.s;det=null;render();document.getElementById("sheet").scrollTop=0}
  else if(b.dataset.p){per=b.dataset.p;render()}
  else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
  else if(b.dataset.pv){posView=b.dataset.pv;render()}
@@ -1721,7 +1721,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.tq){tQ=b.dataset.tq;render()}
  else if(b.dataset.dt){dtab=b.dataset.dt;render()}
  else if(b.dataset.it){inzTab=b.dataset.it;try{localStorage.setItem("pf_inz",inzTab)}catch(x){}render()}
- else if(b.dataset.kz){det=null;sub=null;tab="kand";kTab="short";slF="zone";render();window.scrollTo(0,0)}
+ else if(b.dataset.kz){det=null;sub=null;subStack=[];tab="kand";kTab="short";slF="zone";render();window.scrollTo(0,0)}
  else if(b.id==="logAdd"){const x=document.getElementById("lgX").value.trim();if(x){LOG.unshift({d:new Date().toISOString().slice(0,10),tk:b.dataset.tk,ty:document.getElementById("lgT").value,x});saveLog();render()}}
  else if(b.dataset.ldel!==undefined){LOG.splice(+b.dataset.ldel,1);saveLog();render()}
  else if(b.dataset.dc){docF=b.dataset.dc;render()}
@@ -1730,7 +1730,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dx){dOpen[b.dataset.dx]=!dOpen[b.dataset.dx];render()}else if(b.dataset.sx){sOpen[b.dataset.sx]=!sOpen[b.dataset.sx];render()}else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
- else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
+ else if(b.dataset.go==="par"){det=null;sub=null;subStack=[];tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
 });
 document.addEventListener("input",e=>{const t=e.target;
  if(t.id&&t.id.startsWith("vk_")){const r=rows.find(x=>x.tk===t.dataset.tk);if(r){const k=t.id.slice(3),o=VK[r.tk]=VK[r.tk]||{};if(k==="x")o.x=t.value;else{const v=parseFloat(t.value);if(isFinite(v)&&v>0)o[k]=v;else delete o[k]}saveVK();const el=document.getElementById("vkOut");if(el)el.innerHTML=vkStatus(r)}return}
