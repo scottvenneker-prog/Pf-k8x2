@@ -617,7 +617,7 @@ function rapport(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,wa=f=>own.reduce(
  try{const dn=dqNames();if(dn.length)better.push(`Bij ${dn.length} bedrijven is de data onzeker (${dn.slice(0,4).join(", ")}${dn.length>4?" e.a.":""}). Hun groeicijfers tellen voorzichtig mee. Check ze zelf bij de cijfers van het bedrijf.`)}catch(e){}
  if(!better.length)better.push("Geen grote aandachtspunten volgens je eigen regels.");
  const gr=tot>=8.5?"Uitstekend":tot>=7.5?"Goed":tot>=6.5?"Ruim voldoende":tot>=5.5?"Voldoende":"Aandacht nodig";
- const cs=r=>{const v=verdict(r),z=cscore(r);return v.k==='structureel'?['afbouwen of verkopen','r']:(z.s>=9||v.lab==='Behouden of bijkopen')?['uitbouwen naar 3 tot 5%','g']:['volgen, nog geen reden om bij te kopen','n']};
+ const cs=r=>{const v=verdict(r);if(v.k==='structureel')return ['afbouwen of verkopen','r'];const s=streef(r);if(s&&s.tier==='uitbouwen')return ['uitbouwen naar '+f1(s.t)+'%','g'];if(s&&s.tier==='trimmen')return ['verkleinen naar '+f1(s.t)+'%','a'];return ['houden, '+((s&&s.why)||'nog geen reden om bij te kopen'),'n']};
  const klein=[...smalls].sort((a,b)=>a.w-b.w).map(r=>({r,w:r.w,a:cs(r)})),med=[...own].map(r=>r.w).sort((a,b)=>a-b)[Math.floor(own.length/2)];
  if(smalls.length>=3)better.push(`${smalls.length} van je ${own.length} posities zijn kleiner dan 2% (samen ${f1(smW)}%). Zelfs een verdubbeling van zo'n aandeel verandert je portefeuille met minder dan 2%. Bouw de goede uit of ruim de rest op.`);
  return {tot,gr,C,good,bad,better,klein,smW,med,n:own.length}}catch(e){return null}}
@@ -675,6 +675,8 @@ function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],c
   else if(r.eps!=null&&r.eps<RULES.eps)nee="groeit onder je doel van "+RULES.eps+"%, dus geen extra geld";
   else if(r.roic!=null&&r.roic<RULES.roic)nee="heeft een ROIC van "+f1(r.roic)+"%, onder je grens van "+RULES.roic+"%, dus geen extra geld";
   else if(rm!=null&&rm<10)nee="had in de jaren ervoor een ROIC onder 10%, dus geen extra geld";
+  else if(CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9)){const c=CLU.find(c=>c.f(r)&&cluW(c)>=c.lim*.9);nee="zit in het "+c.n.toLowerCase()+", dat al "+f1(cluW(c))+"% van je portefeuille is (grens "+c.lim+"%), dus geen extra geld"}
+  else if(secW[r.sector]>=PAR.sec*.9)nee="zit in de sector "+r.sector+", die al "+f1(secW[r.sector])+"% van je portefeuille is (grens "+PAR.sec+"%), dus geen extra geld"
   else if(/^AI /.test(MEGA[r.tk]||"")&&aiShare()>=RULES.mega)nee="zit in AI-thema's, die samen al "+f1(aiShare())+"% van je portefeuille zijn (grens "+RULES.mega+"%)";
   if(nee){t=cur;tier="vasthouden";why=nee}}
  if(duur&&t>cur&&tier==="uitbouwen"){t=cur;tier="vasthouden";why+=`, maar ${Math.round(Math.abs(F.mid))}% boven redelijke waarde (indicatie): niet extra kopen`}
