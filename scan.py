@@ -7,6 +7,8 @@ import pandas as pd, requests, yfinance as yf
 P = json.load(open("portfolio.json"))
 G = P.get("grenzen", {})
 HELD = set(P["posities"]) | set(P.get("watchlist", {}))
+DUBBEL = {"GOOG": "GOOGL", "GOOGL": "GOOG", "FOX": "FOXA", "FOXA": "FOX", "NWS": "NWSA", "NWSA": "NWS", "UA": "UAA", "UAA": "UA", "BF-A": "BF-B", "BF-B": "BF-A"}   # twee aandelensoorten van hetzelfde bedrijf
+HELD |= {DUBBEL[x] for x in HELD if x in DUBBEL}
 UA = {"User-Agent": "Mozilla/5.0 (portefeuille-cockpit wekelijkse scan)"}
 MAXN = 30                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
 EPSMAX = .60                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
@@ -56,8 +58,10 @@ def wiki(url, kolommen, suffix=""):
     try: tabs += pd.read_html(io.StringIO(r.text), match="Ticker")
     except Exception: pass
     for df in tabs:
+        if len(df) >= 10: print("tabel", len(df), [str(c)[:20] for c in df.columns][:6])
         for c in df.columns:
-            if str(c).strip().lower() in kolommen:
+            cn = " ".join(map(str, c)).strip().lower() if isinstance(c, tuple) else str(c).strip().lower()
+            if cn in kolommen or any(k in cn for k in kolommen):
                 uit = [str(x).strip() for x in df[c].dropna()]
                 break
         if len(uit) >= 10: break
@@ -130,7 +134,10 @@ def rang(m):
 if __name__ == "__main__":
     OLD = json.load(open("scan.json")) if os.path.exists("scan.json") else None
     U, per = universe()
-    cand = [x for x in U if x not in HELD]
+    cand, gezien = [], set()
+    for x in U:
+        if x in HELD or DUBBEL.get(x) in gezien: continue
+        cand.append(x); gezien.add(x)
     print("universum", len(U), per, "te scannen", len(cand))
     res, gescand, fout = {}, 0, 0
     for i, tk in enumerate(cand):
@@ -151,6 +158,9 @@ if __name__ == "__main__":
     fails = dict((OLD or {}).get("fails", {}))
     log = list((OLD or {}).get("log", []))
     nieuw, log_nw = {}, []
+    for tk in [t for t in oud if t in HELD]:           # staat inmiddels al in je portefeuille of lijst (bijv. andere aandelensoort)
+        x = oud.pop(tk); fails.pop(tk, None)
+        log_nw.append(dict(t="rm", n=x["naam"], tk=tk, d=dnl, iso=today.isoformat(), m="Zit al in je portefeuille of lijst, onder een andere aandelensoort."))
     for tk, x in oud.items():                          # bestaande leden: blijven zolang ze de ruimere grens halen
         m = res.get(tk)
         if m is None:
