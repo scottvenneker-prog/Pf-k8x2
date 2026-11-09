@@ -175,13 +175,14 @@ function slBlok(){const w=rows.filter(r=>r.watch),risk=w.filter(slRisk),ad=SLOG.
  ${risk.length?`<div class="sec"><h2>Valt binnenkort af</h2><div class="list">${risk.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot a"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">Score ${r.score} van 5, week 1 van ${PAR.sl_wk} onder je grens. Verdwijnt bij de volgende update als dat zo blijft.</div></span><span class="m">›</span></button>`).join("")}</div></div>`:""}
  <details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span style="font-weight:600">Wat is er veranderd</span><span class="m">${SLOG.length} wijzigingen ›</span></summary><div class="list" style="border:0">${SLOG.map(x=>`<div class="row" style="align-items:flex-start"><span class="dot ${x.t==="add"?"g":"r"}" style="margin-top:6px"></span><span class="grow"><div class="t" style="white-space:normal">${x.t==="add"?"Erbij":"Eraf"}: ${x.n} <span class="m">· ${x.d}</span></div><div class="m" style="white-space:normal">${x.m}</div></span></div>`).join("")}</div></details>`}
 function vPos(){
+ if(filter==="trans")return vTrans();
  if(filter==="closed")return vClosed();
  if(filter==="opties")return vOpt();
  let l=rows.filter(r=>filter==="watch"?r.watch:!r.watch);
  if(filter==="g"||filter==="r")l=l.filter(r=>r.licht===filter);
  const srt={weging:(a,b)=>b.waarde-a.waarde,periode:(a,b)=>pv(b)-pv(a),peg:(a,b)=>a.peg-b.peg};
  l.sort(srt[sort]||srt.weging);
- const fl=POSFL;
+ const fl=posfl();
  return head("Posities")+(filter==="watch"?"":vlakBlok())+perChips()+`<div class="chips">${fl.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:10px"><span class="note" style="margin:0">${l.length} bedrijven</span><label class="note" style="margin:0">Sorteer <select id="sort">${["weging","periode","peg"].map(s=>`<option ${s===sort?"selected":""}>${s}</option>`).join("")}</select></label></div>`+
  l.map(r=>`<button class="card" data-d="${r.tk}"><div class="h"><span class="dot ${r.licht}"></span><div class="nm">${r.naam}<span>${r.tk} · ${r.sector} · ${r.land}</span></div><div style="text-align:right"><div class="num" style="font-weight:600">${r.watch?"watchlist":eur(r.waarde)}</div><div class="num ${cls(pv(r))}" style="font-size:12.5px">${pc(pv(r))} ${({d:"vandaag",m:"1 mnd",y:"1 jr",f:"5 jr",t:"totaal"})[per]}</div></div></div>
@@ -351,7 +352,8 @@ function feeEst(r,amt){const t=feeTab(),f=t[r.munt]!=null?t[r.munt]:5,st=r.munt=
 function feeTxt(x,amt){if(!(amt>0))return "";const c=feeEst(x.r,amt);return `Aankoopkosten ongeveer ${eur(Math.round(c.t))} (${(c.t/amt*100).toFixed(1).replace(".",",")}%)${c.st?", inclusief 0,5% Britse zegelbelasting":""}`}
 
 let cSort="laatste",_CL=null;
-const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"]];
+const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"],["trans","Transacties"]];
+function posfl(){return PRIVE&&PRIVE.imp&&PRIVE.imp.trx?POSFL:POSFL.filter(x=>x[0]!=="trans")}
 function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL;
  const fl={};((PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[]).forEach(x=>{(fl[x[4]]=fl[x[4]]||[]).push([x[0],x[6]])});
  PRIVE.sold.forEach(s=>{if(!(s.buy>0))return;if(/\s[CP]\d+(\.\d+)?\s\d{2}[A-Z]{3}\d{2}$/.test((PRIVE.names&&PRIVE.names[s.isin])||""))return;const res=s.sell-s.buy;let xi=null;
@@ -360,10 +362,56 @@ function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL
   const f2=(fl[s.isin]||[]).slice().sort((a,b)=>a[0]<b[0]?-1:1),na=afterSale(s.isin,s.laatste),vs=vsSp(f2,new Date(new Date(s.laatste).getTime()+864e5),0.01,s.laatste);
   _CL.push({isin:s.isin,naam:(PRIVE.names&&PRIVE.names[s.isin])||s.isin,eerste:s.eerste,laatste:s.laatste,n:s.n,buy:s.buy,sell:s.sell,res:res,pct:res/s.buy*100,xirr:xi==null||!isFinite(xi)||Math.abs(xi)>1000?null:xi,na:na,gemist:gm,vs:vs})});
  return _CL}
+
+let tQ=null,_TR=null;
+function transData(){if(_TR)return _TR;_TR={Q:{},keys:[]};try{
+ const X=(PRIVE&&PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[];if(!X.length)return _TR;pfTWR(260);if(!_TD||!window._PS)return _TR;
+ const N=_TD.length,i2n={};Object.keys(PRIVE.hold||{}).forEach(t=>{const r=rows.find(x=>x.tk===t);if(r)i2n[PRIVE.hold[t].isin]=r.naam});const nm=i=>(PRIVE.names&&PRIVE.names[i])||i2n[i]||i,opt=i=>/\s[CP]\d+(\.\d+)?\s\d{2}[A-Z]{3}\d{2}$/.test((PRIVE.names&&PRIVE.names[i])||"");
+ const P={};[...window._PS,...(window._PX||[])].forEach(p=>{P[p.isin]=p});
+ const V=new Array(N).fill(0);Object.values(P).forEach(p=>{for(let k=0;k<N;k++)if(p.q[k]>0&&p.px[k]>0)V[k]+=p.q[k]*p.px[k]});
+ const idx=d=>{let k=-1;for(let j=0;j<N;j++){if(_TD[j]<d)k=j;else break}return k};
+ const by={};X.forEach(x=>{if(x[5]&&isFinite(x[6])&&x[4]&&!/^NLEX/i.test(x[4])&&!opt(x[4]))(by[x[4]]=by[x[4]]||[]).push(x)});
+ const qOf=d=>{const m=+d.slice(5,7);return d.slice(0,4)+"-Q"+Math.ceil(m/3)};
+ const qb=k=>{const y=+k.slice(0,4),q=+k[6];return [y+"-"+String((q-1)*3+1).padStart(2,"0")+"-01",q===4?(y+1)+"-01-01":y+"-"+String(q*3+1).padStart(2,"0")+"-01"]};
+ const cl={};closedList().forEach(x=>{cl[x.isin]=x});const g={};
+ Object.entries(by).forEach(([isin,rs])=>{rs.forEach((x,i)=>{if(rs.some((y,j)=>j!==i&&y[0]===x[0]&&Math.sign(y[5])!==Math.sign(x[5])&&Math.abs(Math.abs(y[6])/Math.abs(x[6])-1)<.02))return;
+  const k=qOf(x[0]);((g[k]=g[k]||{})[isin]=g[k][isin]||[]).push({d:x[0],s:x[5]>0?1:-1,q:Math.abs(x[5]),a:Math.abs(x[6])})})});
+ const keys=Object.keys(g).sort().reverse();_TR.keys=keys;
+ keys.forEach(k=>{const [a,b]=qb(k),k0=idx(a),k1=idx(b),it=[];
+  Object.entries(g[k]).forEach(([isin,tr])=>{tr.sort((u,v)=>u.d<v.d?-1:1);const p=P[isin];let q0=null,q1=null,w0=null,w1=null;
+   if(p&&k0>=0){q0=p.q[k0]>0?p.q[k0]:0;q1=p.q[k1]>0?p.q[k1]:0;const v0=V[k0],v1=V[k1];w0=v0>0&&p.px[k0]>0?q0*p.px[k0]/v0*100:(q0===0?0:null);w1=v1>0&&p.px[k1]>0?q1*p.px[k1]/v1*100:(q1===0?0:null)}
+   const bq=tr.filter(t=>t.s>0).reduce((s,t)=>s+t.q,0),sq=tr.filter(t=>t.s<0).reduce((s,t)=>s+t.q,0);
+   let cat,ch=null;
+   if(q0!=null&&q1!=null){if(q0<=0&&q1>0)cat="nieuw";else if(q0>0&&q1<=0.0001*q0)cat="uit";else if(q1>q0*1.02)cat="meer";else if(q1<q0*0.98)cat="minder";else cat="mix";if(q0>0)ch=(q1/q0-1)*100}
+   else cat=bq>=sq?"meer":"minder";
+   it.push({isin,n:nm(isin),tr,cat,ch,w0,w1,bq,sq,res:cat==="uit"&&cl[isin]?cl[isin].pct:null})});
+  _TR.Q[k]=it});
+}catch(e){_TR.err=String(e)}return _TR}
+function vTrans(){const T=transData(),ks=T.keys;
+ const nm=s=>s.toLowerCase().replace(/(^|[\s(-])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(Ab|Nv|Plc|Ag|Sa|Se|Asa|Spa|Bv|Kgaa|Ltd|Adr|Etf)\b/g,m=>m.length<=3||m==="Plc"?m.toUpperCase():m);
+ const hd=head("Posities")+`<div class="chips">${posfl().map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>`;
+ if(!ks.length)return hd+`<div class="tile"><div class="note">Geen transacties beschikbaar${T.err?" ("+T.err+")":""}.</div></div>`;
+ if(!tQ||!ks.includes(tQ))tQ=ks[0];
+ const lab=k=>"Q"+k[6]+" "+k.slice(2,4),mn=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"],dt=d=>(+d.slice(8,10))+" "+mn[+d.slice(5,7)-1],
+  w=x=>x==null?"?":(x<0.05?"0":x.toFixed(1).replace(".",",")),sg=x=>(x>=0?"+":"−")+Math.round(Math.abs(x)).toLocaleString("nl-NL")+"%";
+ const it=T.Q[tQ],gr=[["nieuw","Nieuw gekocht"],["meer","Vergroot"],["minder","Verkleind"],["uit","Helemaal verkocht"],["mix","Gekocht en verkocht"]];
+ const dw=x=>(x.w1==null||x.w0==null)?0:Math.abs(x.w1-x.w0);
+ const cnt=gr.map(([c,t])=>[t,it.filter(x=>x.cat===c).length]).filter(a=>a[1]);
+ let h=hd+`<div class="chips" style="padding-top:2px">${ks.slice(0,16).map(k=>`<button class="chip" data-tq="${k}" aria-pressed="${tQ===k}">${lab(k)}</button>`).join("")}</div>
+ <div class="tile"><div class="note" style="margin:0">${lab(tQ)}: ${it.length} aandelen gehandeld. ${cnt.map(a=>a[1]+" "+a[0].toLowerCase()).join(", ")}.</div>
+ <div class="note">Zoals een 13F: wat je kocht en verkocht, met de verandering van je positie (aantal stuks) en je gewicht in de portefeuille, van begin naar eind van het kwartaal. Opties tellen niet mee.</div></div>`;
+ gr.forEach(([c,t])=>{const l=it.filter(x=>x.cat===c).sort((a,b)=>dw(b)-dw(a));if(!l.length)return;
+  h+=`<div class="sec"><h2>${t} <small style="font-weight:400;opacity:.6">${l.length}</small></h2>`+l.map(x=>{
+   const big=c==="nieuw"?"Nieuw":c==="uit"?"Verkocht":x.ch!=null?sg(x.ch):"";
+   const col=c==="uit"||c==="minder"?"bad":c==="mix"?"":"good";
+   const sd=s=>x.tr.filter(t=>t.s===s).map(t=>dt(t.d)).join(", "),dts=[sd(1)?"gekocht "+sd(1):"",sd(-1)?"verkocht "+sd(-1):""].filter(Boolean).join(" · ");
+   const wt=x.w0!=null&&x.w1!=null?`Gewicht ${w(x.w0)}% → ${w(x.w1)}%`:"";
+   return `<div class="card"><div class="h"><div class="nm">${nm(x.n)}<span style="white-space:normal;display:block">${dts}</span></div><div style="text-align:right"><div class="num" style="font-weight:600;${col?"color:var(--"+col+")":""}">${big}</div>${wt?`<div class="num" style="font-size:12.5px;opacity:.75">${wt}</div>`:""}${x.res!=null?`<div class="num ${cls(x.res)}" style="font-size:12.5px">resultaat ${pc(x.res)}</div>`:""}</div></div></div>`}).join("")+`</div>`});
+ return h}
 function vClosed(){const L=closedList().slice(),tot=L.reduce((s,x)=>s+x.res,0),inv=L.reduce((s,x)=>s+x.buy,0),w=L.filter(x=>x.res>0).length;
  const srt={laatste:(a,b)=>a.laatste<b.laatste?1:-1,res:(a,b)=>b.res-a.res,slecht:(a,b)=>a.res-b.res,pct:(a,b)=>b.pct-a.pct,na:(a,b)=>(b.na==null?-1e9:b.na)-(a.na==null?-1e9:a.na)}[cSort];L.sort(srt);
  const md=d=>d.slice(5,7)+"-"+d.slice(0,4),nm=s=>s.toLowerCase().replace(/(^|[\s(-])([a-zà-ÿ])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(Ab|Nv|Plc|Ag|Sa|Se|Asa|Spa|Bv|Kgaa|Ltd|Adr|Etf)\b/g,m=>m.length<=3||m==="Plc"?m.toUpperCase():m);
- return head("Posities")+`<div class="chips">${POSFL.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ return head("Posities")+`<div class="chips">${posfl().map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
  <div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Resultaat</small><b class="num ${cls(tot)}">${eur(tot)}</b></div><div><small>Op aankopen</small><b class="num ${cls(tot)}">${pc(inv?tot/inv*100:0)}</b></div><div><small>In de plus</small><b class="num">${w} van ${L.length}</b></div></div>
  <div class="note">Aandelen die je helemaal verkocht hebt: verkoop min aankoop, zonder dividend. "Per jaar" houdt rekening met wanneer je kocht en verkocht.</div></div>${afterSum(L)}
  <div class="chips" style="padding-top:10px">${[["laatste","Recent"],["res","Beste"],["slecht","Slechtste"],["pct","Hoogste %"],["na","Na verkoop"]].map(([k,t])=>`<button class="chip" data-cs="${k}" aria-pressed="${cSort===k}">${t}</button>`).join("")}</div>`+
@@ -374,7 +422,7 @@ function vOpt(){const A=(PRIVE&&PRIVE.opts)||[],L=A.filter(o=>!o.open),op=A.filt
  const G=L.filter(o=>o.kant==="gekocht"),V=L.filter(o=>o.kant==="verkocht"),tot=sm(L,"res"),prem=sm(L,"prem");
  const srt={laatste:(a,b)=>a.laatste<b.laatste?1:-1,res:(a,b)=>b.res-a.res,slecht:(a,b)=>a.res-b.res,pct:(a,b)=>pr(b.res,b.prem)-pr(a.res,a.prem)}[cSort];L.sort(srt);
  const md=d=>d.slice(5,7)+"-"+d.slice(0,4),blok=(t,l)=>`<div><small>${t}</small><b class="num ${cls(sm(l,"res"))}">${eur(sm(l,"res"))}</b><small>${pc(pr(sm(l,"res"),sm(l,"prem")))} van premie</small></div>`;
- return head("Posities")+`<div class="chips">${POSFL.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ return head("Posities")+`<div class="chips">${posfl().map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
  <div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Totaal resultaat</small><b class="num ${cls(tot)}">${eur(tot)}</b><small>${pc(pr(tot,prem))} van premie</small></div>${blok("Verkocht",V)}${blok("Gekocht",G)}</div>
  <div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px"><div><small>Gesloten</small><b class="num">${L.length}</b></div><div><small>In de plus</small><b class="num">${L.filter(o=>o.res>0).length}</b></div><div><small>Nog open</small><b class="num">${op.length}</b></div></div>
  <div class="note">Resultaat is alle ontvangen en betaalde premie samen, inclusief kosten. Het rendement is het resultaat gedeeld door de premie (bij verkocht opties de ontvangen premie, bij gekocht opties de betaalde premie). Wordt een verkochte optie uitgeoefend, dan zit dat resultaat bij het aandeel en niet hier.</div></div>
@@ -1500,6 +1548,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.f){filter=b.dataset.f;render()}
  else if(b.dataset.cs){cSort=b.dataset.cs;render()}
  else if(b.dataset.wt){winTab=b.dataset.wt;render()}
+ else if(b.dataset.tq){tQ=b.dataset.tq;render()}
  else if(b.dataset.dt){dtab=b.dataset.dt;render()}
  else if(b.dataset.it){inzTab=b.dataset.it;try{localStorage.setItem("pf_inz",inzTab)}catch(x){}render()}
  else if(b.dataset.kz){det=null;sub=null;tab="kand";kTab="short";slF="zone";render();window.scrollTo(0,0)}
