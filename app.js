@@ -916,26 +916,35 @@ function divCome(){const out=[],now=new Date(),ty=now.getFullYear();
   if(yd&&yd.getFullYear()===ty&&D.div_laatste_bedrag)out.push({r,dt:yd,eur:D.div_laatste_bedrag*r.qty/rate,y:true});
   (D.div_12m||[]).forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd.getFullYear()===ty&&(!yd||Math.abs(dd-yd)>45*864e5))out.push({r,dt:dd,eur:a*r.qty/rate})})});
  return out.sort((a,b)=>a.dt-b.dt)}
-function divGot(){const m=Array(12).fill(0),ty=String(new Date().getFullYear());let ok=false;
- try{for(const [d,t,a,cu] of IMP.acc.ev){if(t!=="v"||d.slice(0,4)!==ty)continue;ok=true;let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}m[+d.slice(5,7)-1]+=e}}catch(e){}
- return {m,ok}}
+function divGot(){const m=Array(12).fill(0),L=[],ty=String(new Date().getFullYear());let ok=false;
+ const nm=(isin,pn)=>{const h=Object.entries((PRIVE&&PRIVE.hold)||{}).find(([k,v])=>v.isin===isin);const r=h&&rows.find(x=>x.tk===h[0]);return r?r.naam:(pn||"").toLowerCase().replace(/(^|[\s(-])([a-zà-ÿ])/g,(a,b,c)=>b+c.toUpperCase()).replace(/\b(Inc|Corp|Co|Plc|Nv|Se|Ab|Sa|Ag)\.?$/i,"").trim()};
+ try{const dv=IMP.acc.dv;if(dv&&dv.length){for(const [d,a,cu,pn,isin,tx] of dv){if(d.slice(0,4)!==ty)continue;ok=true;let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}m[+d.slice(5,7)-1]+=e;L.push({d,eur:e,n:nm(isin,pn),tk:((Object.entries(PRIVE.hold).find(([k,v])=>v.isin===isin))||[])[0]})}}
+  else for(const [d,t,a,cu] of IMP.acc.ev){if(t!=="v"||d.slice(0,4)!==ty)continue;ok=true;let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}m[+d.slice(5,7)-1]+=e}}catch(e){}
+ return {m,ok,L}}
 function divChart(got,come){const mn=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"],ex=Array(12).fill(0);come.forEach(x=>ex[x.dt.getMonth()]+=x.eur);
  const W=320,H=160,top=18,bot=H-24,mx=Math.max(...got.map((g,i)=>g+ex[i]),1),y=v=>bot-(v/mx)*(bot-top),bw=W/12;
  const f=v=>hide?"":Math.round(v);
- return `<div class="sec"><h2>Dividend per maand, heel ${new Date().getFullYear()}</h2><div class="tile"><svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Dividend per maand">${got.map((g,i)=>{const x=i*bw+bw*.16,w=bw*.68,hg=g>0?Math.max(2,bot-y(g)):0,he=ex[i]>0?Math.max(2,bot-y(ex[i])):0,t=g+ex[i];
+ return `<div class="sec"><h2>Dividend per maand, heel ${new Date().getFullYear()}</h2><button class="tile go" data-s="divm"><svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Dividend per maand">${got.map((g,i)=>{const x=i*bw+bw*.16,w=bw*.68,hg=g>0?Math.max(2,bot-y(g)):0,he=ex[i]>0?Math.max(2,bot-y(ex[i])):0,t=g+ex[i];
   return `${g>0?`<rect x="${x}" y="${bot-hg}" width="${w}" height="${hg}" rx="2" fill="var(--c1)"/>`:""}${ex[i]>0?`<rect x="${x}" y="${bot-hg-he}" width="${w}" height="${he}" rx="2" fill="var(--c1)" fill-opacity=".28" stroke="var(--c1)" stroke-dasharray="3 2"/>`:""}${t>0&&!hide?`<text x="${x+w/2}" y="${bot-hg-he-3}" text-anchor="middle" font-size="9">${f(t)}</text>`:""}<text x="${x+w/2}" y="${H-8}" text-anchor="middle" font-size="9">${mn[i]}</text>`}).join("")}<line class="g" x1="0" x2="${W}" y1="${bot}" y2="${bot}"/></svg>
- <div class="note" style="margin:4px 0 0"><span style="color:var(--c1)">■</span> ontvangen (echt, bruto) &nbsp; <span style="color:var(--c1);opacity:.5">▨</span> nog te ontvangen (verwacht)</div></div></div>`}
+ <div class="note" style="margin:4px 0 0"><span style="color:var(--c1)">■</span> ontvangen (echt, bruto) &nbsp; <span style="color:var(--c1);opacity:.5">▨</span> nog te ontvangen (verwacht)</div><div class="note" style="margin:2px 0 0">Tik voor de specificatie per maand ›</div></button></div>`}
 function vDiv(){
  if(!PRIVE)return head("Dividend")+`<div class="note" style="margin-top:12px">Het dividend van je portefeuille zie je zodra je met je wachtwoord bent ingelogd.</div>`+demo;
  const G=divGot(),come=divCome(),got=G.m.reduce((s,x)=>s+x,0),exp=come.reduce((s,x)=>s+x.eur,0),tot=got+exp;
  const geenDat=own.some(r=>r.yld>0&&r.qty&&!(r.D&&r.D.div_12m));
  return head("Dividend")+`<div class="tile" style="margin-top:8px">${kvs([["Ontvangen dit jaar",eur(got)],["Nog te ontvangen",eur(exp)],["Verwacht heel jaar",eur(tot)]])}<div class="note" style="margin:6px 0 0">Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting. Is er al een datum aangekondigd (Yahoo), dan gebruik ik die met het laatste dividend per aandeel. De rest is wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div></div>
- ${divChart(G.m,come)}<div class="sec"><h2>Nog te ontvangen</h2><div class="list">${come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.y?"aangekondigd, ":"verwacht rond "}${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note">Dit jaar verwacht ik niets meer.</div>'}</div></div>`+
+ ${divChart(G.m,come)}<div class="sec"><div class="list"><button class="row" data-dx="come" aria-expanded="${!!dOpen.come}"><span class="grow"><div class="t">Nog te ontvangen</div><div class="m">${come.length} uitbetalingen</div></span><span class="num">${eur(exp)}</span><span class="m">${dOpen.come?"˄":"˅"}</span></button>${dOpen.come?(come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.y?"aangekondigd, ":"verwacht rond "}${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note" style="padding:8px 12px">Dit jaar verwacht ik niets meer.</div>'):""}</div></div>`+
  (geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">De datum is de verwachte ex-datum van vorig jaar plus een jaar; de uitbetaling zelf volgt meestal een paar weken later. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`+demo}
 
 let sOpen={};
 
 function slTog(n){return `<button class="row" data-more="1" style="background:var(--bg)"><span class="grow"><div class="t">${slMore?"Minder tonen":"Meer kandidaten ("+(n-SLTOP())+")"}</div></span><span class="m">${slMore?"˄":"˅"}</span></button>`}
+
+let dOpen={};
+function divMSub(){const G=divGot(),come=divCome(),mn=["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"],now=new Date().getMonth();
+ const fd=s=>dstr(new Date(s+"T12:00:00"));
+ return `<div class="list">${mn.map((n,i)=>{const got=G.L.filter(x=>+x.d.slice(5,7)-1===i).sort((a,b)=>a.d<b.d?-1:1),ex=come.filter(x=>x.dt.getMonth()===i),tg=got.reduce((s,x)=>s+x.eur,0),te=ex.reduce((s,x)=>s+x.eur,0);
+  if(!got.length&&!ex.length)return "";const o=!!dOpen["m"+i];
+  return `<button class="row" data-dx="m${i}" aria-expanded="${o}"><span class="grow"><div class="t">${n}</div><div class="m">${got.length+ex.length} uitbetalingen${te>0?" · deels verwacht":""}</div></span><span class="num">${eur(tg+te)}</span><span class="m">${o?"˄":"˅"}</span></button>${o?got.map(x=>`<div class="row" style="padding-left:20px"><span class="grow"><div class="t">${x.n}</div><div class="m">${fd(x.d)}, ontvangen</div></span><span class="num">${eur(x.eur,2)}</span></div>`).join("")+ex.map(x=>`<div class="row" style="padding-left:20px;opacity:.75"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.y?"aangekondigd, ":"verwacht rond "}${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,2)}</span></div>`).join(""):""}`}).join("")}</div><div class="note">Ontvangen bedragen zijn bruto, uit je rekeningoverzicht, omgerekend naar euro op de datum van uitbetaling. Verwachte bedragen (gedimd) kunnen afwijken.</div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1603,7 +1612,7 @@ function vSub(){
  if(k==="bedrijven"){title="Weging per bedrijf";const l=[...own].sort((a,b)=>b.w-a.w);
   body=`<div class="seg" style="margin-top:10px">${[["grafiek","Weging"],["streef","Streefweging"],["lijst","Lijst"]].map(([k,t])=>`<button data-bt="${k}" aria-pressed="${bTab===k}">${t}</button>`).join("")}</div>`+(bTab==="streef"?streefSec():bTab==="lijst"?`<div class="sec"><div class="list">${l.map(r=>`<button class="row" data-d="${r.tk}"><span class="dot ${r.licht}"></span><span class="grow"><div class="t">${r.naam}</div><div class="m">${r.sector} · ${r.land} · ${r.munt}</div></span><span style="text-align:right"><div class="num">${f1(r.w)}%</div><div class="m num">${eur(r.waarde)}</div></span></button>`).join("")}</div></div>`:`<div class="tile">${hbars(l.map(r=>({n:r.tk.replace(/\..*/,""),v:r.w,k:r.w>=10?"a":"n"})),10,"%")}<div class="note">De streep is je grens van 10%. Oranje staat erboven.</div></div>`)}
  if(k==="kwal"){title="Kwaliteit over 5 jaar";body=kwalSub()}
- if(k==="gt"){title="Geld- tegenover tijdgewogen";body=gtSub()}if(k==="rapport"){title="Portefeuille-analyse";body=rapportSub()}if(k==="gedrag"){title="Beleggersgedrag";body=gedragSub()}if(k==="methode"){title="Zo rekent de app";body=methodeSub()}if(k==="sl_af"){title="Valt binnenkort af";body=slAfSub()}if(k==="sl_wijz"){title="Wat is er veranderd";body=slWijzSub()}if(k==="sl_uitleg"){title="Zo werkt de shortlist";body=slUitlegSub()}if(k==="sl_sect"){title="Welke sectoren vullen je aan";body=slSectSub()}
+ if(k==="gt"){title="Geld- tegenover tijdgewogen";body=gtSub()}if(k==="rapport"){title="Portefeuille-analyse";body=rapportSub()}if(k==="gedrag"){title="Beleggersgedrag";body=gedragSub()}if(k==="methode"){title="Zo rekent de app";body=methodeSub()}if(k==="divm"){title="Dividend per maand";body=divMSub()}if(k==="sl_af"){title="Valt binnenkort af";body=slAfSub()}if(k==="sl_wijz"){title="Wat is er veranderd";body=slWijzSub()}if(k==="sl_uitleg"){title="Zo werkt de shortlist";body=slUitlegSub()}if(k==="sl_sect"){title="Welke sectoren vullen je aan";body=slSectSub()}
  if(k==="conc"){title="Concentratie";body=concSub()}
  if(k==="spr"){title="Spreiding";body=sprSub()}
  if(k==="divpa"){title="Dividend per aandeel";
@@ -1660,7 +1669,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dc){docF=b.dataset.dc;render()}
  else if(b.dataset.dk){docC=b.dataset.dk;render()}
  else if(b.dataset.bt){bTab=b.dataset.bt;render()}else if(b.dataset.cc){cSel=b.dataset.cc;render()}else if(b.dataset.kt){kTab=b.dataset.kt;render();window.scrollTo(0,0)}
- else if(b.dataset.sx){sOpen[b.dataset.sx]=!sOpen[b.dataset.sx];render()}else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
+ else if(b.dataset.dx){dOpen[b.dataset.dx]=!dOpen[b.dataset.dx];render()}else if(b.dataset.sx){sOpen[b.dataset.sx]=!sOpen[b.dataset.sx];render()}else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
  else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
