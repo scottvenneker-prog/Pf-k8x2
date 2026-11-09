@@ -258,7 +258,7 @@ function oordeelR(r){
  if(r.ai[0]<=-1)M("AI-risico",`${r.ai[1]}. ${r.ai[3]||r.ai[2]}`,aiTot>AI_LIM?"r":"a");
  else if(r.ai[0]>=1&&aiProf>35)M("Veel AI in je portefeuille",`Samen met de andere AI-profiteerders is dat ${f1(aiProf)}% van je portefeuille. Ze delen dezelfde bron van groei.`,"a");
  if(AI_PREV[r.tk]!=null&&r.ai[0]<AI_PREV[r.tk])M("AI-beoordeling verslechterd",`Van ${AI_NM[AI_PREV[r.tk]]} naar ${AI_NM[r.ai[0]]}.`,"r");
- if(r.nd!=null&&r.nd>PAR.nd)M("Hoge schuld",`${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×.`,"r"); if(r.rv){const v=r.rv,pp=n=>Math.round(n*100)+"%",om=v.gt!=null?v.gt:v.g;if(v.fc!=null&&v.fm!=null&&v.fc<.6)M("Winst komt niet in kas",`De vrije kasstroom is ${f1(v.fc)}× de winst (laatste boekjaar). Een deel van de winst komt niet als geld binnen.`,"a");if(v.un!=null&&v.un>1&&(v.uf==null||v.uf>1))M("Dividend zwaar belast",`De uitkering is ${pp(v.un)} van de winst${v.uf!=null?" en "+pp(v.uf)+" van de vrije kasstroom":""} (laatste boekjaar).`,"a");if(om!=null&&r.eps!=null&&r.eps-om*100>10)M("Winstgroei komt van marges",`De winst groeit ${f1(r.eps)}% per jaar, de omzet ${f1(om*100)}%. Het verschil komt uit hogere marges, niet uit meer verkoop.`,"a")}
+ if(r.nd!=null&&r.nd>PAR.nd)M("Hoge schuld",`${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×.`,"r"); if(r.rv){const v=r.rv,pp=n=>Math.round(n*100)+"%",om=v.gt!=null?v.gt:v.g;if(v.fc!=null&&v.fm!=null&&v.fc<.6&&!["III.L","KSPI"].includes(r.tk))M("Winst komt niet in kas",`De vrije kasstroom is ${f1(v.fc)}× de winst (laatste boekjaar). Een deel van de winst komt niet als geld binnen.`,"a");if(v.un!=null&&v.un>1&&(v.uf==null||v.uf>1))M("Dividend zwaar belast",`De uitkering is ${pp(v.un)} van de winst${v.uf!=null?" en "+pp(v.uf)+" van de vrije kasstroom":""} (laatste boekjaar).`,"a");if(om!=null&&r.eps!=null&&r.eps-om*100>10)M("Winstgroei komt van marges",`De winst groeit ${f1(r.eps)}% per jaar, de omzet ${f1(om*100)}%. Het verschil komt uit hogere marges, niet uit meer verkoop.`,"a")}
  if(r.trend==="Downtrend")M("Koers in downtrend","De koers staat onder zowel het 50- als 200-daags gemiddelde.","r");
  if(r.eps<DOEL)M("Winstgroei onder je doel",`${r.eps}% per jaar tegen een doel van ${DOEL}%.`,r.eps<12?"r":"a");
  if(t.rev<=-10)M("Winstverwachting omlaag",`De verwachting voor volgend jaar is ${Math.abs(t.rev)}% omlaag in een maand.`,"r");
@@ -501,7 +501,7 @@ function cscore(r){const D=r.D||{},ins=D.ins_pct==null?null:D.ins_pct*100,dil=D.
  const e=r.eps,f=r.fcf;
  const dqs=r.dq||[];
  add(r.epsF&&false?"":"Winstgroei",e==null?0:Math.min(dqs.includes("winstgroei")?1:2,e>=15?2:e>=12?1:0),2,e==null?"–":f1(e)+"%","doel 15%");
- add("Kasstroomgroei",f==null?0:Math.min(dqs.includes("kasstroomgroei")||(r.rv&&r.rv.fc!=null&&r.rv.fc<.6)?1:2,f>=15?2:f>=10?1:0),2,f==null?"–":f1(f)+"%","doel 15%");
+ add("Kasstroomgroei",f==null?0:Math.min(dqs.includes("kasstroomgroei")||(r.rv&&r.rv.fc!=null&&r.rv.fc<.6&&!["III.L","KSPI"].includes(r.tk))?1:2,f>=15?2:f>=10?1:0),2,f==null?"–":f1(f)+"%","doel 15%");
  add("Schuld",r.nd==null||r.nd<=1?2:r.nd<=2?1:0,2,r.nd==null?"n.v.t.":f1(r.nd)+"×","max 1× EBITDA");
  add("ROIC",r.roic==null||dqs.includes("ROIC")?1:r.roic>=15?2:r.roic>=10?1:0,2,r.roic==null?"n.v.t.":r.roic+"%","doel 15%");
  add("Eigenaarschap",(ins!=null&&ins>=5?1:0)+(dil!=null&&dil<=1?1:0),2,(ins==null?"–":f1(ins)+"% insiders")+(dil==null?"":", verwatering "+f1(dil)+"%"),"insiders 5%+, weinig verwatering");
