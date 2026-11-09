@@ -83,6 +83,16 @@ def fx():
 
 FX = fx()
 
+def fcf_rend(f, mc, cur, fcur, same):
+    """Kasstroom / beurswaarde. Bij verschillende valuta (bijv. rapportage in USD, notering in CAD) omrekenen via de euro-koers van vandaag."""
+    try:
+        if f is None or not mc: return None
+        if same: return f / mc
+        if cur in (None, "GBp") or fcur in (None, "GBp") or cur not in FX or fcur not in FX: return None
+        y = (f / FX[fcur]) / (mc / FX[cur])
+        return y if 0 < y < 0.3 else None
+    except Exception: return None
+
 FXW = {}
 def fxw(c):
     """Wekelijkse reeks 'eenheden vreemde valuta per euro' (EURxxx=X)."""
@@ -273,7 +283,7 @@ def one(tk):
         bm=last(gp) / last(rev) if last(gp) is not None and last(rev) else None,
         om=last(ebit) / last(rev) if last(ebit) is not None and last(rev) else None,
         nd_ebitda=nd / eb if (nd is not None and eb and eb > 0 and not fin) else None,
-        fcf_yield=last(fcf) / mc if (same and mc and last(fcf) is not None) else None,
+        fcf_yield=fcf_rend(last(fcf), mc, cur, info.get("financialCurrency"), same),
         pos52=(px - lo) / (hi - lo) if lo is not None and hi and hi > lo else None, mcap=mc,
         yld=dvd["div_ttm"] / hl if hl else 0, koers_eur=(hl / rate) if rate else None, rate=rate, koers_cagr5=pcagr(hist, 5),
         eps=[round(float(x), 2) for x in eps.values], jaren=[str(d.year) for d in eps.index],
