@@ -142,6 +142,18 @@ def surprises(t, hist):
     except Exception: pass
     return out
 
+def uitslag(t):
+    """Laatste gemelde kwartaalcijfers (alleen als ze van de laatste 7 dagen zijn): gerapporteerde en verwachte winst per aandeel."""
+    try:
+        df = t.get_earnings_dates(limit=6)
+        df = df[df["Reported EPS"].notna()]
+        if not len(df): return None
+        d = df.index[0]; r = df.iloc[0]
+        dd = str(d)[:10]
+        if (pd.Timestamp.now().normalize() - pd.Timestamp(dd)).days > 7: return None
+        return dict(datum=dd, eps=num(r.get("Reported EPS")), schat=num(r.get("EPS Estimate")), s=num(r.get("Surprise(%)")))
+    except Exception: return None
+
 def despike(s):
     """Haalt losse foute koersen weg (bijv. 0,01 in plaats van 0,55 bij Carclo): een punt dat meer dan 10 keer boven of 10 keer onder het lopende midden ligt."""
     try:
@@ -269,7 +281,7 @@ def one(tk):
         roic_reeks=[round(float(x), 3) for x in roic.values], rjaren=[str(d.year) for d in roic.index],
         ins_pct=info.get("heldPercentInsiders"), beta=info.get("beta"), ev_ebitda=info.get("enterpriseToEbitda"), roe=info.get("returnOnEquity"), fin=1 if fin else 0,
         px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(histu.resample("W").last().dropna().tail(600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(histu, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
-        dil=dil, vol=vol, dd5=dd5, om_reeks=[round(float(x), 3) for x in omr.values], omjaren=[str(d.year) for d in omr.index], er=er,
+        dil=dil, vol=vol, dd5=dd5, om_reeks=[round(float(x), 3) for x in omr.values], omjaren=[str(d.year) for d in omr.index], er=er, uitslag=uitslag(t),
         nieuws=news(t), insiders=ins[:8],
         ins_koop=sum(i["type"] == "koop" and i["datum"] >= cut for i in ins),
         ins_verkoop=sum(i["type"] == "verkoop" and i["datum"] >= cut for i in ins))
