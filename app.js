@@ -268,8 +268,10 @@ function oordeelR(r){
  if(dn>=0&&dn<=14)soft.push(`Cijfers over ${dn===0?"vandaag":dn+" dagen"} (${dstr(earn(r)).toLowerCase()}). Wacht liever tot daarna met kopen.`);
  const vkh=vkHit(r);vkh.forEach(h=>M("Eigen criterium: "+h.t.toLowerCase(),h.m,"r"));
  const hard=min.some(m=>m.c==="r"),dash=[["Kwaliteit",r.licht==="g"?"g":r.licht==="a"?"a":"r",lichtTxt[r.licht]],["Waardering",(r.peg<=PAR.peg||r.pe<r.peh*.9)?"g":(r.pe>r.peh*PAR.pe||r.peg>PAR.peg+1)?"r":"a",(r.peg<=PAR.peg||r.pe<r.peh*.9)?"Gunstig":(r.pe>r.peh*PAR.pe||r.peg>PAR.peg+1)?"Duur":"Redelijk"],["Trend",r.tc,r.trend],["Weging",!ow?"n":(w>=PAR.weg||clHit.some(c=>cluW(c)>c.lim)||secHit)?"r":(w>=PAR.weg*.7||clHit.length)?"a":"g",!ow?"Nog geen":(w>=PAR.weg||secHit)?"Te groot":clHit.length?"Cluster vol":"Ruimte"],["AI",aiC(r.ai[0]),aiL(r.ai[0])]];
- let head,hc;
+ let head,hc;const S0=ow&&typeof streef==="function"?streef(r):null;
  if(ow&&(v.k==="structureel"||vkh.length)){head="Verkoop overwegen";hc="r"}
+ else if(ow&&S0&&S0.tier==="uitbouwen"){head="Bijkopen aantrekkelijk";hc="g"}
+ else if(ow&&S0){head=v.lab;hc=v.cl==="r"?"r":v.cl==="a"?"a":v.cl==="g"?"g":"n"}
  else if(hard){head=ow?"Niet bijkopen":"Nog niet kopen";hc="a"}
  else if(buyPts>=4){head=ow?"Bijkopen aantrekkelijk":"Kopen overwegen";hc="g"}
  else if(buyPts>=3){head=ow?"Bijkopen kan":"Kopen overwegen";hc="g"}
@@ -278,6 +280,8 @@ function oordeelR(r){
  let adv;
  if(head==="Verkoop overwegen"&&vkh.length&&v.k!=="structureel")adv=`Een van je eigen verkoopcriteria is geraakt: ${vkh.map(h=>h.t.toLowerCase()).join(" en ")}. Je schreef die op toen je nuchter was. Kijk of de reden voor het criterium nog klopt, en beslis dan.`;
  else if(head==="Verkoop overwegen")adv=`${v.wat} ${min.length?"Daarnaast: "+top(min)+".":""}`;
+ else if(ow&&S0&&S0.tier==="uitbouwen")adv=`Bijkopen past: ${r.naam} ${S0.why}.${min.length?" Let wel op "+top(min)+".":""} Houd rekening met aankoopkosten en koop liever één flinke portie dan kleine plukjes.`;
+ else if(ow&&S0)adv=`${head}. ${r.naam} ${S0.why}.${plus.length?" Voor: "+top(plus)+".":""}${min.length?" Tegen: "+top(min)+".":""}`;
  else if(head==="Niet bijkopen"||head==="Nog niet kopen")adv=`${ow?"Bijkopen":"Kopen"} past nu niet: ${top(min.filter(m=>m.c==="r").length?min.filter(m=>m.c==="r"):min)}. ${plus.length?`De bedrijfskant is prima (${top(plus)}), dus dit gaat over de verhouding in je portefeuille en niet over de kwaliteit.`:""} ${ow?"Stuur je nieuwe storting liever naar een bedrijf dat spreiding toevoegt.":"Zet hem op je shortlist en kijk opnieuw als er ruimte is."}`;
  else if(hc==="g")adv=`${ow?"Bijkopen":"Kopen"} is verdedigbaar: ${top(plus)}.${min.length?" Let wel op "+top(min)+".":""} Houd rekening met aankoopkosten en koop liever één flinke portie dan kleine plukjes.`;
  else adv=`${ow?"Houden":"Afwachten"}. ${plus.length?"Voor: "+top(plus)+". ":""}${min.length?"Tegen: "+top(min)+". ":""}Er is geen duidelijke reden om nu bij te kopen${ow?" of te verkopen":""}.`;
@@ -673,7 +677,8 @@ function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],c
  if(M&&M.s==="Zwak"&&t>cur){t=cur;tier="vasthouden";why="heeft een zwakke moat en is klein, dus geen extra geld"}
  if(tier==="uitbouwen"){const rm=rmin3(r);let nee=null,exc=null;
   if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
-  else if(v.lab==="Volgen"||v.lab==="Behouden, let op")nee="staat op "+v.lab.toLowerCase()+", dus geen extra geld";
+  else if(v.lab==="Behouden, let op")nee="krijgt volgens analisten volgend jaar maar "+f1(r.epsF)+"% winstgroei (Yahoo), onder je doel van "+RULES.eps+"%, dus geen extra geld";
+  else if(v.lab==="Volgen")nee="groeit net onder je doel en staat op volgen, dus geen extra geld";
   else if(r.peg>RULES.peg&&pgT(r.peg)!=="n.v.t.")nee="heeft een PEG van "+pgT(r.peg)+", boven je grens van "+String(RULES.peg).replace(".",",")+", dus geen extra geld";
   else if(r.fin&&r.roe==null)nee="heeft nog geen bekend ROE (rendement op eigen vermogen), dus geen extra geld";
   else if(r.fin&&r.roe<RULES.roe)nee="heeft een ROE van "+f1(r.roe)+"%, onder je grens van "+RULES.roe+"% voor financiële bedrijven, dus geen extra geld";
@@ -1146,7 +1151,7 @@ function megaH(){const W=own.reduce((t,r)=>t+r.w,0)||100,G={};own.forEach(r=>{co
 
 function pgT(v){return v==null||!(v>0)||v>=90?"n.v.t.":f1(v)}
 
-function verdict(r){const v=verdict0(r);if(v&&v.lab==="Behouden of bijkopen"){const s=streef(r);if(s&&s.tier!=="uitbouwen")return Object.assign({},v,{lab:"Behouden",cl:"g",wat:v.wat.replace(/bijkopen kan/,"bijkopen hoeft nu niet")+" "+(s.why?"Reden: "+r.naam+" "+s.why+".":"")})}return v}
+function verdict(r){const v=verdict0(r);if(!v||v.k==="structureel")return v;const s=streef(r);if(s&&s.tier!=="uitbouwen"&&/bijkopen/i.test(v.wat||"")){const lab=v.lab==="Behouden of bijkopen"?"Behouden":v.lab,cl=v.lab==="Behouden of bijkopen"?"g":v.cl;return Object.assign({},v,{lab,cl,wat:v.wat.replace("De waardering maakt bijkopen mogelijk.","Bijkopen hoeft nu niet.").replace(/bijkopen kan/g,"bijkopen hoeft nu niet")+(s.why?" Reden: "+r.naam+" "+s.why+".":"")})}return v}
 
 let advTab="ov";
 function advTabs(){const T=[["ov","Overzicht"],["nu","Wat nu"],["aand","Per aandeel"],["pf","Portefeuille"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
