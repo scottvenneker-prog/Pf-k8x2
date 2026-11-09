@@ -169,7 +169,7 @@ function vStart(){
  ${adviesBlok()}${stortCard()}
  ${weekBlok()}
  ${nieuwStrip()}${actieBlok()}
- <div class="sec"><h2>Kandidaten voor ${eur(INLEG)}</h2><div class="list">${top.map(x=>`<button class="row" data-t="kand"><span class="dot g"></span><span class="grow"><div class="t">${x.r.naam}${x.r.watch?' <span class="pill n">watchlist</span>':''}</div><div class="m">PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`).join("")}</div></div>
+ <div class="sec"><div class="sh"><button data-t="kand" style="background:none;border:0;padding:0;margin:0;text-align:left;flex:1;color:inherit;font:inherit;cursor:pointer"><h2>Kandidaten voor ${eur(INLEG)}</h2></button><button class="chip" data-t="kand">Alles ›</button></div><div class="list">${top.map(x=>{const st=x.r.watch?null:streef(x.r);const adv=x.r.watch?"Nieuw kopen":(st&&st.d>0.4?"Bijkopen: weging "+f1(x.r.w)+"% → "+f1(st.t)+"%":"Bijkopen mag, houd je weging");return `<button class="row" data-t="kand"><span class="dot g"></span><span class="grow"><div class="t">${x.r.naam}${x.r.watch?' <span class="pill n">watchlist</span>':''}</div><div class="m"><b>${adv}</b></div><div class="m">PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="m">›</span></button>`}).join("")}</div></div>
  `+demo}
 const SCN=(window.DATA&&window.DATA.scan)||{};const SLM={};(SCN.lijst||[]).forEach(x=>{SLM[x.tk]={w:"scan",d:x.sinds}});
 const SLOG=(SCN.log||[]).filter(x=>x.t==="add"||x.t==="rm");
