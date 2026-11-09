@@ -13,9 +13,8 @@ for x in SC.get("lijst", []):
 FALL = {"USD": 1.1143, "GBP": 0.8344, "SEK": 11.025, "CAD": 1.5743}  # reserve-wisselkoersen (per 1 EUR)
 FIRST = not os.path.exists("seen.json")
 SEEN = set() if FIRST else set(json.load(open("seen.json")))
-KEYS = ("earnings","guidance","outlook","acqui","merger","takeover","offer","downgrade","upgrade","ceo","cfo","chair",
-        "lawsuit","investigation","probe","buyback","dividend","warning","raises","cuts","bankrupt","recall","fda",
-        "approval","delist","short seller","resigns","steps down")
+KEYS = ("acqui","merger","takeover","lawsuit","investigation","probe","bankrupt","recall","delist","short seller",
+        "resigns","steps down","profit warning","cuts dividend","dividend cut","fraud","antitrust","export ban")   # alleen echt ingrijpend nieuws
 
 
 def num(x):
@@ -283,11 +282,15 @@ def one(tk):
     except Exception: out.setdefault("earnings", None)
     return out
 
+_NPUSH = 0
 def notify(key, title, msg, url=None):
+    global _NPUSH
     if key in SEEN: return
     SEEN.add(key)
     topic = os.environ.get("NTFY_TOPIC")
     if FIRST or not topic: return
+    if _NPUSH >= 3: return          # hooguit 3 meldingen per run, de rest verdwijnt in de app
+    _NPUSH += 1
     h = {"Title": title.encode("ascii", "ignore").decode()}
     if url and url.startswith("https://"): h["Click"] = url
     requests.post(f"https://ntfy.sh/{topic}", data=msg.encode("utf-8"), headers=h)
@@ -359,13 +362,14 @@ for tk in list(H) + [w for w in WL if w not in H] + SCT:
         if tk in H:
             n = r["naam"]
             r.update(weging=H[tk].get("weging"), rend=H[tk].get("rend"))   # percentages, geen bedragen
-            if abs(r["dag"]) > .05: notify(f"dag-{tk}-{today}", "Grote beweging", f'{n}: {r["dag"]*100:+.1f}% vandaag')
+            if abs(r["dag"]) > .10: notify(f"dag-{tk}-{today}", "Grote beweging", f'{n}: {r["dag"]*100:+.1f}% vandaag')
             if r["earnings"]:
                 d = (dt.date.fromisoformat(r["earnings"][:10]) - dt.date.today()).days
                 if 0 <= d <= 3: notify(f'c-{tk}-{r["earnings"][:10]}', "Cijfers komen eraan", f"{n} rapporteert over {d} dag(en)")
             for nw in r["nieuws"]:
-                if any(k in nw["titel"].lower() for k in KEYS): notify("n-" + nw["id"], f"{n}: nieuws", nw["titel"], nw["url"])
+                if any(k in nw["titel"].lower() for k in KEYS) and (n.split()[0].lower().strip(",.") in nw["titel"].lower() or tk.split(".")[0].lower() in nw["titel"].lower()): notify("n-" + nw["id"], f"{n}: nieuws", nw["titel"], nw["url"])
             for i in r["insiders"]:
+                if i["type"] != "koop": continue     # verkopen hebben vaak privé redenen
                 notify(f'i-{tk}-{i["wie"]}-{i["datum"]}-{i["type"]}-{i["aandelen"]}', f"{n}: insider {i['type']}",
                        f'{i["wie"]} ({i["functie"]}) {i["type"]} {i["aandelen"]:,} aandelen op {i["datum"]}')
         else:
