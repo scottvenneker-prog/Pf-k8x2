@@ -123,7 +123,7 @@ function analyse(x,a){const r=x.r;const sec=secW[r.sector]||0;
   `De koers staat op ${r.pos}% van de 52-wekenrange.`,
   `Analisten zien gemiddeld ${r.kd>=0?"+":"−"}${Math.abs(r.kd)}% naar hun koersdoel.`];
  const tr=`${r.trend}. De koers zit ${pc(r.v50)} van het 50-daags en ${pc(r.v200)} van het 200-daags gemiddelde. Afgelopen maand ${pc(r.p.m)}, afgelopen jaar ${pc(r.p.y)}. ${r.trend==="Uptrend"?"De trend ondersteunt een aankoop nu.":r.trend==="Pullback"?"Een terugval binnen een uptrend is vaak een beter instapmoment dan na een piek.":r.trend==="Herstel"?"De koers herstelt, maar de lange trend moet nog bevestigen.":"De trend is negatief. Je kunt overwegen het bedrag in twee delen te splitsen."}`;
- const pf=`Weging gaat van ${f1(wNu)}% naar ${f1(wNa)}%. Sector ${r.sector} gaat van ${f1(sec)}% naar ${f1(secNa)}%${secNa>35?", boven je grens van 35%":""}. ${r.munt==="EUR"?"Geen valutarisico.":`Je krijgt er ${r.munt} blootstelling bij.`}`;
+ const pf=a<=0?`Weging nu ${f1(wNu)}%. Sector ${r.sector} is ${f1(sec)}% van je portefeuille${sec>PAR.sec?", boven je grens van "+PAR.sec+"%":""}. ${r.munt==="EUR"?"Geen valutarisico.":`Je krijgt er ${r.munt} blootstelling bij.`}`:`Weging gaat van ${f1(wNu)}% naar ${f1(wNa)}%. Sector ${r.sector} gaat van ${f1(sec)}% naar ${f1(secNa)}%${secNa>35?", boven je grens van 35%":""}. ${r.munt==="EUR"?"Geen valutarisico.":`Je krijgt er ${r.munt} blootstelling bij.`}`;
  const risk=[...x.warn.map(t=>t[0].toUpperCase()+t.slice(1)+"."),`Heroverweeg als PEG boven 2 komt, de EPS-groei onder 10% zakt, of de koers onder het 200-daags gemiddelde sluit.`].join(" ");
  return `<details><summary>Volledige analyse</summary><div class="an"><h4>Waarom nu</h4><p>Score ${f1(x.s)}: ${x.why.slice(0,2).join("; ")||"gemengd beeld"}.</p><h4>Kwaliteit</h4><p>${kw.join(" ")}</p><h4>Waardering</h4><p>${wd.join(" ")}</p><h4>Trend</h4><p>${tr}</p><h4>AI-impact</h4><p>${r.ai[1]}: ${r.ai[2]}</p><h4>Jouw portefeuille</h4><p>${pf}</p><h4>Risico's en wanneer heroverwegen</h4><p>${risk}</p></div></details>`}
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -210,7 +210,7 @@ function vShort(){return `<p style="margin:8px 0 0;color:var(--mut)">Mijn lijst 
  <div class="note">De shortlist wordt elke zondag ververst. Wat erbij komt of eraf gaat, zie je hierboven onder Wat is er veranderd en krijg je als pushmelding. Voorbeeldcijfers.</div>`+demo}
 function vKand(){
  const kseg=`<div class="seg" style="margin-top:8px">${[["maand","Deze maand"],["short","Shortlist"],["comp","Compounders"],["guru","Beleggers"]].map(([k,t])=>`<button data-kt="${k}" aria-pressed="${kTab===k}">${t}</button>`).join("")}</div>`;
- if(kTab==="short")return head("Kandidaten")+kseg+vShort();if(kTab==="comp")return vComp();if(kTab==="guru")return vGuru();
+ if(kTab==="short")return head("Kandidaten")+kseg+vShort();if(kTab==="comp")return vComp();if(kTab==="guru")return vGuru();return vMaand(kseg);
  const KP=kandPick(budget),top=KP.top,k=kandidaten();
  const hierna=(r,a)=>(r.watch?a:r.waarde+a)/(TOT+budget)*100;
  const alloc=KP.alloc;
@@ -879,6 +879,20 @@ function methodeSub(){const it=(t,k,formule,bron,let_)=>fold(t,k,`<div><b>Formul
  ${it("Data en kwaliteit","bronnen","Koersen en bedrijfscijfers komen van Yahoo Finance en worden drie keer per werkdag ververst. Onwaarschijnlijke waarden worden gemarkeerd. Een automatische test loopt alle schermen na bij elke wijziging.","Yahoo Finance, FMP, SEC.","Yahoo kan fouten bevatten, vooral bij winstgroei over een korte periode of een bijna-nul beginpunt.")}`}
 
 let slMore=false;const SLTOP=()=>PAR.sl_top||10;
+
+let kOpen={};
+function kCard(x,top){const r=x.r;return `<div class="cand"><div class="top2"><div><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0">${r.tk} · ${r.sector}${r.ontdekt?" · ontdekt door scan":r.watch?" · mijn shortlist":""}</div></div></div><ul>${[...x.why].slice(0,4).map(t=>`<li>${t}</li>`).join("")}${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul>${analyse(x,0)}</div>`}
+function kRij(x,sub){const o=!!kOpen[x.r.tk];return `<button class="row" data-kx="${x.r.tk}" aria-expanded="${o}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${sub}</div></span>${x.s>=0?`<span class="pill n num">${f1(x.s)}</span>`:""}<span class="m">${o?"˄":"˅"}</span></button>`}
+function vMaand(kseg){
+ const k=kandidaten(),top=k.slice(0,3);
+ const ov=k.slice(3,9).map(x=>kRij(x,`PEG ${f1(x.r.peg)} · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}${secW[x.r.sector]>35?" · sector vol":""}`)+(kOpen[x.r.tk]?kCard(x):"")).join("");
+ const af=rows.filter(r=>!r.watch&&r.w>=PAR.weg).map(r=>{const x={r,s:-1},o=!!kOpen[r.tk];return kRij(x,`Weging al ${f1(r.w)}%, grens is ${PAR.weg}%`)+(o?`<div class="cand"><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0 0 6px">${r.tk} · ${r.sector}</div><ul><li>Je hebt al ${f1(r.w)}% in dit bedrijf; je grens is ${PAR.weg}%, dus bijkopen past nu niet.</li><li>PEG ${f1(r.peg)}, PE ${f1(r.pe)} tegenover ${f1(r.peh)} historisch</li>${r.roic!=null?`<li>ROIC ${r.roic}%</li>`:""}<li>EPS-groei ${r.eps}% per jaar</li></ul></div>`:"")}).join("");
+ return head("Kandidaten")+kseg+`<p style="margin:8px 0 0;color:var(--mut)">Welke bedrijven zijn nu mooi geprijsd? Dit is een screening op je eigen regels, geen beleggingsadvies.</p>
+ <div class="sec"><h2>Top ${top.length} deze maand</h2>`+top.map(x=>kCard(x)).join("")+`</div>
+ <div class="sec"><h2>Ontdekt door de scan</h2><div class="note" style="margin:0 0 8px">Elke zondag loop ik een groot aantal beursgenoteerde bedrijven langs (bijvoorbeeld S&amp;P 500, Nasdaq-100, AEX/AMX en Stoxx 600) op jouw regels: winstgroei vanaf 12%, ROIC vanaf 15%, PEG onder 2 en geen zware schuld. De beste die nog niet in je lijst staan, komen hier. Voorbeeldcijfers.</div><div class="list">${k.filter(x=>x.r.ontdekt).map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam} <span class="pill n">nieuw</span></div><div class="m">Winst ${x.r.eps}%/jr · ROIC ${x.r.roic}% · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="pill n num">${f1(x.s)}</span></button>`).join("")}</div></div>
+ <div class="sec"><h2>Overige, op volgorde</h2><div class="list">${ov}</div></div>
+ <div class="sec"><h2>Afgevallen</h2><div class="list">${af}</div></div>
+ <div class="note">Tik op een bedrijf om de uitleg te openen. Score = waardering (PEG, PE t.o.v. historie, 52-wekenpositie) plus kwaliteit (ROIC, EPS-groei, FCF-groei, schuld). Een sector boven 35% krijgt 3 punten aftrek. De uitleg per bedrijf is een samenvatting van de cijfers.</div>`+demo}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1603,7 +1617,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dc){docF=b.dataset.dc;render()}
  else if(b.dataset.dk){docC=b.dataset.dk;render()}
  else if(b.dataset.bt){bTab=b.dataset.bt;render()}else if(b.dataset.cc){cSel=b.dataset.cc;render()}else if(b.dataset.kt){kTab=b.dataset.kt;render();window.scrollTo(0,0)}
- else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
+ else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
  else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
