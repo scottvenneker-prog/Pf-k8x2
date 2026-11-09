@@ -933,13 +933,11 @@ function kCard(x,top){const r=x.r;return `<div class="cand"><div class="top2"><d
 function kRij(x,sub){const o=!!kOpen[x.r.tk];return `<button class="row" data-kx="${x.r.tk}" aria-expanded="${o}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${sub}</div></span>${x.s>=0?`<span class="pill n num">${f1(x.s)}</span>`:""}<span class="m">${o?"˄":"˅"}</span></button>`}
 function vMaand(kseg){
  const k=kandV(),eigen=k.filter(x=>!x.r.watch),P=vervangPairs();
- const af=rows.filter(r=>!r.watch&&r.w>=PAR.weg).map(r=>{const x={r,s:-1},o=!!kOpen[r.tk];return kRij(x,`Weging al ${f1(r.w)}%, niet extra bijkopen`)+(o?`<div class="cand"><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0 0 6px">${r.tk} · ${r.sector}</div><ul><li>Je hebt al ${f1(r.w)}% in dit bedrijf; boven je grens van ${PAR.weg}% koop je niet extra bij. Je laat de winnaar doorlopen.</li><li>PEG ${pgT(r.peg)}</li>${r.roic!=null?`<li>ROIC ${r.roic}%</li>`:""}<li>Winstgroei ${epsT(r)} per jaar</li></ul></div>`:"")}).join("");
  const nieuw=P.length?P.map(x=>`<div class="note" style="margin:8px 0 4px"><b>Zou ${x.A.naam} kunnen vervangen</b> (compounder-score ${cscore(x.B).s} tegenover ${cscore(x.A).s} van 10): ${x.w.join(", ")}.</div>`+(k.find(y=>y.r.tk===x.B.tk)?kCard(k.find(y=>y.r.tk===x.B.tk)):"")).join(""):`<div class="tile"><div class="note" style="margin:0">Geen nieuwe naam nodig. Er is op dit moment geen bedrijf dat aanzienlijk beter is dan wat je al hebt.</div></div>`;
  return head("Kandidaten")+kseg+`<p style="margin:8px 0 0;color:var(--mut)">Je eigen bedrijven gaan voor. Een nieuwe naam komt er alleen in als hij duidelijk beter is dan een aandeel dat je al hebt.</p>
  <div class="sec"><h2>Je eigen bedrijven om bij te kopen</h2>${eigen.length?eigen.map(x=>kCard(x)).join(""):`<div class="tile"><div class="note" style="margin:0">Op dit moment past bijkopen bij geen van je bedrijven binnen je regels.</div></div>`}</div>
  <div class="sec"><h2>Nieuwe naam, alleen bij een aanzienlijke upgrade</h2>${nieuw}<div class="note">Eisen: compounder-score minstens 9 van 10, PEG tot 1, ROIC vanaf 20% (ook de laatste 3 jaar vanaf 15%), betrouwbare winstgroei vanaf 20%, en minstens 3 punten hoger op de compounder-score dan het aandeel dat hij vervangt, met hogere winstgroei, hogere ROIC en lagere PEG.</div></div>
- <div class="sec"><h2>Niet extra bijkopen</h2><div class="list">${af}</div></div>
- <div class="note">De score is de compounder-score van 10 punten (groei, ROIC, kasstroom, schuld, waardering). Een aandeel dat je al hebt komt hier bij een goede score en past binnen je regels.</div>`+demo}
+`+demo}
 
 let gOpen={};
 
