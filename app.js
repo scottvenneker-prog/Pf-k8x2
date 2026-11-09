@@ -1142,7 +1142,10 @@ function vDoel(){
  v.sort((a,b)=>ord[a.v.k]-ord[b.v.k]||b.r.w-a.r.w);
  const verk=v.filter(x=>x.v.k==="structureel");
  const vrij=verk.reduce((t,x)=>t+x.r.waarde,0);
- const kd=kandidaten().filter(x=>!verk.some(y=>y.r.tk===x.r.tk)).slice(0,3);
+ const kd=kandidaten().filter(x=>!own.some(y=>y.tk===x.r.tk)).slice(0,3);
+ const dsec=(k,t,m,h)=>{const o=!!dOpen["ds"+k];return `<div class="list" style="margin-top:12px"><button class="row" data-dx="ds${k}" aria-expanded="${o}"><span class="grow"><div class="t">${t}</div><div class="m">${m}</div></span><span class="m">${o?"˄":"˅"}</span></button></div>${o?`<div style="margin:8px 0 0 14px;padding:2px 0 2px 12px;border-left:2px solid var(--line)">${h}</div>`:""}`};
+ const verH=kd.length?`${kd.map((x,i)=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><span class="pill n">Kopen overwegen</span></div><ul><li>${x.why.slice(0,3).join("</li><li>")}</li>${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul></div>`).join("")}<div class="note">Met ${eur(vrij+INLEG)} (opbrengst plus de inleg van deze maand) kun je de bovenste twee of drie kopen en blijft elk aandeel onder 10%.</div>`:`<div class="note">Geen bedrijven buiten je portefeuille die nu aan je regels voldoen.</div>`;
+ const advL=v.filter(x=>["structureel","duur","licht","tijdelijk"].includes(x.v.k));
  const item=x=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><div><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><div class="note" style="margin:6px 0 0">Winst ${x.r.eps}%/jr · koers 5 jr ${f1(cg5(x.r))}%/jr · weging ${f1(x.r.w)}%</div><div class="note num" style="margin:2px 0 0">PE ${f1(x.r.pe)} vs ${f1(x.r.peh)} historisch · PEG ${f1(x.r.peg)}</div></div><span class="pill ${x.v.cl}">${x.v.lab}</span></div><details><summary>Analyse</summary><div class="an"><h4>Waarom</h4><p>${x.v.uitleg}</p><h4>Wat ik zou doen</h4><p>${x.v.wat}</p></div></details></div>`;
 
  const gr=[["Voldoet","g",v.filter(x=>["voldoet","tijdelijk"].includes(x.v.k))],["Volgen","a",v.filter(x=>["duur","licht"].includes(x.v.k))],["Heroverwegen","r",verk]].map(([n,c,l])=>({n,c,l,w:l.reduce((t,x)=>t+x.r.w,0)}));
@@ -1151,9 +1154,9 @@ function vDoel(){
  <div class="split">${gr.map(g=>g.w>0?`<i style="flex:${g.w};background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></i>`:"").join("")}</div>
  <div class="s" style="display:flex;flex-wrap:wrap;gap:4px 14px">${gr.map(g=>`<span><span class="sw3" style="background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></span>${g.n} ${g.l.length} · ${f1(g.w/tw*100)}%</span>`).join("")}</div>
  <div class="s" style="margin-top:8px">${f1(boven)}% van je portefeuille groeit zelf ${DOEL}% of meer.${verk.length?` ${verk.length} aandelen om te heroverwegen${vrij?`, samen ${eur(vrij)}`:""}.`:" Niets om direct te heroverwegen."}</div></div>
- <div class="sec"><h2>Alle bedrijven in één overzicht</h2>${scoreCard(v)}</div>
- <div class="sec"><h2>Advies per aandeel</h2>${v.filter(x=>["structureel","duur","licht","tijdelijk"].includes(x.v.k)).map(item).join("")}</div>
- ${verk.length?`<div class="sec"><h2>Mogelijke vervangers</h2>${kd.map((x,i)=>`<div class="cand" style="margin-bottom:10px"><div class="top2"><button class="back" data-d="${x.r.tk}">${x.r.naam} ›</button><span class="pill n">Kopen overwegen</span></div><ul><li>${x.why.slice(0,3).join("</li><li>")}</li>${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul></div>`).join("")}<div class="note">Met ${eur(vrij+INLEG)} (opbrengst plus de inleg van deze maand) kun je de bovenste twee of drie kopen en blijft elk aandeel onder 10%.</div></div>`:""}
+ ${dsec("a","Alle bedrijven in één overzicht",own.length+" bedrijven",scoreCard(v))}
+ ${dsec("b","Advies per aandeel",advL.length+" aandelen",advL.map(item).join("")||'<div class="note">Geen advies nodig.</div>')}
+ ${verk.length?dsec("c","Mogelijke vervangers",kd.length?kd.length+" bedrijven die je nog niet hebt":"geen",verH):""}
  <div class="note">Dit is een screening die jouw eigen regels toepast op de cijfers. De uitleg is een samenvatting van die cijfers, geen persoonlijk beleggingsadvies. Jij beslist, en belasting en kosten tellen mee bij elke wissel.</div>`+demo}
 function bedrijvenSec(){const l=[...own].sort((a,b)=>b.w-a.w);const top=l.slice(0,7),rest=l.slice(7);
  const items=top.map((r,i)=>({n:r.naam,v:r.w,c:"--c"+(i+1)}));items.push({n:`Overig (${rest.length} bedrijven)`,v:rest.reduce((t,r)=>t+r.w,0),c:"--cx"});
