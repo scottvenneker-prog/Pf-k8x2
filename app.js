@@ -343,6 +343,14 @@ function buildNws(){const L=[],now=new Date(),fmt=d=>d.toLocaleDateString("nl-NL
   const nw=(D.nieuws||[])[0];if(nw&&!r.watch){const d=new Date(nw.tijd);L.push({s:+d,id:"n-"+nw.id,w:ago(d),tk:r.tk,t:"nieuws",h:nw.titel,x:"Bron: "+(nw.bron||"Yahoo")+".",b:"Nieuws",n:(now-d)<864e5?1:0,u:nw.url})}
   if(!r.watch&&r.w>(PF.grenzen&&PF.grenzen.weg||10))L.push({s:+now-2,id:"w-"+r.tk,w:"Nu",tk:r.tk,t:"weging",h:"Weging boven "+(PF.grenzen&&PF.grenzen.weg||10)+"%",x:r.naam+" is "+f1(r.w)+"% van je portefeuille.",b:"Berekend",n:0});
   if(!r.watch&&r.v200!=null&&r.v200<0)L.push({s:+now-3,id:"t-"+r.tk,w:"Nu",tk:r.tk,t:"trend",h:"Koers onder 200-daags gemiddelde",x:"De koers staat "+f1(Math.abs(r.v200))+"% onder het langjarig gemiddelde.",b:"Berekend",n:0})});
+ const KW=/(acquir|acquisition|takeover|merger|buyout|overname|bid for|\bprobe|investigat|lawsuit|\bsues?\b|settlement|fraud|recall|guidance|profit warning|winstwaarschuwing|warns?\b|downgrad|upgrad|price target|koersdoel|dividend cut|cuts dividend|\bceo\b|steps? down|resign|bankrupt|delist|short seller|antitrust|\bfined?\b|sanction|export ban|tariff)/i;
+ L.forEach(x=>{const r=rows.find(z=>z.tk===x.tk),w=r?r.w:0;x.p=0;x.why="";
+  if(x.t==="cijfers"||x.t==="dividend"){const dn=x.dt!=null?Math.floor((x.dt-new Date(now.getFullYear(),now.getMonth(),now.getDate()))/864e5):99;if(dn<=3){x.p=1;x.why=(x.t==="cijfers"?"cijfers":"ex-datum")+(dn<=0?" vandaag":" over "+dn+" dagen")}}
+  else if(x.t==="insider"){if(w>=3){x.p=1;x.why="insider bij een aandeel van "+f1(w)+"%"}}
+  else if(x.t==="weging"){x.p=1;x.why="boven je grens"}
+  else if(x.t==="trend"){if(w>=5){x.p=1;x.why="onder het 200-daags gemiddelde, "+f1(w)+"% van je portefeuille"}}
+  else if(x.t==="nieuws"){const m=KW.exec(x.h||"");if(m){x.p=1;x.why="sleutelwoord: "+m[1].toLowerCase().replace(/\\b/g,"")}else if(w>=5){x.p=1;x.why=f1(w)+"% van je portefeuille"}}
+  else x.p=1});
  const t0=+new Date(now.getFullYear(),now.getMonth(),now.getDate());L.sort((a,b)=>{const fa=a.dt!=null&&a.dt>=t0,fb=b.dt!=null&&b.dt>=t0;if(fa&&fb)return a.dt-b.dt||b.s-a.s;if(fa!==fb)return fa?-1:1;return b.s-a.s});return L}
 function buildTR(){const T={};own.forEach(r=>{const D=r.D||{},t={},d=D.div_reeks||[];if(d.length>=2&&d[d.length-1]<d[d.length-2]*.9)t.divcut=1;if(r.land==="VS"&&(D.ins_verkoop||0)>=3)t.ins=D.ins_verkoop;T[r.tk]=t});return T}
 function cleanDom(){for(const id of ["app","sheet"]){const w=document.createTreeWalker(document.getElementById(id),NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){let t=n.nodeValue;
@@ -469,8 +477,8 @@ function yrRecon(k){try{pfTWR(5);if(!window._PS||!_TD)return null;const ds=_TD,p
  let fs=0;for(let i=b0+1;i<=ke;i++)fs+=fl[i]||0;
  const net=buy-sell,res=eind-begin-net+fs,tw=(typeof _TW!=="undefined"&&_TW[ke]&&_TW[b0])?(_TW[ke]/_TW[b0]-1)*100:null;
  return {y:k,begin,eind,net,res,fs,tw,apx,dz:res/(begin+net/2)*100,ok:begin>=5000}}catch(e){return null}}
-function yrCard(k){const d=JR[k],r=yrRecon(+k),Y=YRS.find(x=>x.y===+k),pcs=v=>v==null||!isFinite(v)?"–":pc(v);
- const hdr=`<div style="font-weight:600;font-size:14px;margin-bottom:6px">${k}${Y&&Y.lopend?" (tot nu)":""}</div>`;
+function yrCard0(k){const d=JR[k],r=yrRecon(+k),Y=YRS.find(x=>x.y===+k),pcs=v=>v==null||!isFinite(v)?"–":pc(v);
+ const hdr="";
  if(Y){const s=Y.res/Y.begin*100,dz=Y.res/(Y.begin+Y.inleg/2)*100,tw=r&&r.tw!=null&&r.apx<0.1?r.tw:null;
   return `<div class="sec"><div class="tile">${hdr}${kvs([["Vermogen 1 jan",eur(Y.begin)],["Vermogen "+(Y.lopend?"nu":"31 dec"),eur(Y.eind)],["Gestort",eur(d.i)],["Opgenomen",eur(d.u)],["Resultaat",eur(Y.res),cs(Y.res)],["Yield op beginvermogen",pcs(s),cs(s)],["Gecorrigeerd voor inleg",pcs(dz),cs(dz)],["Tijdgewogen",pcs(tw),cs(tw)]])}<div class="note" style="margin-top:6px">Vermogen en resultaat zoals DeGiro ze toont (inclusief cash en opties).</div></div></div>`}
  if(!r||r.eind<=0)return `<div class="sec"><div class="tile">${hdr}${kvs([["Gestort",eur(d.i)],["Opgenomen",eur(d.u)]])}<div class="note" style="margin-top:4px">Voor dit jaar ontbreken te veel koersen om het vermogen te reconstrueren.</div></div></div>`;
@@ -968,6 +976,10 @@ function ytdX(r){try{if(!PRIVE||!PRIVE.imp||!PRIVE.hold||!PRIVE.hold[r.tk])retur
  const dv=(PRIVE.imp.acc&&PRIVE.imp.acc.dv)||[];dv.forEach(x=>{if(x[4]!==isin||x[0]<y0)return;const a=x[1]+(x[5]||0);let e=a;if(x[2]&&x[2]!=="EUR"){const rt=fxRate(x[2],x[0]);e=rt?a/rt:0}s+=e});
  return {e:s,p:inv>0?s/inv*100:null}}catch(e){return null}}
 function ytdE(r){const x=ytdX(r);return x?x.e:null}
+
+function yrCard(k){const o=!!dOpen["g"+k],Y=YRS.find(x=>x.y===+k),r=yrRecon(+k),res=Y?Y.res:(r&&r.eind>0?r.res:null),yl=Y?Y.res/Y.begin*100:(r&&r.ok&&r.begin>0?r.res/r.begin*100:null),d=JR[k];
+ const sub=yl!=null&&isFinite(yl)?"yield "+pc(yl):"netto inleg "+eur(d.i-d.u);
+ return `<div class="sec"><div class="list"><button class="row" data-dx="g${k}" aria-expanded="${o}" style="${o?"background:var(--bg);border-left:4px solid var(--c1);":""}"><span class="grow"><div class="t" style="${o?"font-size:17px;font-weight:700":""}">${k}${Y&&Y.lopend?" (tot nu)":""}</div><div class="m">${sub}</div></span>${res!=null&&isFinite(res)?`<span class="num ${res>=0?"pos":"neg"}" style="${o?"font-weight:700":""}">${eur(res)}</span>`:""}<span class="m">${o?"˄":"˅"}</span></button></div>${o?yrCard0(k).replace('<div class="sec">','<div class="sec" style="margin-top:6px">'):""}</div>`}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -975,13 +987,13 @@ const unread=()=>NWS.filter(x=>x.n&&!READ.includes(x.id)).length;
 let wSec="Alles";try{wSec=localStorage.getItem("pf_wsec")||"Alles"}catch(e){}
 let nwsTab="feed",agTab="alles",posView="bedrijf";
 const nameOf=tk=>(rows.find(r=>r.tk===tk)||{naam:tk}).naam;
-function nwsRow(x){const u=x.n&&!READ.includes(x.id);return `<button class="row" data-d="${x.tk}" style="align-items:flex-start"><span class="nd" style="margin-top:7px;${u?"":"visibility:hidden"}"></span><span class="grow"><div class="t" style="white-space:normal">${nameOf(x.tk)}: ${x.h}</div><div class="m" style="margin-top:2px">${x.x}</div><div class="m" style="margin-top:4px"><span class="pill ${TYP[x.t][1]}">${TYP[x.t][0]}</span> ${x.w} · ${x.b}</div></span></button>`}
+function nwsRow(x){const u=x.n&&!READ.includes(x.id);return `<button class="row" data-d="${x.tk}" style="align-items:flex-start"><span class="nd" style="margin-top:7px;${u?"":"visibility:hidden"}"></span><span class="grow"><div class="t" style="white-space:normal">${nameOf(x.tk)}: ${x.h}</div><div class="m" style="margin-top:2px">${x.x}</div><div class="m" style="margin-top:4px"><span class="pill ${TYP[x.t][1]}">${TYP[x.t][0]}</span> ${x.w} · ${x.b}${x.why?" · "+x.why:""}</div></span></button>`}
 function vNws(){
  const seg=`<div class="seg seg2" style="margin-top:12px"><button data-nt="feed" aria-pressed="${nwsTab==="feed"}">Nieuws</button><button data-nt="inst" aria-pressed="${nwsTab==="inst"}">Instellingen</button></div>`;
  if(nwsTab==="inst")return head("Nieuws")+seg+vMeld();
  const nw=NWS.filter(x=>x.n),ev=NWS.filter(x=>!x.n);
- return head("Nieuws")+seg+`<div class="sh" style="margin-top:12px"><span class="note" style="margin:0">${unread()?unread()+" nieuw":"Alles gelezen"}</span>${unread()?'<button class="chip" id="readAll">Alles als gelezen</button>':""}</div><div class="list">${nw.map(nwsRow).join("")}</div><div class="sec"><h2>Eerder</h2><div class="list">${ev.map(nwsRow).join("")}</div></div><div class="note">Voor Europese bedrijven komt dit vooral uit nieuwsbronnen en is het minder volledig dan voor Amerikaanse. De bron staat bij elk bericht. Voorbeeldberichten.</div>`+demo}
-function nieuwStrip(){const l=NWS.filter(x=>x.n&&!READ.includes(x.id)).slice(0,3);if(!l.length)return "";
+ return head("Nieuws")+seg+`<div class="sh" style="margin-top:12px"><span class="note" style="margin:0">${unread()?unread()+" nieuw":"Alles gelezen"}</span>${unread()?'<button class="chip" id="readAll">Alles als gelezen</button>':""}</div><div class="sec"><h2>Belangrijk</h2><div class="list">${NWS.filter(x=>x.p).map(nwsRow).join("")||'<div class="row"><span class="grow m">Niets belangrijks op dit moment.</span></div>'}</div></div><div class="sec"><div class="list"><button class="row" data-dx="nov" aria-expanded="${!!dOpen.nov}"><span class="grow"><div class="t">Overig nieuws</div><div class="m">${NWS.filter(x=>!x.p).length} berichten</div></span><span class="m">${dOpen.nov?"˄":"˅"}</span></button>${dOpen.nov?NWS.filter(x=>!x.p).map(nwsRow).join(""):""}</div></div><div class="note">Voor Europese bedrijven komt dit vooral uit nieuwsbronnen en is het minder volledig dan voor Amerikaanse. De bron staat bij elk bericht. Voorbeeldberichten.</div>`+demo}
+function nieuwStrip(){const l=NWS.filter(x=>x.p&&x.n&&!READ.includes(x.id)).slice(0,3);if(!l.length)return "";
  return `<div class="sec"><div class="sh"><h2>Nieuw</h2><button class="chip" data-t="nws">Alles ›</button></div><div class="list">${l.map(x=>`<button class="row" data-d="${x.tk}"><span class="grow"><div class="t" style="white-space:normal">${nameOf(x.tk)}: ${x.h}</div><div class="m"><span class="pill ${TYP[x.t][1]}">${TYP[x.t][0]}</span> ${x.w}</div></span><span class="m">›</span></button>`).join("")}</div></div>`}
 const TR=buildTR();
 const CLU=[{n:"Tech-cluster",lim:50,u:"Technologie en Halfgeleiders. Deze bewegen meestal samen mee met de markt voor tech en AI.",f:r=>r.sector==="Technologie"||r.sector==="Halfgeleiders"},{n:"Overnemers",lim:25,u:"Bedrijven die steeds kleine bedrijven kopen en houden: Constellation, Topicus, Lumine, Chapters Group, Teqnion en Roko. Zelfde verdienmodel, dus ze doen vaak tegelijk goed of slecht.",f:r=>["CSU.TO","TOI.V","LMN.V","CHG.DE","TEQ.ST","ROKO-B.ST"].includes(r.tk)}];
