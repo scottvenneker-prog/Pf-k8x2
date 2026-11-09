@@ -1171,7 +1171,7 @@ function vDoel(){
  <div class="split">${gr.map(g=>g.w>0?`<i style="flex:${g.w};background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></i>`:"").join("")}</div>
  <div class="s" style="display:flex;flex-wrap:wrap;gap:4px 14px">${gr.map(g=>`<span><span class="sw3" style="background:var(--${g.c==="g"?"good":g.c==="a"?"warn":"bad"})"></span>${g.n} ${g.l.length} · ${f1(g.w/tw*100)}%</span>`).join("")}</div>
  <div class="s" style="margin-top:8px">${f1(boven)}% van je portefeuille groeit zelf ${DOEL}% of meer.${verk.length?` ${verk.length} aandelen om te heroverwegen${vrij?`, samen ${eur(vrij)}`:""}.`:" Niets om direct te heroverwegen."}</div></div>
- ${dsec("a","Alle bedrijven in één overzicht",own.length+" bedrijven",scoreCard(v))}
+ <div class="sec"><h2>Alle bedrijven in één overzicht</h2>${scoreCard(v)}</div>
  ${dsec("b","Advies per aandeel",advL.length+" aandelen",advL.map(item).join("")||'<div class="note">Geen advies nodig.</div>')}
  ${dsec("c","Vervangen",vervangPairs().length+" voorstellen · "+own.length+" van max "+MAXPOS+" aandelen",vervangHTML())}
  <div class="note">Dit is een screening die jouw eigen regels toepast op de cijfers. De uitleg is een samenvatting van die cijfers, geen persoonlijk beleggingsadvies. Jij beslist, en belasting en kosten tellen mee bij elke wissel.</div>`+demo}
