@@ -659,7 +659,7 @@ function kandPick(bud){const lim=r=>CLU.some(c=>c.f(r)&&cluW(c)>=c.lim*.9),nP=Ma
  const alloc=top.map(x=>{const deel=bud/top.length,cap=Math.max(0,.10*(TOT+bud)-(x.r.watch?0:x.r.waarde));return Math.round(Math.min(deel,cap)/50)*50});
  return {top,alloc}}
 
-const UITG={"RACE.MI":"een autofabrikant"};
+const UITG={};
 const RULES={eps:15,roic:15,roicIn:20,peg:1.5,nd:1,mega:40};
 function aiShare(){const W=own.reduce((t,r)=>t+r.w,0)||100;return own.filter(r=>/^AI /.test(MEGA[r.tk]||"")).reduce((t,r)=>t+r.w,0)/W*100}
 function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],cur=r.w,cap=PAR.weg,duur=F&&F.mid<-20;let t,tier,why;
