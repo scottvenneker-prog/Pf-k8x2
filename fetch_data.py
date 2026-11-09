@@ -201,7 +201,7 @@ def one(tk):
     div, price = info.get("dividendRate"), info.get("currentPrice") or px
     ins = insiders(t); cut = (dt.date.today() - dt.timedelta(days=180)).isoformat()
     out = dict(naam=META.get(tk, {}).get("naam") or info.get("shortName") or tk, t=tk, sector=info.get("sector"), land=info.get("country"),
-        px=px, dag=day, pe=pe, fpe=info.get("forwardPE"), pe_hist=sum(pes)/len(pes) if pes else None,
+        px=px, dag=day, pe=pe, fpe=info.get("forwardPE"), pe_hist=sum(pes)/len(pes) if pes else None, pe_n=len(pes),
         peg=(pe / (g * 100)) if pe and g and g > 0 else None, eps_cagr=g, fcf_cagr=cagr(fcf), roic=last(roic),
         bm=last(gp) / last(rev) if last(gp) is not None and last(rev) else None,
         om=last(ebit) / last(rev) if last(ebit) is not None and last(rev) else None,
