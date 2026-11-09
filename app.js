@@ -145,7 +145,8 @@ let sub=null,tab="start",filter="alles",sort="weging",det=null,dtab="analyse",bu
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
 function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
-function head(t){const n=unread();return `<div class="top"><h1>${t}</h1>${t==="Nieuws"||t==="Inzichten"?'<button class="chip" data-t="start">Klaar</button>':`${eyeBtn()}<button class="chip" data-t="inz">Inzichten</button><button class="chip bell" data-t="nws" aria-label="Nieuws${n?", "+n+" nieuw":""}"><svg viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4"/></svg>${n?`<i class="bd">${n}</i>`:""}</button>`}</div>`}
+function head(t){const n=unread();if(t==="Nieuws"||t==="Inzichten")return `<div class="bar"><button class="back" data-t="start">‹ Terug</button></div><div class="top"><h1>${t}</h1></div>`;
+ return `<div class="top"><h1>${t}</h1>${false?'':`${eyeBtn()}<button class="chip" data-t="inz">Inzichten</button><button class="chip bell" data-t="nws" aria-label="Nieuws${n?", "+n+" nieuw":""}"><svg viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4"/></svg>${n?`<i class="bd">${n}</i>`:""}</button>`}</div>`}
 const demo="";
 function weekBlok(){return ""}
 function vStart(){
