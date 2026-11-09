@@ -9,6 +9,7 @@ G = P.get("grenzen", {})
 HELD = set(P["posities"]) | set(P.get("watchlist", {}))
 UA = {"User-Agent": "Mozilla/5.0 (portefeuille-cockpit wekelijkse scan)"}
 MAXN = 30                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
+EPSMAX = .60                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
 RULE = dict(eps=.12, roic=.15, peg=2.0, nd=G.get("nd", 2.5))   # toevoegen
 STAY = dict(eps=.08, roic=.10, peg=2.5, nd=3.5)             # blijven staan (marge, tegen heen-en-weer)
 MINCAP = 10e9
@@ -50,7 +51,11 @@ def clean(o):
 def wiki(url, kolommen, suffix=""):
     r = requests.get(url, headers=UA, timeout=40); r.raise_for_status()
     uit = []
-    for df in pd.read_html(io.StringIO(r.text)):
+    try: tabs = pd.read_html(io.StringIO(r.text))
+    except Exception: tabs = []
+    try: tabs += pd.read_html(io.StringIO(r.text), match="Ticker")
+    except Exception: pass
+    for df in tabs:
         for c in df.columns:
             if str(c).strip().lower() in kolommen:
                 uit = [str(x).strip() for x in df[c].dropna()]
@@ -110,7 +115,7 @@ def metrics(tk):
 
 
 def ok(m, R):
-    return (m["eps"] is not None and m["eps"] >= R["eps"] and m["roic"] is not None and m["roic"] >= R["roic"]
+    return (m["eps"] is not None and R["eps"] <= m["eps"] <= EPSMAX and m["roic"] is not None and m["roic"] >= R["roic"]
             and m["peg"] is not None and 0 < m["peg"] < R["peg"] and (m["nd"] is None or m["nd"] <= R["nd"]))
 
 
