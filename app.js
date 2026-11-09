@@ -1615,7 +1615,7 @@ function vInz(){
   rend:inzRapport()+inzGedrag()+inzMethode()+yearSec()+sekt("Rendement",inzBron()+inzGT()+inzVsSp()+inzWin()+inzDiv()+inzVT()+inzGed()),
   risico:topRisico()+sekt("Risico en spreiding",inzConc()+inzKlap()+inzCorr()+inzOpt()+inzDD())+P.stS+P.stV+aiSec(),
   kwal:topSterkte()+sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
-  bel:sekt("Kosten",inzBronb())+P.ko,
+  bel:P.ko,
   plan:sekt("Deze maand",inzVolg()+inzZone()+inzSeizoen())+P.vo+sekt("Beslislogboek",inzLog())};
  return head("Inzichten")+seg+(T[inzTab]||T.rend)+demo}
 const KC=[["Aankoop","--c1",o=>o.fb||0],["Verkoop","--c2",o=>o.fv||0],["Valuta","--c3",o=>o.fx||0],["Beurstaks","--c4",o=>o.ks||0],["Aansluiting","--c5",o=>o.ka||0],["Rente en overig","--cx",o=>(o.r||0)+(o.ko||0)]];
