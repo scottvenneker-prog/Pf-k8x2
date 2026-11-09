@@ -267,7 +267,7 @@ def one(tk):
         eps=[round(float(x), 2) for x in eps.values], jaren=[str(d.year) for d in eps.index],
         fcf=[round(float(x) / 1e6) for x in fcf.values], fjaren=[str(d.year) for d in fcf.index],
         roic_reeks=[round(float(x), 3) for x in roic.values], rjaren=[str(d.year) for d in roic.index],
-        ins_pct=info.get("heldPercentInsiders"), beta=info.get("beta"), ev_ebitda=info.get("enterpriseToEbitda"),
+        ins_pct=info.get("heldPercentInsiders"), beta=info.get("beta"), ev_ebitda=info.get("enterpriseToEbitda"), roe=info.get("returnOnEquity"), fin=1 if fin else 0,
         px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(histu.resample("W").last().dropna().tail(600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(histu, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
         dil=dil, vol=vol, dd5=dd5, om_reeks=[round(float(x), 3) for x in omr.values], omjaren=[str(d.year) for d in omr.index], er=er,
         nieuws=news(t), insiders=ins[:8],
