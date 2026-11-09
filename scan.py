@@ -14,7 +14,8 @@ MAXN = 30                                            # zoveel bedrijven nemen we
 EPSMAX = .60                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
 RULE = dict(eps=.12, roic=.15, peg=2.0, nd=G.get("nd", 2.5))   # toevoegen
 STAY = dict(eps=.08, roic=.10, peg=2.5, nd=3.5)             # blijven staan (marge, tegen heen-en-weer)
-MINCAP = 10e9
+MINCAP = 2e9                                                  # in dollars: ook middelgrote bedrijven, daar zitten de verborgen parels
+FXUSD = {"USD": 1, "EUR": 1.1, "GBP": 1.3, "SEK": .095, "DKK": .147, "NOK": .092, "CHF": 1.12, "CAD": .73}
 SKIP_SEC = ("Financial Services", "Real Estate")             # ROIC en schuld/EBITDA zeggen daar weinig
 SECMAP = {"Technology": "Technologie", "Financial Services": "Financieel", "Industrials": "Industrie", "Consumer Cyclical": "Consument",
           "Consumer Defensive": "Consument", "Healthcare": "Zorg", "Communication Services": "Communicatie", "Energy": "Energie",
@@ -77,7 +78,7 @@ def wiki(url, kolommen, suffix=""):
 def universe():
     U, per = {}, {}
     bronnen = [("S&P 500", "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", ("symbol", "ticker"), ""),
-               ("Nasdaq-100", "https://en.wikipedia.org/wiki/Nasdaq-100", ("ticker", "symbol"), ""),
+               ("S&P 400", "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies", ("symbol", "ticker"), ""),
                ("AEX", "https://en.wikipedia.org/wiki/AEX_index", ("ticker symbol", "ticker", "symbol"), ".AS"),
                ("AMX", "https://en.wikipedia.org/wiki/AMX_index", ("ticker symbol", "ticker", "symbol"), ".AS")]
     for naam, url, kol, suf in bronnen:
@@ -87,13 +88,31 @@ def universe():
             for x in l: U.setdefault(x, naam)
         except Exception as e:
             print("FOUT universum", naam, e); per[naam] = 0
+    # Europese beurzen via de Yahoo-screener (alles boven MINCAP): Stockholm, Parijs, Frankfurt, Londen, Milaan, Madrid, Kopenhagen, Helsinki, Oslo, Zurich, Brussel
+    for code, naam in (("STO", "Stockholm"), ("PAR", "Parijs"), ("GER", "Frankfurt"), ("LSE", "Londen"), ("MIL", "Milaan"), ("MCE", "Madrid"),
+                       ("CPH", "Kopenhagen"), ("HEL", "Helsinki"), ("OSL", "Oslo"), ("EBS", "Zurich"), ("BRU", "Brussel")):
+        try:
+            q = yf.EquityQuery("and", [yf.EquityQuery("eq", ["exchange", code]), yf.EquityQuery("gt", ["intradaymarketcap", MINCAP])])
+            l, off = [], 0
+            while off < 750:
+                r = yf.screen(q, offset=off, size=250, sortField="intradaymarketcap", sortAsc=False)
+                qs = (r or {}).get("quotes") or []
+                l += [x["symbol"] for x in qs if x.get("symbol")]
+                if len(qs) < 250: break
+                off += 250
+            per[naam] = len(l)
+            for x in l: U.setdefault(x, naam)
+        except Exception as e:
+            print("FOUT screener", naam, e); per[naam] = 0
     return U, per
 
 
 def metrics(tk):
     t = yf.Ticker(tk); info = t.info or {}
     mc = info.get("marketCap"); sec = info.get("sector")
-    if not mc or mc < MINCAP or not sec or sec in SKIP_SEC: return "skip"
+    cu0 = info.get("financialCurrency") or info.get("currency")
+    if cu0 == "GBp": cu0 = "GBP"
+    if not mc or mc * FXUSD.get(cu0, 1) < MINCAP or not sec or sec in SKIP_SEC: return "skip"
     roe = info.get("returnOnEquity")
     if roe is not None and roe == roe and roe < .08: return "skip"
     cur, fcur = info.get("currency"), info.get("financialCurrency")
