@@ -18,7 +18,7 @@ function mk(tk,M,w){const D=DR[tk]||{};
  const r1x=v=>v==null?null:Math.round(v*10)/10;let eps=pct(D.eps_cagr);const fcf=pct(D.fcf_cagr),roic=pct(D.roic),pe=D.pe>0?D.pe:null,peh=D.pe_hist>0?D.pe_hist:null,nd=D.nd_ebitda==null?null:D.nd_ebitda;
  let epsF=false;if(SERIAL.includes(tk)&&fcf!=null&&(eps==null||eps<fcf)){eps=fcf;epsF=true}
  const pos=pct(D.pos52),yld=pct(D.yld)||0,dag=pct(D.dag)||0;
- const o={pen:D.pe_n||null,tk,naam:M.naam||D.naam||tk,sector:M.sector||D.sector||"Onbekend",land:M.land||D.land||"",munt:M.munt||"EUR",qty:0,waarde:0,inkoop:0,dag,eps,fcf,roic,pe,peh,nd,pos,yld,watch:w,epsF,D,M,eigenaar:M.eigenaar||null};
+ const o={ettm:D.eps_ttm!=null?{v:D.eps_ttm,d:D.eps_ttm_d,fy:D.eps_cagr_fy,lj:D.jaren&&D.jaren[D.jaren.length-1],le:D.eps&&D.eps[D.eps.length-1]}:null,pen:D.pe_n||null,tk,naam:M.naam||D.naam||tk,sector:M.sector||D.sector||"Onbekend",land:M.land||D.land||"",munt:M.munt||"EUR",qty:0,waarde:0,inkoop:0,dag,eps,fcf,roic,pe,peh,nd,pos,yld,watch:w,epsF,D,M,eigenaar:M.eigenaar||null};
  o.peg=D.peg>0?D.peg:(pe&&eps>0?pe/eps:99);o.peg=Math.round(o.peg*100)/100;
  o.dq=[];if(eps!=null&&eps>100)o.dq.push('winstgroei');if(fcf!=null&&fcf>100)o.dq.push('kasstroomgroei');if(roic!=null&&roic>150)o.dq.push('ROIC');if(pe!=null&&pe>150)o.dq.push('PE');
  if(eps!=null&&eps>40&&pe>0)o.peg=Math.round(pe/40*100)/100;
@@ -307,7 +307,7 @@ function vDet(){
  const r=rows.find(x=>x.tk===det);const t=dtab;
  const tabs=[["analyse","Analyse"],["kwaliteit","Kwaliteit"],["trend","Trend"],["ai","AI"],["waardering","Waardering"],["moat","Moat en risico"],["dividend","Dividend"],["nieuws","Nieuws & insiders"],["positie","Positie"]];
  let body="";
- if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=dqTile(r)+body;
+ if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=dqTile(r)+ettmTile(r)+body;
  if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${r.eps}%</b><em>${r.epsF?"kasstroomgroei, overnames vertekenen de winst":"doel: 12% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
  ${((r.D||{}).eps||[]).length>1?`<div class="chart"><h3>Winst per aandeel (EPS)</h3><p>Per jaar, in de munt van het bedrijf</p>${barsR(r.D.eps,r.D.jaren)}</div>`:""}${((r.D||{}).fcf||[]).length>1?`<div class="chart"><h3>Vrije kasstroom (FCF)</h3><p>Per jaar, in miljoenen</p>${barsR(r.D.fcf,r.D.fjaren)}</div>`:""}${kwExtra(r)}`;
  if(t==="trend")body=`<div class="facts"><div class="fact"><small>Trend</small><b><span class="pill ${r.tc}">${r.trend}</span></b><em>50- en 200-daags gemiddelde</em></div><div class="fact"><small>Analisten koersdoel</small><b class="num ${cls(r.kd)}">${pc(r.kd,0)}</b><em>gemiddelde verwachting</em></div><div class="fact"><small>T.o.v. 50-daags</small><b class="num ${cls(r.v50)}">${pc(r.v50)}</b></div><div class="fact"><small>T.o.v. 200-daags</small><b class="num ${cls(r.v200)}">${pc(r.v200)}</b></div></div>
@@ -831,6 +831,8 @@ function gedragSub(){const L=gedragLijst(),G=gsel(),nieuw=gMode==='nieuw';
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-gm]");if(!b)return;gMode=b.dataset.gm;try{localStorage.setItem("pf_gmode",gMode)}catch(x){}render()});
 document.addEventListener("change",e=>{if(e.target.id!=="gstart")return;const v=e.target.value;if(/^\d{4}-\d{2}-\d{2}$/.test(v)){gStart=v;try{localStorage.setItem("pf_gstart",v)}catch(x){}render()}});
 
+function ettmTile(r){const e=r.ettm;if(!e)return "";const f=n=>n==null?"–":(n>0?"+":n<0?"−":"")+Math.abs(n*100).toFixed(1).replace(".",",")+"%",p2=n=>n.toFixed(2).replace(".",","),dm=d=>d?d.slice(8,10)+"-"+d.slice(5,7)+"-"+d.slice(0,4):"";
+ return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c1)"><div class="lbl">Winst per aandeel: boekjaar en laatste 12 maanden</div><div class="kv" style="grid-template-columns:1fr 1fr"><div><small>Boekjaar ${e.lj||""}</small><b class="num">${e.le!=null?p2(e.le):"–"}</b></div><div><small>Laatste 12 maanden</small><b class="num">${p2(e.v)}</b></div></div><div class="note">Winstgroei per jaar: ${f(e.fy)} alleen over de volle boekjaren, ${f(r.eps/100)} als je de laatste 12 maanden (tot ${dm(e.d)}) meetelt. De app gebruikt het tweede cijfer.</div></div>`}
 function dqTile(r){const d=r.dq||[];if(!d.length)return "";return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c2)"><div class="lbl">Data onzeker</div><div>De ${d.join(", ")} van dit bedrijf ${d.length>1?"zijn":"is"} onwaarschijnlijk hoog (meestal een basiseffect: een jaar met bijna geen winst of kasstroom als begin). Ik reken er voorzichtig mee: de groei telt in de score niet voor het volle punt${d.includes("winstgroei")?", en de PEG rekent met maximaal 40% groei":""}.</div></div>`}
 function dqNames(){return rows.filter(r=>!r.watch&&r.dq&&r.dq.length).map(r=>r.naam)}
 

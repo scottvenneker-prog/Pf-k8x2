@@ -195,6 +195,16 @@ def one(tk):
                    div_jaren=[str(i) for i in full.index], div_laatste_datum=str(dv.index[-1])[:10], div_laatste_bedrag=round(float(dv.iloc[-1]), 4))
     rate = 1.0 if cur == "EUR" else FX.get(cur)
     pe, g = info.get("trailingPE"), cagr(eps)
+    g_fy, eps_ttm, ttm_d = g, None, None
+    try:   # winstgroei t/m de laatste 12 maanden, als die recenter zijn dan het laatste boekjaar (zelfde valuta, redelijke verhouding)
+        ttm, mq, s_ = info.get("trailingEps"), info.get("mostRecentQuarter"), eps.dropna()
+        if same and ttm and mq and len(s_) >= 2 and ttm > 0 and float(s_.iloc[-1]) > 0:
+            qd = pd.Timestamp(mq, unit="s")
+            if .25 <= ttm / float(s_.iloc[-1]) <= 4 and qd > s_.index[-1].tz_localize(None) + pd.Timedelta(days=60):
+                p_ = s_[s_ > 0]; yrs = (qd - p_.index[0].tz_localize(None)).days / 365.25
+                if yrs >= 1.5:
+                    g = float((ttm / float(p_.iloc[0])) ** (1 / yrs) - 1); eps_ttm = round(float(ttm), 2); ttm_d = str(qd)[:10]
+    except Exception as e: print("TTM", tk, e)
     fin = info.get("sector") == "Financial Services"
     nd, eb, mc = last(row(bs, "Net Debt")), last(ebitda), info.get("marketCap")
     lo, hi = info.get("fiftyTwoWeekLow"), info.get("fiftyTwoWeekHigh")
@@ -202,7 +212,7 @@ def one(tk):
     ins = insiders(t); cut = (dt.date.today() - dt.timedelta(days=180)).isoformat()
     out = dict(naam=META.get(tk, {}).get("naam") or info.get("shortName") or tk, t=tk, sector=info.get("sector"), land=info.get("country"),
         px=px, dag=day, pe=pe, fpe=info.get("forwardPE"), pe_hist=sum(pes)/len(pes) if pes else None, pe_n=len(pes),
-        peg=(pe / (g * 100)) if pe and g and g > 0 else None, eps_cagr=g, fcf_cagr=cagr(fcf), roic=last(roic),
+        peg=(pe / (g * 100)) if pe and g and g > 0 else None, eps_cagr=g, eps_cagr_fy=g_fy, eps_ttm=eps_ttm, eps_ttm_d=ttm_d, fcf_cagr=cagr(fcf), roic=last(roic),
         bm=last(gp) / last(rev) if last(gp) is not None and last(rev) else None,
         om=last(ebit) / last(rev) if last(ebit) is not None and last(rev) else None,
         nd_ebitda=nd / eb if (nd is not None and eb and eb > 0 and not fin) else None,
