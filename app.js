@@ -537,9 +537,9 @@ function vGuru(){const G=(DATA.gurus)||{},ks=Object.keys(G);
  ks.map(k=>{const g=G[k],T=g.top,rw=(x,mode)=>{const o=x.o==null?null:x.o,dp=o==null?null:x.p-o;return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--line)"><span>${x.n}${tag(x.n)}</span><span class="num" style="white-space:nowrap">${mode==="n"?f1(x.p)+"%":mode==="v"?f1(o==null?x.p:o)+"% → 0":f1(o)+"% → "+f1(x.p)+"% <b class=\""+(dp>=0?"pos":"neg")+"\">("+(dp>=0?"+":"−")+f1(Math.abs(dp))+" pt)</b>"}</span></div>`};
  const sec=(t,l,mode,note)=>l.length?`<div class="lbl" style="margin-top:10px">${t} (${l.length})</div>${note?`<div class="note" style="margin:0 0 2px">${note}</div>`:""}${l.slice(0,8).map(x=>rw(x,mode)).join("")}`:"";
  const nw=T.filter(x=>x.d==="nieuw"),meer=T.filter(x=>x.d==="meer").sort((a,b)=>(b.p-b.o)-(a.p-a.o)),min=T.filter(x=>x.d==="minder").sort((a,b)=>(a.p-a.o)-(b.p-b.o)),vk=(g.verkocht||[]).map(x=>({n:x.n,o:x.o==null?x.p:x.o,p:0}));
- return `<div class="tile" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b>${k}</b><span class="note" style="margin:0">kwartaal ${g.periode}</span></div><div class="note" style="margin:2px 0 4px">${g.aantal} posities · gemeld op ${g.gemeld}${g.vorig?" · vergeleken met "+g.vorig:""}</div>
+ const go=!!gOpen[k];return `<div class="tile" style="margin-top:10px"><button data-gx="${k}" aria-expanded="${go}" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px"><b>${k}</b><span class="note" style="margin:0">kwartaal ${g.periode} ${go?"˄":"˅"}</span></div><div class="note" style="margin:2px 0 4px">${g.aantal} posities · gemeld op ${g.gemeld}${g.vorig?" · vergeleken met "+g.vorig:""}${go?"":" · tik voor details"}</div></button>${go?`
  ${sec("Nieuw gekocht",nw,"n","Aandelen die vorig kwartaal nog niet in de portefeuille zaten. Gewicht van de portefeuille.")}${sec("Vergroot",meer,"c","Gewicht in de portefeuille: vorig kwartaal → nu. Dit zegt iets over de verhouding, niet exact over het aantal gekochte aandelen.")}${sec("Verkleind",min,"c")}${sec("Helemaal verkocht",vk,"v")}
- <div class="lbl" style="margin-top:10px">Grootste posities nu</div>${T.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--line)"><span>${x.n}${tag(x.n)}</span><b class="num">${f1(x.p)}%</b></div>`).join("")}</div>`}).join("")}
+ <div class="lbl" style="margin-top:10px">Grootste posities nu</div>${T.slice(0,8).map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--line)"><span>${x.n}${tag(x.n)}</span><b class="num">${f1(x.p)}%</b></div>`).join("")}`:""}</div>`}).join("")}
 
 /* ---- jaarbrieven ---- */
 const BRIEVEN=[
@@ -893,6 +893,8 @@ function vMaand(kseg){
  <div class="sec"><h2>Overige, op volgorde</h2><div class="list">${ov}</div></div>
  <div class="sec"><h2>Afgevallen</h2><div class="list">${af}</div></div>
  <div class="note">Tik op een bedrijf om de uitleg te openen. Score = waardering (PEG, PE t.o.v. historie, 52-wekenpositie) plus kwaliteit (ROIC, EPS-groei, FCF-groei, schuld). Een sector boven 35% krijgt 3 punten aftrek. De uitleg per bedrijf is een samenvatting van de cijfers.</div>`+demo}
+
+let gOpen={};
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1617,7 +1619,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dc){docF=b.dataset.dc;render()}
  else if(b.dataset.dk){docC=b.dataset.dk;render()}
  else if(b.dataset.bt){bTab=b.dataset.bt;render()}else if(b.dataset.cc){cSel=b.dataset.cc;render()}else if(b.dataset.kt){kTab=b.dataset.kt;render();window.scrollTo(0,0)}
- else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
+ else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
  else if(b.dataset.go==="par"){det=null;sub=null;tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
