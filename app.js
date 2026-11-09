@@ -908,13 +908,13 @@ function scL(k){const l=k.filter(x=>x.r.ontdekt).slice(0,5);if(!l.length)return 
 function scNote2(){const n=rows.filter(r=>r.ontdekt).length;return n>5?`<div class="note">Plus ${n-5} andere door de scan gevonden bedrijven. Die staan in je Shortlist.</div>`:""}
 
 /* ---- Agenda: dividend, echt ---- */
-function divCome(){const out=[],now=new Date(),ty=now.getFullYear();
+function divCome(all){const out=[],now=new Date(),ty=now.getFullYear();
  if(!PRIVE)return out;
  own.forEach(r=>{const D=r.D||{};if(!r.qty)return;const rate=r.munt==="EUR"?1:D.rate;if(!rate)return;
-  let yd=null;const pk=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+"T12:00:00");return isNaN(d)?null:d};
-  const pay=pk(D.div_volgende),ex=pk(D.ex_div);yd=pay&&pay>now?pay:ex&&ex>now?ex:null;
-  if(yd&&yd.getFullYear()===ty&&D.div_laatste_bedrag)out.push({r,dt:yd,eur:D.div_laatste_bedrag*r.qty/rate,y:true});
-  (D.div_12m||[]).forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd.getFullYear()===ty&&(!yd||Math.abs(dd-yd)>45*864e5))out.push({r,dt:dd,eur:a*r.qty/rate})})});
+  const pk=s=>{if(!s)return null;const d=new Date(String(s).slice(0,10)+"T12:00:00");return isNaN(d)?null:d};
+  const pay=pk(D.div_volgende),ex=pk(D.ex_div),yd=pay&&pay>now?pay:ex&&ex>now?ex:null,h=D.div_12m||[],reg=h.length>=3&&D.div_laatste_bedrag,lim=all?new Date(now.getTime()+200*864e5):new Date(ty,11,31,23,59);
+  if(yd&&yd<=lim&&D.div_laatste_bedrag)out.push({r,dt:yd,ex:ex&&ex>now?ex:null,eur:D.div_laatste_bedrag*r.qty/rate,y:true});
+  h.forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd<=lim&&(!yd||Math.abs(dd-yd)>45*864e5))out.push({r,dt:dd,eur:(reg?D.div_laatste_bedrag:a)*r.qty/rate})})});
  return out.sort((a,b)=>a.dt-b.dt)}
 function divGot(){const m=Array(12).fill(0),L=[],ty=String(new Date().getFullYear());let ok=false;
  const nm=(isin,pn)=>{const h=Object.entries((PRIVE&&PRIVE.hold)||{}).find(([k,v])=>v.isin===isin);const r=h&&rows.find(x=>x.tk===h[0]);return r?r.naam:(pn||"").toLowerCase().replace(/(^|[\s(-])([a-zà-ÿ])/g,(a,b,c)=>b+c.toUpperCase()).replace(/\b(Inc|Corp|Co|Plc|Nv|Se|Ab|Sa|Ag)\.?$/i,"").trim()};
@@ -932,8 +932,8 @@ function vDiv(){
  const G=divGot(),come=divCome(),got=G.m.reduce((s,x)=>s+x,0),exp=come.reduce((s,x)=>s+x.eur,0),tot=got+exp;
  const geenDat=own.some(r=>r.yld>0&&r.qty&&!(r.D&&r.D.div_12m));
  return head("Dividend")+`<div class="tile" style="margin-top:8px">${kvs([["Ontvangen dit jaar",eur(got)],["Nog te ontvangen",eur(exp)],["Verwacht heel jaar",eur(tot)]])}<div class="note" style="margin:6px 0 0">Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting. Is er al een datum aangekondigd (Yahoo), dan gebruik ik die met het laatste dividend per aandeel. De rest is wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div></div>
- ${divChart(G.m,come)}<div class="sec"><div class="list"><button class="row" data-dx="come" aria-expanded="${!!dOpen.come}"><span class="grow"><div class="t">Nog te ontvangen</div><div class="m">${come.length} uitbetalingen</div></span><span class="num">${eur(exp)}</span><span class="m">${dOpen.come?"˄":"˅"}</span></button>${dOpen.come?(come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${x.y?"aangekondigd, ":"verwacht rond "}${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note" style="padding:8px 12px">Dit jaar verwacht ik niets meer.</div>'):""}</div></div>`+
- (geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">De datum is de verwachte ex-datum van vorig jaar plus een jaar; de uitbetaling zelf volgt meestal een paar weken later. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`+demo}
+ ${divChart(G.m,come)}<div class="sec"><div class="list"><button class="row" data-dx="come" aria-expanded="${!!dOpen.come}"><span class="grow"><div class="t">Nog te ontvangen</div><div class="m">${come.length} uitbetalingen</div></span><span class="num">${eur(exp)}</span><span class="m">${dOpen.come?"˄":"˅"}</span></button>${dOpen.come?(come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${divLbl(x)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note" style="padding:8px 12px">Dit jaar verwacht ik niets meer.</div>'):""}</div></div>`+
+ (geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">Verwacht rond: de uitbetaaldatum van vorig jaar plus een jaar. Bedrijven die vier keer per jaar uitkeren reken ik met hun laatste bedrag, de rest met het bedrag van vorig jaar. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`+demo}
 
 let sOpen={};
 
@@ -945,7 +945,9 @@ function divMSub(){const G=divGot(),come=divCome(),mn=["Januari","Februari","Maa
  const sr=(n,sub,v,dim)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid var(--line);${dim?"opacity:.7;":""}"><span style="min-width:0"><span style="font-size:14px">${n}</span><span class="m" style="font-size:12px;display:block">${sub}</span></span><span class="num" style="font-size:14px;white-space:nowrap">${v}</span></div>`;
  return `<div class="list">${mn.map((n,i)=>{const got=G.L.filter(x=>+x.d.slice(5,7)-1===i).sort((a,b)=>a.d<b.d?-1:1),ex=come.filter(x=>x.dt.getMonth()===i),tg=got.reduce((s,x)=>s+x.eur,0),te=ex.reduce((s,x)=>s+x.eur,0);
   if(!got.length&&!ex.length)return "";const o=!!dOpen["m"+i];
-  return `<button class="row" data-dx="m${i}" aria-expanded="${o}" style="${o?"background:var(--bg);border-left:4px solid var(--c1);":""}"><span class="grow"><div class="t" style="${o?"font-size:17px;font-weight:700":""}">${n}</div><div class="m">${got.length+ex.length} uitbetalingen${te>0?" · deels verwacht":""}</div></span><span class="num" style="${o?"font-weight:700":""}">${eur(tg+te)}</span><span class="m">${o?"˄":"˅"}</span></button>${o?`<div style="margin:0 0 10px 14px;padding:2px 12px 6px 12px;border-left:2px solid var(--line)">${got.map(x=>sr(x.n,fd(x.d)+", ontvangen",eur(x.eur,2))).join("")}${ex.map(x=>sr(x.r.naam,(x.y?"aangekondigd, ":"verwacht rond ")+dstr(x.dt),eur(x.eur,2),true)).join("")}</div>`:""}`}).join("")}</div><div class="note">Ontvangen bedragen zijn bruto, uit je rekeningoverzicht, omgerekend naar euro op de datum van uitbetaling. Verwachte bedragen (gedimd) kunnen afwijken.</div>`}
+  return `<button class="row" data-dx="m${i}" aria-expanded="${o}" style="${o?"background:var(--bg);border-left:4px solid var(--c1);":""}"><span class="grow"><div class="t" style="${o?"font-size:17px;font-weight:700":""}">${n}</div><div class="m">${got.length+ex.length} uitbetalingen${te>0?" · deels verwacht":""}</div></span><span class="num" style="${o?"font-weight:700":""}">${eur(tg+te)}</span><span class="m">${o?"˄":"˅"}</span></button>${o?`<div style="margin:0 0 10px 14px;padding:2px 12px 6px 12px;border-left:2px solid var(--line)">${got.map(x=>sr(x.n,fd(x.d)+", ontvangen",eur(x.eur,2))).join("")}${ex.map(x=>sr(x.r.naam,divLbl(x),eur(x.eur,2),true)).join("")}</div>`:""}`}).join("")}</div><div class="note">Ontvangen bedragen zijn bruto, uit je rekeningoverzicht, omgerekend naar euro op de datum van uitbetaling. Verwachte bedragen (gedimd) kunnen afwijken.</div>`}
+
+function divLbl(x){return x.y?(x.ex?"ex-datum "+dstr(x.ex)+", uitbetaling "+dstr(x.dt):"aangekondigd, uitbetaling "+dstr(x.dt)):"verwacht rond "+dstr(x.dt)}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1004,7 +1006,7 @@ function vAgenda(){
  if(agTab==="dividend"){const o=vDiv();return head("Agenda")+seg+o.slice(head("Dividend").length)}
  const ev=[];
  if(agTab!=="dividend")own.forEach(r=>{const d=earn(r);if(d-new Date()<150*864e5)ev.push({d,r,t:"cijfers"})});
- if(agTab==="alles")own.filter(r=>r.D&&r.D.ex_div&&daysTo(r.D.ex_div)>=0).forEach(r=>ev.push({d:new Date(r.D.ex_div.slice(0,10)+"T12:00:00"),r,t:"dividend",inc:r.qty*(r.D.div_laatste_bedrag||0)/(r.D.rate||1)}));
+ if(agTab==="alles")divCome(true).forEach(x=>ev.push({d:x.dt,r:x.r,t:"dividend",inc:x.eur}));
  ev.sort((a,b)=>a.d-b.d);for(let i=ev.length-1;i>=0;i--)if(ev[i].d<T0)ev.splice(i,1);
  const groups={};ev.forEach(e=>{const w=Math.max(0,Math.floor((e.d-T0)/(7*864e5)));(groups[w]=groups[w]||[]).push(e)});
  const wl=w=>w===0?"Deze week":w===1?"Volgende week":"Over "+w+" weken";
