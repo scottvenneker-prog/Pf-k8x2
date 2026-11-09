@@ -568,7 +568,7 @@ def uitzonderlijk(rows):
                 out[r["tk"]] = dict(tk=r["tk"], naam=r.get("naam"), datum=nu.date().isoformat(), ernst="hoog", auto=True,
                     reden=f"{len(hits)} berichten in 48 uur" + (f" en koers {dag*100:+.1f}% vandaag" if dag <= -.08 else ""),
                     titel=hits[0]["titel"], tekst="Meerdere nieuwsberichten in korte tijd over een ingrijpend onderwerp. Lees de bronnen zelf voor de details.",
-                    advies="Geen extra geld tot duidelijk is wat er speelt.", bronnen=[dict(naam=h.get("bron") or "bron", url=h.get("url")) for h in hits[:3] if h.get("url")])
+                    bronnen=[dict(naam=h.get("bron") or "bron", url=h.get("url")) for h in hits[:3] if h.get("url")])
                 notify(f"uit-{r['tk']}-{nu.date()}", f"{r.get('naam')}: uitzonderlijk nieuws", hits[0]["titel"], hits[0].get("url"))
         except Exception as e: print("uitzonderlijk", r.get("tk"), e)
     return list(out.values())

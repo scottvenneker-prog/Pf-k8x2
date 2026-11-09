@@ -669,8 +669,7 @@ function streef(r){try{const v=verdict0(r),z=cscore(r),F=fairV(r),M=MOAT[r.tk],c
  else {t=3;tier="vasthouden";why="voldoet aan je doel, geen reden voor meer"}
  if(M&&M.s==="Zwak"&&t>cur){t=cur;tier="vasthouden";why="heeft een zwakke moat en is klein, dus geen extra geld"}
  if(tier==="uitbouwen"){const rm=rmin3(r);let nee=null,exc=null;
-  if(brkVoor(r.tk).some(x=>x.ernst!=="laag"))nee="staat onder uitzonderlijk nieuws ("+brkVoor(r.tk)[0].titel.toLowerCase()+"), dus geen extra geld tot de uitkomst bekend is";
-  else if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
+  if(UITG[r.tk])nee="is "+UITG[r.tk]+", en die sector wil je niet in je portefeuille, dus geen extra geld";
   else if(v.lab==="Volgen"||v.lab==="Behouden, let op")nee="staat op "+v.lab.toLowerCase()+", dus geen extra geld";
   else if(r.eps!=null&&r.eps<RULES.eps)nee="groeit onder je doel van "+RULES.eps+"%, dus geen extra geld";
   else if(r.roic!=null&&r.roic<RULES.roic)nee="heeft een ROIC van "+f1(r.roic)+"%, onder je grens van "+RULES.roic+"%, dus geen extra geld";
@@ -1173,7 +1172,7 @@ try{window.__parse={parseAccount,parseTrx}}catch(e){}
 function brkAll(){try{const L=(window.DATA&&window.DATA.uitzonderlijk)||[],nu=Date.now();return L.filter(x=>x&&x.tk&&x.datum&&(nu-new Date(x.datum).getTime())<=21*864e5)}catch(e){return []}}
 function brkVoor(tk){return brkAll().filter(x=>x.tk===tk)}
 function brkKaart(x,kort){const nm=(rows.find(r=>r.tk===x.tk)||{}).naam||x.naam||x.tk;const dt=new Date(x.datum).toLocaleDateString("nl-NL",{day:"numeric",month:"long"});
- return `<div class="tile" style="margin-top:10px;border-left:4px solid var(--bad,#c0392b)"><div class="lbl" style="color:var(--bad,#c0392b);font-weight:700">Uitzonderlijk nieuws · ${nm} · ${dt}</div><div class="t" style="margin-top:4px;white-space:normal">${x.titel}</div><div class="note" style="margin:6px 0 0">${kort?x.tekst.split(". ")[0]+". Tik voor de details.":x.tekst}</div>${kort?"":`<div class="note" style="margin:8px 0 0"><b>Wat het betekent voor je advies:</b> ${x.advies||"Geen extra geld tot de uitkomst bekend is."}</div>${(x.bronnen||[]).length?`<div class="note" style="margin:8px 0 0">Bronnen: ${x.bronnen.map(b=>`<a href="${b.url}" target="_blank" rel="noopener">${b.naam}</a>`).join(" · ")}</div>`:""}`}${x.auto?`<div class="note" style="margin:6px 0 0">Automatisch herkend: ${x.reden||""}</div>`:""}</div>`}
+ return `<div class="tile" style="margin-top:10px;border-left:4px solid var(--bad,#c0392b)"><div class="lbl" style="color:var(--bad,#c0392b);font-weight:700">Uitzonderlijk nieuws · ${nm} · ${dt}</div><div class="t" style="margin-top:4px;white-space:normal">${x.titel}</div><div class="note" style="margin:6px 0 0">${kort?x.tekst.split(". ")[0]+". Tik voor de details.":x.tekst}</div>${kort?"":`<div class="note" style="margin:8px 0 0">Dit nieuws staat er als toevoeging. Het advies en de cijfers van de app zijn er niet door aangepast; de afweging is aan jou.</div>${(x.bronnen||[]).length?`<div class="note" style="margin:8px 0 0">Bronnen: ${x.bronnen.map(b=>`<a href="${b.url}" target="_blank" rel="noopener">${b.naam}</a>`).join(" · ")}</div>`:""}`}${x.auto?`<div class="note" style="margin:6px 0 0">Automatisch herkend: ${x.reden||""}</div>`:""}</div>`}
 function brkStart(){const L=brkAll();if(!L.length)return "";return `<div class="sec" style="margin-top:8px">${L.map(x=>`<button data-d="${x.tk}" style="display:block;width:100%;text-align:left;border:0;background:none;padding:0">${brkKaart(x,true)}</button>`).join("")}</div>`}
 function brkDet(r){const L=brkVoor(r.tk);return L.length?`<div class="sec" style="margin-top:8px">${L.map(x=>brkKaart(x,false)).join("")}</div>`:""}
 const NWS=buildNws();
