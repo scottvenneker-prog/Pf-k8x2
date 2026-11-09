@@ -141,7 +141,7 @@ function bars(cagr,label,base){const n=5;const arr=[];let e=100;for(let i=n-1;i>
  const yrs=[2021,2022,2023,2024,2025];
  return `<div class="bars">${v.map((x,i)=>`<div><span class="num">${Math.round(x)}</span><i style="height:${Math.max(6,x/mx*72)}px"></i></div>`).join("")}</div><div class="axis">${yrs.map(y=>`<span>${y}</span>`).join("")}</div>`}
 // state
-let sub=null,tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
+let subStack=[],sub=null,tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
 function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
@@ -1691,10 +1691,10 @@ document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
  if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;render();window.scrollTo(0,0)}
  else if(b.dataset.d){sub=null;det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
- else if(b.id==="bk"){if(det)det=null;else sub=null;render()}
+ else if(b.id==="bk"){if(det)det=null;else sub=subStack.length?subStack.pop():null;render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
  else if(b.dataset.del!==undefined){STORT.splice(+b.dataset.del,1);saveS();render()}
- else if(b.dataset.s){sub=b.dataset.s;render();document.getElementById("sheet").scrollTop=0}
+ else if(b.dataset.s){if(sub)subStack.push(sub);else subStack=[];sub=b.dataset.s;render();document.getElementById("sheet").scrollTop=0}
  else if(b.dataset.p){per=b.dataset.p;render()}
  else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
  else if(b.dataset.pv){posView=b.dataset.pv;render()}
