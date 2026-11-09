@@ -12,8 +12,8 @@ HELD |= {DUBBEL[x] for x in HELD if x in DUBBEL}
 UA = {"User-Agent": "Mozilla/5.0 (portefeuille-cockpit wekelijkse scan)"}
 MAXN = 30                                            # zoveel bedrijven nemen we volledig mee in de dagelijkse data
 EPSMAX = .60                                                 # boven 60% per jaar is meestal een basiseffect (herstel vanaf bijna geen winst)
-RULE = dict(eps=.12, roic=.15, peg=2.0, nd=G.get("nd", 2.5))   # toevoegen
-STAY = dict(eps=.08, roic=.10, peg=2.5, nd=3.5)             # blijven staan (marge, tegen heen-en-weer)
+RULE = dict(eps=.15, roic=.20, peg=1.5, nd=G.get("nd", 2.5), rmin=.15)   # toevoegen
+STAY = dict(eps=.10, roic=.15, peg=2.0, nd=3.5, rmin=.10)             # blijven staan (marge, tegen heen-en-weer)
 MINCAP = 2e9                                                  # in dollars: ook middelgrote bedrijven, daar zitten de verborgen parels
 FXUSD = {"USD": 1, "EUR": 1.1, "GBP": 1.3, "SEK": .095, "DKK": .147, "NOK": .092, "CHF": 1.12, "CAD": .73}
 SKIP_SEC = ("Financial Services", "Real Estate")             # ROIC en schuld/EBITDA zeggen daar weinig
@@ -129,16 +129,17 @@ def metrics(tk):
     ic = row(bs, "Invested Capital")
     roic_s = ((ebit * (1 - tax)) / ic).dropna()
     roic = float(roic_s.iloc[-1]) if len(roic_s) else None
+    rmin = float(roic_s.iloc[-3:].min()) if len(roic_s) >= 2 else None   # stabiel: ook de jaren ervoor hoog
     nd, eb = row(bs, "Net Debt"), row(inc, "EBITDA")
     ndv = float(nd.iloc[-1] / eb.iloc[-1]) if len(nd) and len(eb) and eb.iloc[-1] > 0 else None
     ind = info.get("industry") or ""
     sector = "Halfgeleiders" if "Semiconductor" in ind else SECMAP.get(sec, sec)
     return dict(tk=tk, naam=info.get("shortName") or info.get("longName") or tk, sector=sector, land=LAND.get(info.get("country"), info.get("country")),
-                munt="GBP" if cur == "GBp" else cur, eps=g, roic=roic, peg=pe / (g * 100) if g > 0 else None, nd=ndv, pe=pe)
+                munt="GBP" if cur == "GBp" else cur, eps=g, roic=roic, rmin=rmin, peg=pe / (g * 100) if g > 0 else None, nd=ndv, pe=pe)
 
 
 def ok(m, R):
-    return (m["eps"] is not None and R["eps"] <= m["eps"] <= EPSMAX and m["roic"] is not None and m["roic"] >= R["roic"]
+    return (m["eps"] is not None and R["eps"] <= m["eps"] <= EPSMAX and m["roic"] is not None and m["roic"] >= R["roic"] and m.get("rmin") is not None and m["rmin"] >= R["rmin"]
             and m["peg"] is not None and 0 < m["peg"] < R["peg"] and (m["nd"] is None or m["nd"] <= R["nd"]))
 
 
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         log_nw.append(dict(t="info", n="Eerste scan", tk=None, d=dnl, iso=today.isoformat(), m=f"{len(nieuw)} bedrijven voldoen aan je regels en staan op de lijst."))
     log = (log_nw + log)[:80]
     out = dict(datum=today.isoformat(), universum=len(U), per_index=per, gescand=gescand, voldoen=len(voldoet), max=MAXN,
-               regels=dict(eps=RULE["eps"], roic=RULE["roic"], peg=RULE["peg"], nd=RULE["nd"]), lijst=list(nieuw.values()), fails=fails, log=log)
+               regels=dict(eps=RULE["eps"], roic=RULE["roic"], peg=RULE["peg"], nd=RULE["nd"], rmin=RULE["rmin"], stay=STAY), lijst=list(nieuw.values()), fails=fails, log=log)
     json.dump(clean(out), open("scan.json", "w"), ensure_ascii=False, indent=1)
     print("klaar", len(nieuw), "lijst,", len(log_nw), "wijzigingen")
     topic = os.environ.get("NTFY_TOPIC")
