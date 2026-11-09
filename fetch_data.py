@@ -138,9 +138,17 @@ def surprises(t, hist):
     except Exception: pass
     return out
 
+def despike(s):
+    """Haalt losse foute koersen weg (bijv. 0,01 in plaats van 0,55 bij Carclo): een punt dat meer dan 10 keer boven of 10 keer onder het lopende midden ligt."""
+    try:
+        if len(s) < 30: return s
+        med = s.rolling(41, center=True, min_periods=10).median()
+        return s[(s / med).between(.1, 10) | med.isna()]
+    except Exception: return s
+
 def one(tk):
     t = yf.Ticker(tk); info = t.info or {}
-    raw = t.history(period="max", auto_adjust=True)["Close"]
+    raw = despike(t.history(period="max", auto_adjust=True)["Close"].dropna())
     px = float(raw.iloc[-1]); day = float(px / raw.iloc[-2] - 1)
     cur = "GBP" if info.get("currency") == "GBp" else info.get("currency")
     hist = raw / 100 if info.get("currency") == "GBp" else raw          # pence -> ponden
@@ -161,7 +169,7 @@ def one(tk):
                 except Exception: pass
     hl = float(hist.iloc[-1])
     try:   # koersen zonder dividendcorrectie (wel splitsingen) voor waardering in het verleden; de dividenden zitten apart in de kasstromen
-        ru = t.history(period="max", auto_adjust=False)["Close"].dropna()
+        ru = despike(t.history(period="max", auto_adjust=False)["Close"].dropna())
         histu = ru / 100 if info.get("currency") == "GBp" else ru
         if len(histu) < 10: histu = hist
     except Exception: histu = hist

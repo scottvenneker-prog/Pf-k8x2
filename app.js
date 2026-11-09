@@ -328,7 +328,7 @@ function xd(r){if(r.x)return r.x;const D=r.D||{},x={},e=r.eigenaar;
  x.buy=r.land==="VS"&&D.ins_koop!=null?D.ins_koop:null;x.sell=r.land==="VS"&&D.ins_verkoop!=null?D.ins_verkoop:null;
  x.dil=pct(D.dil);x.opm=pct(D.om);const o0=(D.om_reeks||[])[0];x.opm5=o0==null?null:o0*100;
  x.fy=pct(D.fcf_yield);x.ev=D.ev_ebitda==null?null:Math.round(D.ev_ebitda);
- x.beta=D.beta==null?null:+D.beta.toFixed(2);x.vol=pct(D.vol);x.dd=pct(D.dd5);x.cor=null;
+ x.beta=D.beta==null?null:+D.beta.toFixed(2);x.vol=pct(D.vol);x.dd=pct(D.dd5);x.cor=corRest(r);
  x.er=(D.er||[]).slice(0,4).map(q=>({s:q.s,k:q.k==null?0:q.k*100}));
  x.erS=x.er.length?x.er.reduce((t,q)=>t+q.s,0)/x.er.length:null;x.erK=x.er.length?x.er.reduce((t,q)=>t+q.k,0)/x.er.length:null;
  return r.x=x}
@@ -838,6 +838,11 @@ function ettmTile(r){const e=r.ettm,fw=r.D&&r.D.eps_fwd!=null&&isFinite(r.D.eps_
  const top=e?`<div class="kv" style="grid-template-columns:1fr 1fr">${cell("Winst per aandeel, boekjaar "+(e.lj||""),e.le!=null?p2(e.le):"–")}${cell("Laatste 12 maanden",p2(e.v),"tot "+dm(e.d))}</div>`:"";
  const grp=`<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px">${e?cell("Alleen boekjaren",f(e.fy),"gerapporteerd"):cell("Per jaar",f(eps),"gerapporteerd")}${e?cell("Incl. laatste 12 mnd",f(eps),"gerapporteerd"):""}${cell("Verwacht komend jaar",f(fw),"analisten, schatting")}</div>`;
  return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c1)"><div class="lbl">Winstgroei per jaar: terug- en vooruitkijken</div>${top}${grp}<div class="note">${e?"De app rekent met het cijfer incl. de laatste 12 maanden. ":""}De eerste cijfers zijn gerapporteerd. De verwachting is een schatting van analisten voor het komende jaar en telt nergens in de scores mee; ze geeft alleen houvast naar de toekomst.</div></div>`}
+function corRest(r){try{const M=own.filter(o=>o.D&&o.D.px_e&&o.D.px_e.length>60&&o.waarde>0),me=M.find(o=>o.tk===r.tk);if(!me)return null;const W=156,
+ ret=o=>{const a=o.D.px_e,n=a.length,x=[];for(let i=W;i>=1;i--){const k=n-i,j=k-1;{const v=j>=0&&a[j]>0&&a[k]>0?a[k]/a[j]-1:null;x.push(v!=null&&Math.abs(v)<.6?v:null)}}return x},R=ret(me),oth=M.filter(o=>o!==me).map(o=>({x:ret(o),w:o.waarde}));
+ const A=[],B=[];for(let i=0;i<W;i++){if(R[i]==null)continue;let s=0,t=0;oth.forEach(o=>{if(o.x[i]!=null){s+=o.x[i]*o.w;t+=o.w}});if(t>0){A.push(R[i]);B.push(s/t)}}
+ const n=A.length;if(n<52)return null;const ma=A.reduce((s,v)=>s+v,0)/n,mb=B.reduce((s,v)=>s+v,0)/n;let c=0,va=0,vb=0;for(let i=0;i<n;i++){c+=(A[i]-ma)*(B[i]-mb);va+=(A[i]-ma)**2;vb+=(B[i]-mb)**2}
+ return va>0&&vb>0?+(c/Math.sqrt(va*vb)).toFixed(2):null}catch(e){return null}}
 function dqTile(r){const d=r.dq||[];if(!d.length)return "";return `<div class="tile" style="margin-top:10px;border-left:3px solid var(--c2)"><div class="lbl">Data onzeker</div><div>De ${d.join(", ")} van dit bedrijf ${d.length>1?"zijn":"is"} onwaarschijnlijk hoog (meestal een basiseffect: een jaar met bijna geen winst of kasstroom als begin). Ik reken er voorzichtig mee: de groei telt in de score niet voor het volle punt${d.includes("winstgroei")?", en de PEG rekent met maximaal 40% groei":""}.</div></div>`}
 function dqNames(){return rows.filter(r=>!r.watch&&r.dq&&r.dq.length).map(r=>r.naam)}
 
