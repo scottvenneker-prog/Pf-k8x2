@@ -199,7 +199,7 @@ function ask(msg){return new Promise(res=>{$("app").innerHTML='<div class="sec" 
  $("pwf").onsubmit=e=>{e.preventDefault();res($("pwi").value)};$("pws").onclick=()=>res(null)})}
 async function go(){
  say("Laden…");
- try{window.DATA=await j("data.json");window.PF=await j("portfolio.json");try{window.BEO=await j("beoordelingen.json")}catch(e){window.BEO={}}}catch(e){say("Kon de gegevens niet laden ("+e.message+"). Probeer het later opnieuw.");return}
+ try{window.DATA=await j("data.json");window.PF=await j("portfolio.json");try{window.BEO=await j("beoordelingen.json")}catch(e){window.BEO={}}try{window.OVN=await j("overnemers.json")}catch(e){window.OVN={}}}catch(e){say("Kon de gegevens niet laden ("+e.message+"). Probeer het later opnieuw.");return}
  let enc=null;try{const r=await fetch("prive.enc?v="+Date.now());if(r.ok)enc=await r.json()}catch(e){}
  if(enc){let pw=lsG("pf_pw"),msg="";
   for(;;){if(!pw){pw=await ask(msg);if(pw==null)break}
