@@ -204,7 +204,8 @@ def one(tk):
         yr = dv.groupby(dv.index.year).sum(); full = yr[yr.index < dt.date.today().year].tail(6)
         ttm = float(dv[dv.index > pd.Timestamp.now(tz=dv.index.tz) - pd.Timedelta(days=365)].sum())
         dvd = dict(div_ttm=ttm, div_cagr=cagr(full) if len(full) >= 3 else None, div_reeks=[round(float(x), 3) for x in full.values],
-                   div_jaren=[str(i) for i in full.index], div_laatste_datum=str(dv.index[-1])[:10], div_laatste_bedrag=round(float(dv.iloc[-1]), 4))
+                   div_jaren=[str(i) for i in full.index], div_laatste_datum=str(dv.index[-1])[:10], div_laatste_bedrag=round(float(dv.iloc[-1]), 4),
+                   div_12m=[[str(i)[:10], round(float(v), 4)] for i, v in dv[dv.index > pd.Timestamp.now(tz=dv.index.tz) - pd.Timedelta(days=400)].items()])
     # omzet, uitkering en kasstroomkwaliteit (gerapporteerde cijfers, in de rapportagevaluta)
     ni = row(inc, "Net Income Common Stockholders", "Net Income")
     rv = rev.dropna() if rev is not None else pd.Series(dtype=float)

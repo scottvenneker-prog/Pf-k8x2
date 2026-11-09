@@ -906,6 +906,29 @@ function scanNote(){const S=window.DATA&&window.DATA.scan;if(!S||!S.datum)return
 
 function scL(k){const l=k.filter(x=>x.r.ontdekt).slice(0,5);if(!l.length)return '<div class="note">Nog geen resultaten. De eerste scan draait komende zondag.</div>';return l.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam} <span class="pill n">nieuw</span></div><div class="m">Winst ${x.r.eps}%/jr · ROIC ${x.r.roic}% · PE ${f1(x.r.pe)} vs ${f1(x.r.peh)}</div></span><span class="pill n num">${f1(x.s)}</span></button>`).join("")}
 function scNote2(){const n=rows.filter(r=>r.ontdekt).length;return n>5?`<div class="note">Plus ${n-5} andere door de scan gevonden bedrijven. Die staan in je Shortlist.</div>`:""}
+
+/* ---- Agenda: dividend, echt ---- */
+function divCome(){const out=[],now=new Date(),ty=now.getFullYear();
+ if(!PRIVE)return out;
+ own.forEach(r=>{const D=r.D||{},h=D.div_12m;if(!h||!r.qty)return;const rate=r.munt==="EUR"?1:D.rate;if(!rate)return;
+  h.forEach(([d,a])=>{const dd=new Date(d+"T12:00:00");dd.setFullYear(dd.getFullYear()+1);if(dd>now&&dd.getFullYear()===ty)out.push({r,dt:dd,eur:a*r.qty/rate})})});
+ return out.sort((a,b)=>a.dt-b.dt)}
+function divGot(){const m=Array(12).fill(0),ty=String(new Date().getFullYear());let ok=false;
+ try{for(const [d,t,a,cu] of IMP.acc.ev){if(t!=="v"||d.slice(0,4)!==ty)continue;ok=true;let e=a;if(cu&&cu!=="EUR"){const rt=fxRate(cu,d);e=rt?a/rt:0}m[+d.slice(5,7)-1]+=e}}catch(e){}
+ return {m,ok}}
+function divChart(got,come){const mn=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"],ex=Array(12).fill(0);come.forEach(x=>ex[x.dt.getMonth()]+=x.eur);
+ const W=320,H=160,top=18,bot=H-24,mx=Math.max(...got.map((g,i)=>g+ex[i]),1),y=v=>bot-(v/mx)*(bot-top),bw=W/12;
+ const f=v=>hide?"":Math.round(v);
+ return `<div class="sec"><h2>Dividend per maand, heel ${new Date().getFullYear()}</h2><div class="tile"><svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Dividend per maand">${got.map((g,i)=>{const x=i*bw+bw*.16,w=bw*.68,hg=g>0?Math.max(2,bot-y(g)):0,he=ex[i]>0?Math.max(2,bot-y(ex[i])):0,t=g+ex[i];
+  return `${g>0?`<rect x="${x}" y="${bot-hg}" width="${w}" height="${hg}" rx="2" fill="var(--c1)"/>`:""}${ex[i]>0?`<rect x="${x}" y="${bot-hg-he}" width="${w}" height="${he}" rx="2" fill="var(--c1)" fill-opacity=".28" stroke="var(--c1)" stroke-dasharray="3 2"/>`:""}${t>0&&!hide?`<text x="${x+w/2}" y="${bot-hg-he-3}" text-anchor="middle" font-size="9">${f(t)}</text>`:""}<text x="${x+w/2}" y="${H-8}" text-anchor="middle" font-size="9">${mn[i]}</text>`}).join("")}<line class="g" x1="0" x2="${W}" y1="${bot}" y2="${bot}"/></svg>
+ <div class="note" style="margin:4px 0 0"><span style="color:var(--c1)">■</span> ontvangen (echt, bruto) &nbsp; <span style="color:var(--c1);opacity:.5">▨</span> nog te ontvangen (verwacht)</div></div></div>`}
+function vDiv(){
+ if(!PRIVE)return head("Dividend")+`<div class="note" style="margin-top:12px">Het dividend van je portefeuille zie je zodra je met je wachtwoord bent ingelogd.</div>`+demo;
+ const G=divGot(),come=divCome(),got=G.m.reduce((s,x)=>s+x,0),exp=come.reduce((s,x)=>s+x.eur,0),tot=got+exp;
+ const geenDat=own.some(r=>r.yld>0&&r.qty&&!(r.D&&r.D.div_12m));
+ return head("Dividend")+`<div class="tile" style="margin-top:8px">${kvs([["Ontvangen dit jaar",eur(got)],["Nog te ontvangen",eur(exp)],["Verwacht heel jaar",eur(tot)]])}<div class="note" style="margin:6px 0 0">Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting: wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div></div>
+ ${divChart(G.m,come)}<div class="sec"><h2>Nog te ontvangen</h2><div class="list">${come.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">rond ${dstr(x.dt)}</div></span><span class="num">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note">Dit jaar verwacht ik niets meer.</div>'}</div></div>`+
+ (geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">De datum is de verwachte ex-datum van vorig jaar plus een jaar; de uitbetaling zelf volgt meestal een paar weken later. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`+demo}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
