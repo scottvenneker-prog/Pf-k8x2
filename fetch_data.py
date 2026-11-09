@@ -251,7 +251,11 @@ def one(tk):
     lo, hi = info.get("fiftyTwoWeekLow"), info.get("fiftyTwoWeekHigh")
     div, price = info.get("dividendRate"), info.get("currentPrice") or px
     ins = insiders(t); cut = (dt.date.today() - dt.timedelta(days=180)).isoformat()
-    out = dict(naam=META.get(tk, {}).get("naam") or info.get("shortName") or tk, t=tk, sector=info.get("sector"), land=info.get("country"),
+    _om = (info.get("longBusinessSummary") or "").replace("\n", " ").strip()
+    if len(_om) > 330:
+        _k = _om[:330]; _p = _k.rfind(". ")
+        _om = (_k[:_p + 1] if _p > 120 else _k.rstrip() + "…")
+    out = dict(omschr=_om or None, naam=META.get(tk, {}).get("naam") or info.get("shortName") or tk, t=tk, sector=info.get("sector"), land=info.get("country"),
         px=px, dag=day, pe=pe, fpe=info.get("forwardPE"), pe_hist=sum(pes)/len(pes) if pes else None, pe_n=len(pes),
         peg=(pe / (g * 100)) if pe and g and g > 0 else None, rev_cagr=rev_g, rev_cagr_ttm=rev_gt, rev_reeks=[round(float(x) / 1e6) for x in rv.values], rev_jaren=[str(d.year) for d in rv.index], fin_munt=info.get("financialCurrency") or cur, fcf_marge=fcf_marge, fcf_conv=fcf_conv, uit_fcf=uit_fcf, uit_ni=uit_ni, ni_last=(round(nl_ / 1e6) if nl_ is not None else None), eps_cagr=g, eps_cagr_fy=g_fy, eps_ttm=eps_ttm, eps_ttm_d=ttm_d, fcf_cagr=cagr(fcf), roic=last(roic),
         bm=last(gp) / last(rev) if last(gp) is not None and last(rev) else None,
