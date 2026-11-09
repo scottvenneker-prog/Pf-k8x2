@@ -1,0 +1,33 @@
+name: scan
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 0"
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: update
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt lxml
+      - run: python scan.py
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - run: |
+          git config user.name bot
+          git config user.email bot@users.noreply.github.com
+          git add scan.json
+          git commit -m "scan" || exit 0
+          git pull --rebase
+          git push
+      - run: gh workflow run update.yml
+        env:
+          GH_TOKEN: ${{ github.token }}

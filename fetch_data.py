@@ -6,6 +6,10 @@ P = json.load(open("portfolio.json"))
 H, WLD = P["posities"], P.get("watchlist", {})   # H: ticker -> {naam, sector, land, weging, rend, ...}; alleen percentages
 WL = list(WLD)
 META = {**WLD, **H}
+SC = json.load(open("scan.json")) if os.path.exists("scan.json") else {}   # wekelijkse scan: kandidaten die aan je regels voldoen
+SCT = [x["tk"] for x in SC.get("lijst", []) if x["tk"] not in META]
+for x in SC.get("lijst", []):
+    if x["tk"] in SCT: META[x["tk"]] = dict(naam=x.get("naam"), sector=x.get("sector"), land=x.get("land"), munt=x.get("munt"))
 FALL = {"USD": 1.1143, "GBP": 0.8344, "SEK": 11.025, "CAD": 1.5743}  # reserve-wisselkoersen (per 1 EUR)
 FIRST = not os.path.exists("seen.json")
 SEEN = set() if FIRST else set(json.load(open("seen.json")))
@@ -327,7 +331,7 @@ def fmp_check(r, v):
     return dict(v, afw=afw)
 
 rows, today = [], dt.date.today().isoformat()
-for tk in list(H) + [w for w in WL if w not in H]:
+for tk in list(H) + [w for w in WL if w not in H] + SCT:
     try:
         r = one(tk)
         r["fmp"] = fmp_check(r, fmp_data(tk))
@@ -360,6 +364,7 @@ for tk in list(H) + [w for w in WL if w not in H]:
                        f'{i["wie"]} ({i["functie"]}) {i["type"]} {i["aandelen"]:,} aandelen op {i["datum"]}')
         else:
             r["watch"] = True
+            if tk in SCT: r["ontdekt"] = True
         m = META.get(tk, {})   # jouw indeling gaat voor op Yahoo
         r.update(sector=m.get("sector") or r.get("sector"), land=m.get("land") or r.get("land"), munt=m.get("munt"),
                  eigenaar=m.get("eigenaar"), ai=m.get("ai"))
@@ -517,7 +522,7 @@ for gname, cik in GURUS.items():
 SEEN.add("13f:init")
 
 json.dump(clean(dict(bijgewerkt=dt.datetime.now(dt.timezone.utc).isoformat(), versie=2, doel_cagr=P.get("doel_cagr", 15),
-          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU)),
+          grenzen=P.get("grenzen"), clusters=P.get("clusters"), vastgezet=P.get("vastgezet", []), overig=P.get("overig"), rows=rows, indices=INDICES, verkocht=VERK, gurus=GRU, scan=SC)),
           open("data.json", "w"), default=str)
 json.dump(sorted(SEEN)[-4000:], open("seen.json", "w"))
 if FMPK: json.dump(FC, open("fmp_cache.json", "w"))
