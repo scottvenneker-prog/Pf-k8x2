@@ -176,6 +176,7 @@ function slBlok(){const w=rows.filter(r=>r.watch),risk=w.filter(slRisk),ad=SLOG.
  <details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;color:var(--fg)"><span style="font-weight:600">Wat is er veranderd</span><span class="m">${SLOG.length} wijzigingen ›</span></summary><div class="list" style="border:0">${SLOG.map(x=>`<div class="row" style="align-items:flex-start"><span class="dot ${x.t==="add"?"g":"r"}" style="margin-top:6px"></span><span class="grow"><div class="t" style="white-space:normal">${x.t==="add"?"Erbij":"Eraf"}: ${x.n} <span class="m">· ${x.d}</span></div><div class="m" style="white-space:normal">${x.m}</div></span></div>`).join("")}</div></details>`}
 function vPos(){
  if(filter==="trans")return vTrans();
+ if(filter==="moeder")return vMoeder();
  if(filter==="closed")return vClosed();
  if(filter==="opties")return vOpt();
  let l=rows.filter(r=>filter==="watch"?r.watch:!r.watch);
@@ -352,8 +353,8 @@ function feeEst(r,amt){const t=feeTab(),f=t[r.munt]!=null?t[r.munt]:5,st=r.munt=
 function feeTxt(x,amt){if(!(amt>0))return "";const c=feeEst(x.r,amt);return `Aankoopkosten ongeveer ${eur(Math.round(c.t))} (${(c.t/amt*100).toFixed(1).replace(".",",")}%)${c.st?", inclusief 0,5% Britse zegelbelasting":""}`}
 
 let cSort="laatste",_CL=null;
-const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"],["trans","Transacties"]];
-function posfl(){return PRIVE&&PRIVE.imp&&PRIVE.imp.trx?POSFL:POSFL.filter(x=>x[0]!=="trans")}
+const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"],["trans","Transacties"],["moeder","Moeder"]];
+function posfl(){return POSFL.filter(x=>x[0]==="moeder"?!!(PRIVE&&PRIVE.moeder&&PRIVE.moeder.length):x[0]==="trans"?!!(PRIVE&&PRIVE.imp&&PRIVE.imp.trx):true)}
 function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL;
  const fl={};((PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[]).forEach(x=>{(fl[x[4]]=fl[x[4]]||[]).push([x[0],x[6]])});
  PRIVE.sold.forEach(s=>{if(!(s.buy>0))return;if(/\s[CP]\d+(\.\d+)?\s\d{2}[A-Z]{3}\d{2}$/.test((PRIVE.names&&PRIVE.names[s.isin])||""))return;const res=s.sell-s.buy;let xi=null;
@@ -362,6 +363,16 @@ function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL
   const f2=(fl[s.isin]||[]).slice().sort((a,b)=>a[0]<b[0]?-1:1),na=afterSale(s.isin,s.laatste),vs=vsSp(f2,new Date(new Date(s.laatste).getTime()+864e5),0.01,s.laatste);
   _CL.push({isin:s.isin,naam:(PRIVE.names&&PRIVE.names[s.isin])||s.isin,eerste:s.eerste,laatste:s.laatste,n:s.n,buy:s.buy,sell:s.sell,res:res,pct:res/s.buy*100,xirr:xi==null||!isFinite(xi)||Math.abs(xi)>1000?null:xi,na:na,gemist:gm,vs:vs})});
  return _CL}
+
+function vMoeder(){const M=(PRIVE&&PRIVE.moeder)||[],X={};((DATA.extra)||[]).forEach(x=>X[x.t]=x);
+ const L=M.map(([tk,q])=>{const d=DR[tk]||X[tk]||{},ko=d.koers_eur,dv=ko!=null&&d.yld!=null?ko*d.yld:null;
+  return {tk,q,n:(DR[tk]&&DR[tk].naam)||d.naam||tk,ko,dv,w:ko!=null?q*ko:null,dt:dv!=null?q*dv:null}}).sort((a,b)=>(b.w||0)-(a.w||0));
+ const tw=L.reduce((s,x)=>s+(x.w||0),0),td=L.reduce((s,x)=>s+(x.dt||0),0),mis=L.filter(x=>x.w==null).length,q1=n=>n.toLocaleString("nl-NL",{maximumFractionDigits:1});
+ return head("Posities")+`<div class="chips">${posfl().map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
+ <div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr 1fr"><div><small>Totale waarde</small><b class="num">${eur(tw)}</b></div><div><small>Dividend per jaar</small><b class="num">${eur(td)}</b></div><div><small>Dividendrendement</small><b class="num">${tw>0?(td/tw*100).toFixed(2).replace(".",",")+"%":"–"}</b></div></div>
+ <div class="note">Het deel van je moeder. Dividend is wat de afgelopen 12 maanden is uitbetaald, bruto (voor bronbelasting), omgerekend naar euro's.${mis?" Voor "+mis+" aandeel(en) is geen koers beschikbaar.":""}</div></div>`+
+ L.map(x=>`<div class="card"><div class="h"><div class="nm">${x.n}<span style="white-space:normal;display:block">${q1(x.q)} ${x.q===1?"aandeel":"aandelen"}<br>koers ${x.ko!=null?eur(x.ko,2):"–"}</span></div><div style="text-align:right"><div class="num" style="font-weight:600">${eur(x.w)}</div><div class="num" style="font-size:12.5px;opacity:.75">${x.dv>0?"dividend "+eur(x.dt,2)+" per jaar":"geen dividend"}</div>${x.dv>0?`<div class="num" style="font-size:12px;opacity:.6">${eur(x.dv,2)} per aandeel</div>`:""}</div></div></div>`).join("")+
+ `<div class="tile" style="margin-top:12px"><div class="kv" style="grid-template-columns:1fr 1fr"><div><small>Totale waarde</small><b class="num">${eur(tw)}</b></div><div><small>Totaal dividend per jaar</small><b class="num">${eur(td)}</b></div></div><div class="note">Per maand ongeveer ${eur(td/12)}.</div></div>`}
 
 let tQ=null,_TR=null;
 function transData(){if(_TR)return _TR;_TR={Q:{},keys:[]};try{
