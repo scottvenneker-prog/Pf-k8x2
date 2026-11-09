@@ -7,8 +7,8 @@
   "AEX": 25,
   "AMX": 25
  },
- "gescand": 524,
- "voldoen": 37,
+ "gescand": 521,
+ "voldoen": 36,
  "max": 30,
  "regels": {
   "eps": 0.12,
@@ -112,20 +112,6 @@
    "peg": 0.5225245072464957,
    "nd": 0.21634992858021246,
    "pe": 20.81713,
-   "sinds": "2026-11-09",
-   "bron": "S&P 500"
-  },
-  {
-   "tk": "GOOG",
-   "naam": "Alphabet Inc.",
-   "sector": "Communicatie",
-   "land": "VS",
-   "munt": "USD",
-   "eps": 0.3333790189024399,
-   "roic": 0.287466726719964,
-   "peg": 0.44473800567332245,
-   "nd": 0.08765453961859013,
-   "pe": 14.826632,
    "sinds": "2026-11-09",
    "bron": "S&P 500"
   },
@@ -436,10 +422,40 @@
    "pe": 24.52205,
    "sinds": "2026-11-09",
    "bron": "S&P 500"
+  },
+  {
+   "tk": "HUBB",
+   "naam": "Hubbell Inc",
+   "sector": "Industrie",
+   "land": "VS",
+   "munt": "USD",
+   "eps": 0.20598323592666556,
+   "roic": 0.1527562891808271,
+   "peg": 1.2228026657939945,
+   "nd": 1.3264953573742173,
+   "pe": 25.187685,
+   "sinds": "2026-11-09",
+   "bron": "S&P 500"
   }
  ],
  "fails": {},
  "log": [
+  {
+   "t": "rm",
+   "n": "Alphabet Inc.",
+   "tk": "GOOG",
+   "d": "9 nov",
+   "iso": "2026-11-09",
+   "m": "Zit al in je portefeuille of lijst, onder een andere aandelensoort."
+  },
+  {
+   "t": "add",
+   "n": "Hubbell Inc",
+   "tk": "HUBB",
+   "d": "9 nov",
+   "iso": "2026-11-09",
+   "m": "Voldoet aan al je regels: winstgroei 21%, ROIC 15%, PEG 1,2."
+  },
   {
    "t": "info",
    "n": "Eerste scan",
