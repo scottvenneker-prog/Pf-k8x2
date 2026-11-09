@@ -222,6 +222,10 @@ def one(tk):
     fcf_conv = fl_ / nl_ if (fl_ is not None and nl_ and nl_ > 0) else None
     uit_fcf = dl_ / fl_ if (dl_ is not None and fl_ and fl_ > 0 and dl_ > 0) else None
     uit_ni = dl_ / nl_ if (dl_ is not None and nl_ and nl_ > 0 and dl_ > 0) else None
+    ind_ = info.get("industry") or ""   # bij banken, verzekeraars en beleggingsmaatschappijen zeggen omzet en vrije kasstroom weinig
+    if any(k in ind_ for k in ("Insurance", "Banks", "Asset Management", "Capital Markets")):
+        fcf_marge = fcf_conv = uit_fcf = None
+        if any(k in ind_ for k in ("Insurance", "Asset Management")): rev_g = rev_gt = None
     rate = 1.0 if cur == "EUR" else FX.get(cur)
     pe, g = info.get("trailingPE"), cagr(eps)
     g_fy, eps_ttm, ttm_d = g, None, None
