@@ -1550,7 +1550,7 @@ function aiSec(){const cats=[[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraa
 let OPT=PRIVE&&PRIVE.opt?Object.assign({},PRIVE.opt):{n:0,k:0,p:0,d:""};try{const o=JSON.parse(localStorage.getItem("pf_opt")||"null");if(o&&o.k>0)OPT=o}catch(e){}
 const saveOpt=()=>{try{localStorage.setItem("pf_opt",JSON.stringify(OPT))}catch(e){}};
 const wAvg=f=>{const l=own.filter(r=>f(r)!=null&&isFinite(f(r)));const s=l.reduce((t,r)=>t+r.w,0);return s?l.reduce((t,r)=>t+r.w*f(r),0)/s:null};
-const fold=(t,key,body,vk)=>`<details class="tile" style="margin-top:8px;padding:0"><summary style="padding:12px;list-style:none;display:flex;justify-content:space-between;gap:10px;color:var(--fg)"><span style="font-weight:600">${t}</span><span class="num ${vk||""}" style="color:${vk?"":"var(--mut)"};text-align:right">${key}</span></summary><div style="padding:0 12px 12px">${body}</div></details>`;
+const fold=(t,key,body,vk)=>`<!--F--><details class="tile fo" style="margin-top:8px;padding:0"><summary class="fs"><span class="ft">${t}</span><span class="fk ${vk||""}">${key}</span></summary><div class="fb" style="padding:0 12px 12px">${body}</div></details><!--/F-->`;
 const kvs=(a,c=3)=>`<div class="kv" style="grid-template-columns:repeat(${c},1fr)">${a.map(([l,v,k])=>`<div><small>${l}</small><b class="num ${k||""}">${v}</b></div>`).join("")}</div>`;
 const nt=t=>`<div class="note" style="margin-top:8px">${t}</div>`;
 const miniBars=(vals,labs,unit)=>{const W=320,H=100,B=16,T=12,mx=Math.max(...vals,1),bw=W/vals.length;return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img"><line class="g" x1="0" x2="${W}" y1="${H-B}" y2="${H-B}"/>${vals.map((v,i)=>{const h=v/mx*(H-B-T),x=i*bw+bw*.2;return `<rect x="${x}" y="${H-B-h}" width="${bw*.6}" height="${h}" rx="2" fill="var(--c1)"/><text x="${x+bw*.3}" y="${H-3}" text-anchor="middle">${labs[i]}</text>`}).join("")}</svg>`};
@@ -1865,7 +1865,7 @@ function subX(k){if(!k)return null;
  if(k==="corr")return ["Schommeling en correlatie",corrSub()];
  return null}
 
-const sekt=(t,h)=>`<div class="sec"><h2>${t}</h2>${h}</div>`;
+const sekt=(t,h)=>`<div class="sec"><h2>${t}</h2>${h.replace(/(?:<!--F-->[\s\S]*?<!--\/F-->\s*)+/g,m=>`<div class="list fl">${m}</div>`)}</div>`;
 function nieuweInz(){return `<div class="sec"><h2>Meer inzichten</h2>${inzDiv()}${inzBron()}${inzKw()}${inzGT()}${inzOpt()}${inzConc()}${inzSeizoen()}${inzVolg()}${inzDD()}</div>`}
 function vInz(){
  setTimeout(()=>{drawPrj();drawStress();drawVal();drawOpt();drawBox()},0);
