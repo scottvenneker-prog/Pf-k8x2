@@ -1,5 +1,92 @@
+// ===== Dynamische laag: bouwt posities, saldo en opties uit de DeGiro-export (Account.csv + Transactions.csv) =====
+// Het versleutelde bestand (prive.enc) levert de basis; een upload in de app ligt daar als overlay bovenop (localStorage "pf_ovl").
+const PF_OVL_KEY="pf_ovl";
+function pfOvlGet(){try{const o=JSON.parse(localStorage.getItem(PF_OVL_KEY)||"null");return o&&(o.trx||o.acc)?o:null}catch(e){return null}}
+function pfOvlSet(o){try{if(o)localStorage.setItem(PF_OVL_KEY,JSON.stringify(o));else localStorage.removeItem(PF_OVL_KEY)}catch(e){}}
+// voeg een nieuwe periode toe aan wat er al ligt: alles binnen het nieuwe bereik wordt vervangen
+function pfOvlAdd(o,kind,n){o=o||{};
+ if(kind==="trx"){const old=o.trx,lo=old?(n.min<old.lo?n.min:old.lo):n.min,hi=old?(n.max>old.hi?n.max:old.hi):n.max;
+  const keep=old?old.x.filter(r=>r[0]<n.min||r[0]>n.max):[];
+  o.trx={lo,hi,x:keep.concat(n.x.map(r=>r.slice(0,8))),nm:Object.assign({},old&&old.nm,n.nm||{}),fx:n.fx||(old&&old.fx),fee:n.fee||(old&&old.fee)}}
+ else{const old=o.acc,lo=old?(n.min<old.lo?n.min:old.lo):n.min,hi=old?(n.max>old.hi?n.max:old.hi):n.max;
+  const out=(a,i)=>(a||[]).filter(r=>r[i]<n.min||r[i]>n.max);
+  o.acc={lo,hi,ev:out(old&&old.ev,0).concat(n.ev),fxl:out(old&&old.fxl,0).concat(n.fxl||[]),dv:out(old&&old.dv,0).concat(n.dv||[]),leg:out(old&&old.leg,0).concat(n.leg||[]),
+   saldo:(!old||!old.saldo||(n.saldo&&n.saldo.d>=old.saldo.d))?n.saldo:old.saldo}}
+ o.at=new Date().toISOString();return o}
+const PF_MND={jan:"jan",feb:"feb",mar:"mrt",apr:"apr",may:"mei",jun:"jun",jul:"jul",aug:"aug",sep:"sep",oct:"okt",nov:"nov",dec:"dec"};
+// "BES P80.00 21DEC29" -> {t:"BES",s:"put",k:80,d:"2029-12-21"}
+function pfOptName(nm){const m=String(nm||"").match(/^(\S+)\s+([CP])([\d.]+)\s+(\d{1,2})([A-Z]{3})(\d{2})$/);if(!m)return null;
+ const mm=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"].indexOf(m[5]);if(mm<0)return null;
+ return {t:m[1],s:m[2]==="P"?"put":"call",k:+m[3],d:`20${m[6]}-${String(mm+1).padStart(2,"0")}-${m[4].padStart(2,"0")}`,m:m[5].toLowerCase()}}
+function pfOptLabel(o){return `${o.t} ${o.s} ${o.k} · ${PF_MND[o.m]||o.m} 20${o.d.slice(2,4)}`}
+// FIFO per ISIN, zelfde rekenregels als waarmee de basis is gemaakt
+const PF_ISOPT=i=>/^[A-Z]{2}E[NX]/.test(i);
+function pfSum(a){let s=0,c=0;for(const v of a){const t=s+v;c+=Math.abs(s)>=Math.abs(v)?(s-t)+v:(v-t)+s;s=t}return s+c}
+function pfPositions(x){const by={};x.forEach(r=>{if(r[5]==null||!isFinite(r[6]))return;(by[r[4]]=by[r[4]]||[]).push(r)});const out={};
+ for(const isin of Object.keys(by)){if(PF_ISOPT(isin))continue;const L=by[isin].slice().sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?-1:p>q?1:0});
+  const lots=[];let buy=0,sell=0;const flows=[];
+  for(const r of L){const q=r[5],tot=r[6];flows.push([r[0],Math.round(tot*100)/100]);
+   if(q>0){buy+=-tot;lots.push([q,-tot/q])}else{sell+=tot;let rem=-q;while(rem>1e-9&&lots.length){const t=Math.min(rem,lots[0][0]);lots[0][0]-=t;rem-=t;if(lots[0][0]<1e-9)lots.shift()}}}
+  const qty=Math.round(pfSum(lots.map(l=>l[0]))*1e4)/1e4,ink=Math.round(pfSum(lots.map(l=>l[0]*l[1]))*100)/100;
+  out[isin]={isin,qty,ink,eerste:L[0][0],laatste:L[L.length-1][0],n:L.length,buy:Math.round(buy*100)/100,sell:Math.round(sell*100)/100,flows}}
+ return out}
+// open opties: netto aantal per optie-ISIN in de transacties, verlopen reeksen tellen niet mee
+function pfOptions(x,nm,today){const by={};x.forEach(r=>{if(PF_ISOPT(r[4])&&isFinite(r[5]))(by[r[4]]=by[r[4]]||[]).push(r)});const out=[];
+ for(const isin of Object.keys(by)){const L=by[isin].slice().sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?-1:p>q?1:0});
+  const q=L.reduce((s,r)=>s+r[5],0),pn=pfOptName((nm||{})[isin]),prem=L.reduce((s,r)=>s+(r[6]>0?r[6]:0),0),res=L.reduce((s,r)=>s+r[6],0);
+  const open=Math.abs(q)>1e-9&&!(pn&&pn.d<today);
+  out.push({isin,pn,q,open,eerste:L[0][0],laatste:L[L.length-1][0],kant:L[0][5]>0?"gekocht":"verkocht",k:L.length,res:Math.round(res*100)/100,prem:Math.round((L[0][5]>0?L.reduce((s,r)=>s+(r[6]<0?-r[6]:0),0):prem)*100)/100})}
+ return out}
+// hoofdfunctie: past de overlay toe op de basis en bouwt posities/saldo/opties opnieuw op
+function pfDyn(P,O,names,today){if(!P||!P.imp)return P;
+ const MAP={};Object.entries(P.hold||{}).forEach(([tk,h])=>{MAP[h.isin]=tk});
+ const imp=P.imp,baseX=((imp.trx&&imp.trx.x)||[]).slice();
+ if(O&&O.trx&&O.trx.x){const base=(imp.trx&&imp.trx.x)||[];const nx=base.filter(r=>r[0]<O.trx.lo||r[0]>O.trx.hi).concat(O.trx.x);
+  nx.sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?1:p>q?-1:0});
+  const dd=nx.map(r=>r[0]).sort();imp.trx=Object.assign({},imp.trx,{x:nx,dd,min:dd[0],max:dd[dd.length-1],fx:imp.trx&&imp.trx.fx||O.trx.fx,fee:imp.trx&&imp.trx.fee||O.trx.fee})}
+ if(O&&O.acc){const A=imp.acc||{ev:[],fxl:[],dv:[]};const out=(a,i)=>(a||[]).filter(r=>r[i]<O.acc.lo||r[i]>O.acc.hi);
+  imp.acc=Object.assign({},A,{ev:out(A.ev,0).concat(O.acc.ev).sort((p,q)=>p[0]<q[0]?-1:p[0]>q[0]?1:0),fxl:out(A.fxl,0).concat(O.acc.fxl||[]),dv:out(A.dv,0).concat(O.acc.dv||[]).sort((p,q)=>p[0]<q[0]?1:p[0]>q[0]?-1:0),
+   min:A.min&&A.min<O.acc.lo?A.min:O.acc.lo,max:A.max&&A.max>O.acc.hi?A.max:O.acc.hi,rows:(A.rows||0)})}
+ const x=(imp.trx&&imp.trx.x)||[];
+ const pos=pfPositions(x),pos0=pfPositions(baseX),oldHold=P.hold||{},hold={},unknown=[],changes=[];
+ const aff={};((O&&O.trx&&O.trx.x)||[]).forEach(r=>{if(!PF_ISOPT(r[4]))aff[r[4]]=1});
+ const soldBy={};(P.sold||[]).forEach(s=>{soldBy[s.isin]=s});
+ Object.keys(oldHold).forEach(tk=>{const h=oldHold[tk];if(!aff[h.isin]){hold[tk]=h;return}const p=pos[h.isin];if(p&&p.qty>1e-6)hold[tk]=p});
+ Object.keys(aff).forEach(isin=>{const p=pos[isin],tk=MAP[isin];if(!p)return;
+  if(p.qty>1e-6){if(tk){if(!hold[tk])hold[tk]=p}else if(!(pos0[isin]&&pos0[isin].qty>1e-6))unknown.push({isin,name:(O&&O.trx&&O.trx.nm&&O.trx.nm[isin])||(P.names&&P.names[isin])||isin,qty:p.qty,ink:p.ink})}
+  else soldBy[isin]=Object.assign({},soldBy[isin]||{},{isin,eerste:p.eerste,laatste:p.laatste,n:p.n,buy:p.buy,sell:p.sell})});
+ const sk=[];(P.sold||[]).forEach(s=>{sk.push(soldBy[s.isin]);delete soldBy[s.isin]});Object.values(soldBy).forEach(s=>sk.push(s));
+ Object.keys(Object.assign({},oldHold,hold)).forEach(tk=>{const a=oldHold[tk],b=hold[tk];
+  if(a&&!b)changes.push({tk,isin:a.isin,soort:"verkocht",van:a.qty,naar:0});
+  else if(!a&&b)changes.push({tk,isin:b.isin,soort:"nieuw",van:0,naar:b.qty});
+  else if(a&&b&&Math.abs(a.qty-b.qty)>1e-6)changes.push({tk,isin:a.isin,soort:b.qty>a.qty?"bijgekocht":"deels verkocht",van:a.qty,naar:b.qty})});
+ P.hold=hold;P.sold=sk;
+ // namen voor nieuw volledig verkochte posities
+ P.names=P.names||{};changes.filter(c=>c.soort==="verkocht").forEach(c=>{if(!P.names[c.isin]&&names&&names[c.tk])P.names[c.isin]=names[c.tk]});
+ // saldo
+ if(O&&O.acc&&O.acc.saldo&&isFinite(O.acc.saldo.v))P.cash=O.acc.saldo.v;
+ // opties
+ const nm=Object.assign({},O&&O.trx&&O.trx.nm),baseOpen=(P.opts||[]).filter(z=>z.open).map(z=>z.n),extra=[];
+ if(O&&O.trx){
+  const aff={};O.trx.x.forEach(r=>{if(PF_ISOPT(r[4]))aff[r[4]]=1});
+  const op=pfOptions(x.filter(r=>aff[r[4]]),nm,today),L=(P.opts||[]).slice();
+  op.forEach(o=>{if(!o.pn)return;const lab=pfOptLabel(o.pn),e={n:lab,kant:o.kant,eerste:o.eerste,laatste:o.laatste,res:o.res,prem:o.prem,open:o.open,q:o.open?o.q:0,k:o.k},i=L.findIndex(z=>z.n===lab);if(i>=0)L[i]=e;else L.push(e)});
+  L.sort((a,b)=>a.laatste<b.laatste?1:a.laatste>b.laatste?-1:0);P.opts=L;
+  const open=L.filter(z=>z.open),old=P.opt||{},keep=open.filter(z=>baseOpen.includes(z.n)),fresh=open.filter(z=>!baseOpen.includes(z.n));
+  if(!open.length){P.opt={n:0,k:0,d:"",p:0};P.put=0}
+  else if(keep.length){const n=keep.reduce((t,z)=>t+Math.abs(z.q),0);if(n!==old.n){P.opt=Object.assign({},old,{n});P.put=old.p?-n*100*old.p:0}fresh.forEach(z=>extra.push(z.n))}
+  else{const nw=op.find(o=>o.open&&o.pn);if(nw){P.opt={n:Math.abs(nw.q),k:nw.pn.k,d:nw.pn.d,p:0,t:nw.pn.t};P.put=0;fresh.filter(z=>z.n!==pfOptLabel(nw.pn)).forEach(z=>extra.push(z.n))}else{P.opt={n:open.reduce((t,z)=>t+Math.abs(z.q),0),k:0,d:"",p:0};P.put=0}}}
+ // waarschuwing: aandelenregels in het rekeningoverzicht zonder transactie (uitoefening of toewijzing van een optie)
+ const warn=[];
+ if(O&&O.acc&&O.acc.leg&&O.trx){const t={};x.forEach(r=>{if(r[0]>=O.acc.lo&&r[0]<=O.acc.hi&&!PF_ISOPT(r[4])&&isFinite(r[5]))t[r[4]]=(t[r[4]]||0)+r[5]});const a={},rec={},cut=new Date(new Date(today).getTime()-365*864e5).toISOString().slice(0,10);O.acc.leg.forEach(l=>{a[l[1]]=(a[l[1]]||0)+l[2];if(l[0]>=cut)rec[l[1]]=1});
+  Object.keys(a).forEach(i=>{if((rec[i]||MAP[i])&&Math.abs(a[i]-(t[i]||0))>1e-6)warn.push({isin:i,naam:(O.acc.legnm&&O.acc.legnm[i])||i,rekening:a[i],transacties:t[i]||0})})}
+ P.dyn={extra,actief:!!O,at:O&&O.at||null,unknown,changes,warn,opties:(P.opts||[]).filter(z=>z.open).length};
+ return P}
+function pfDynBoot(P,names){try{if(!P)return P;const O=pfOvlGet();if(!O)return P;return pfDyn(P,O,names,new Date().toISOString().slice(0,10))}catch(e){try{console.error("dyn",e)}catch(x){}return P}}
+function pfPut(P){const o=P&&P.opt;if(!o||!(o.n>0))return 0;let p=o.p||0;try{const s=JSON.parse(localStorage.getItem("pf_opt")||"null");if(s&&s.k===o.k&&s.d===o.d&&s.p>=0)p=s.p}catch(e){}return -(o.n*100*p)}
+
 // ===== Gegevenslaag: echte data uit data.json + portfolio.json (alleen percentages), bedragen uit de versleutelde prive.enc =====
-const DATA=window.DATA,PF=window.PF,PRIVE=window.PRIVE||null;
+const DATA=window.DATA,PF=window.PF,PRIVE=pfDynBoot(window.PRIVE||null,(()=>{const m={};((window.DATA&&window.DATA.rows)||[]).forEach(r=>{m[r.t]=r.naam});return m})());
 const EXEMPEL=false;
 const _ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const TOTBASE=(+_ls("pf_totaal")||0)||100000;
@@ -42,12 +129,14 @@ function mk(tk,M,w){const D=DR[tk]||{};
   else{o.waarde=(M.weging||0)/100*TOTBASE;o.inkoop=RD!=null?o.waarde/(1+RD/100):o.waarde}}
  return o}
 ((DATA.scan&&DATA.scan.lijst)||[]).forEach(s=>{if(!PF.posities[s.tk]&&!(PF.watchlist||{})[s.tk]&&DR[s.tk]){PF.watchlist=PF.watchlist||{};PF.watchlist[s.tk]={naam:String(s.naam||s.tk).replace(/\s+Common St.*$/i,"").replace(/,?\s+(Inc|Corp|Corporation)\.?$/i,"").trim(),sector:s.sector,land:s.land,munt:s.munt,eigenaar:"–",ai:null,scan:s.sinds}}});
+if(PRIVE&&PRIVE.dyn&&PRIVE.dyn.actief){PF.watchlist=PF.watchlist||{};Object.keys(PF.posities).forEach(tk=>{if(!PRIVE.hold[tk]){PF.watchlist[tk]=Object.assign({},PF.posities[tk]);delete PF.posities[tk]}})}
 const rows=[...Object.keys(PF.posities).map(t=>mk(t,PF.posities[t],false)),...Object.keys(PF.watchlist||{}).map(t=>mk(t,PF.watchlist[t],true))];
 rows.forEach(r=>{const w=(PF.watchlist||{})[r.tk];if(w&&w.scan){r.ontdekt=true;r.scan_d=w.scan}});
 const own=rows.filter(r=>!r.watch);
 const sumPos=own.reduce((s,r)=>s+r.waarde,0);
-if(PRIVE){CASH=PRIVE.cash;PUT=PRIVE.put}else{CASH=((PF.overig&&PF.overig.cash)||0)/100*TOTBASE;PUT=((PF.overig&&PF.overig.short_put)||0)/100*TOTBASE}
-const TOT=sumPos+CASH+PUT;
+if(PRIVE){CASH=PRIVE.cash;PUT=pfPut(PRIVE)}else{CASH=((PF.overig&&PF.overig.cash)||0)/100*TOTBASE;PUT=((PF.overig&&PF.overig.short_put)||0)/100*TOTBASE}
+const UNK=PRIVE&&PRIVE.dyn?PRIVE.dyn.unknown.reduce((s,u)=>s+u.ink,0):0;
+const TOT=sumPos+CASH+PUT+UNK;
 own.forEach(r=>r.w=r.waarde/TOT*100);
 const secW={};own.forEach(r=>secW[r.sector]=(secW[r.sector]||0)+r.w);
 const sumInk=own.reduce((s,r)=>s+r.inkoop,0), ONR=sumPos-sumInk;
@@ -141,7 +230,7 @@ function bars(cagr,label,base){const n=5;const arr=[];let e=100;for(let i=n-1;i>
  const yrs=[2021,2022,2023,2024,2025];
  return `<div class="bars">${v.map((x,i)=>`<div><span class="num">${Math.round(x)}</span><i style="height:${Math.max(6,x/mx*72)}px"></i></div>`).join("")}</div><div class="axis">${yrs.map(y=>`<span>${y}</span>`).join("")}</div>`}
 // state
-let subStack=[],sub=null,tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
+let subStack=[],sub=(function(){try{if(sessionStorage.getItem("pf_goimp")){sessionStorage.removeItem("pf_goimp");return "import"}}catch(e){}return null})(),tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
 function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
@@ -756,7 +845,7 @@ function risicos(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,L=[],add=(k,t,n,u
  const ov=l.filter(r=>r.w>PAR.weg);add("pos",ov.length?`${ov.map(r=>r.naam).join(" en ")} boven je grens`:`Grootste positie ${top.naam}`,f1(top.w)+"%",`${ov.length?ov.map(r=>r.naam+" "+f1(r.w)+"%").join(", ")+" staan boven je grens van "+PAR.weg+"%.":top.naam+" is je grootste positie."} Daalt ${top.naam} 30%, dan verlies je ${f1(top.w*.3)}% van je portefeuille (${eur(TOT*top.w*.3/100)}).`,`Niet extra bijkopen; nieuwe inleg gaat naar andere bedrijven, zo zakt de weging vanzelf.`,top.w/PAR.weg);
  const usd=own.filter(r=>r.munt!=="EUR").reduce((t,r)=>t+r.w,0)/W*100;add("fx","Valuta buiten de euro",Math.round(usd)+"%",`${Math.round(usd)}% van je geld staat niet in euro (vooral dollar). Wordt de euro 10% sterker, dan verlies je ongeveer ${f1(usd*.1)}% (${eur(TOT*usd*.1/100)}) zonder dat een bedrijf iets fout doet.`,"Meer euro-bedrijven kopen, of bewust accepteren.",usd/60);
  const aiW=typeof aiProfitW==="function"?aiProfitW():0;add("ai","Afhankelijk van AI-uitgaven",Math.round(aiW)+"%",`${Math.round(aiW)}% van je portefeuille profiteert direct van AI-investeringen. Zakken die uitgaven, dan raakt dat deze bedrijven tegelijk.`,"Nieuwe inleg buiten AI-profiteurs zoeken.",aiW/45);
- const no=OPT.k*100*OPT.n;add("put","Short put BESI",eur(no),`Je kunt gedwongen worden BESI te kopen voor ${eur(no)} (${f1(no/TOT*100)}% van je portefeuille) als de koers onder ${OPT.k} zakt${OPT.d?" voor "+OPT.d:""}. Dat is bovenop wat je al hebt.`,"Zorg dat je dit geld (of de marge) hebt, of sluit de optie vroegtijdig af.",no/TOT*100/10);
+ const no=OPT.k*100*OPT.n;if(OPT.n>0)add("put","Short put "+(OPT.t||"BESI"),eur(no),`Je kunt gedwongen worden ${OPT.t||"BESI"} te kopen voor ${eur(no)} (${f1(no/TOT*100)}% van je portefeuille) als de koers onder ${OPT.k} zakt${OPT.d?" voor "+OPT.d:""}. Dat is bovenop wat je al hebt.`,"Zorg dat je dit geld (of de marge) hebt, of sluit de optie vroegtijdig af.",no/TOT*100/10);
  const beta=own.reduce((t,r)=>t+r.w/W*((r.D&&r.D.beta!=null)?r.D.beta:1),0);add("beurs","Beurscrash",pc(-20*beta),`Daalt de beurs 20%, dan daalt jouw portefeuille ongeveer ${f1(20*beta)}% (beta ${f1(beta)}, ${eur(TOT*20*beta/100)}).`,"Dit risico heb je altijd; een kasbuffer of minder beta verkleint het.",beta*.9);
  const FV=own.map(r=>({r,f:fairV(r)})).filter(x=>x.f),FW=FV.reduce((t,x)=>t+x.r.w,0)||1,oW=FV.filter(x=>x.f.mid<-15).reduce((t,x)=>t+x.r.w,0)/FW*100;add("duur","Waardering",Math.round(oW)+"%",`${Math.round(oW)}% van je geld staat in bedrijven boven redelijke waarde (indicatie). Tegenvallende cijfers werken daar hard door in de koers.`,"Niet extra bijkopen in deze namen.",oW/25);
  L.sort((a,b)=>b.r-a.r);return L}catch(e){return []}}
@@ -1585,7 +1674,7 @@ function aiSec(){const cats=[[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraa
  const kw=own.filter(r=>r.ai[0]<=-1).map(r=>r.naam).join(", ");
  return `<div class="sec"><h2>AI-impact op je portefeuille</h2><button class="tile go" data-s="ai">${hbars(items,0,"%")}<div class="kv" style="grid-template-columns:1fr 1fr;margin-top:10px"><div><small>Profiteert</small><b class="num pos">${f1(aiProfitW())}%</b></div><div><small>Kwetsbaar</small><b class="num neg">${f1(aiW(r=>r.ai[0]<=-1))}%</b></div></div><div class="note">${f1(aiProfitW())}% van je portefeuille profiteert van AI. Die bedrijven delen dezelfde bron van groei, namelijk de investeringen in AI. ${kw?"Kwetsbaar: "+kw+".":""} Mijn inschatting, tik voor de uitleg per bedrijf.</div></button></div>`}
 // ===== Extra inzichten =====
-let OPT=PRIVE&&PRIVE.opt?Object.assign({},PRIVE.opt):{n:0,k:0,p:0,d:""};try{const o=JSON.parse(localStorage.getItem("pf_opt")||"null");if(o&&o.k>0)OPT=o}catch(e){}
+let OPT=PRIVE&&PRIVE.opt?Object.assign({},PRIVE.opt):{n:0,k:0,p:0,d:""};try{const o=JSON.parse(localStorage.getItem("pf_opt")||"null");if(o&&o.p>=0&&o.k===OPT.k&&o.d===OPT.d)OPT.p=o.p}catch(e){}
 const saveOpt=()=>{try{localStorage.setItem("pf_opt",JSON.stringify(OPT))}catch(e){}};
 const wAvg=f=>{const l=own.filter(r=>f(r)!=null&&isFinite(f(r)));const s=l.reduce((t,r)=>t+r.w,0);return s?l.reduce((t,r)=>t+r.w*f(r),0)/s:null};
 const fold=(t,key,body,vk)=>`<!--F--><details class="tile fo" style="margin-top:8px;padding:0"><summary class="fs"><span class="ft">${t}</span><span class="fk ${vk||""}">${key}</span></summary><div class="fb" style="padding:0 12px 12px">${body}</div></details><!--/F-->`;
@@ -1651,13 +1740,14 @@ function gtSub(){const ys=Object.keys(JR).sort().reverse();
   return yrCard(k)}).join("")}
 const optK=()=>{const r=rows.find(x=>x.tk==="BESI.AS");return r?r.waarde/r.qty:0};
 const ncdf=x=>{const t=1/(1+.2316419*Math.abs(x)),d=.3989423*Math.exp(-x*x/2),q=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-q:q};
-function optHtml(){const k=OPT.k,n=OPT.n,p=OPT.p,koers=optK(),afn=k*100*n,prem=p*100*n,maxv=afn-prem,be=k-p,afst=(koers/k-1)*100,tot=TOT,pct=afn/tot*100;
- const dg=Math.max(0,Math.round((new Date(OPT.d)-new Date())/864e5)),T=Math.max(dg,1)/365,sig=.45,dd2=(Math.log(koers/k)+(.025-sig*sig/2)*T)/(sig*Math.sqrt(T)),prob=ncdf(-dd2),ann=p/k*100*(365/Math.max(dg,1));
- return `${kvs([["Afnamebedrag",eur(afn)],["Premie binnen",eur(prem),"pos"],["Maximaal verlies",eur(maxv),"neg"]])}<div style="margin-top:8px">${kvs([["Break-even",eur(be,0)+" per aandeel"],["Koers nu",eur(koers,0)],["Afstand tot strike",pc(afst),afst>=0?"pos":"neg"]])}</div><div style="margin-top:8px">${kvs([["Kans op afname*",f1(prob*100)+"%",prob>.25?"neg":""],["Premie per jaar",f1(ann)+"%","pos"],["Verloopt over",dg+" dagen"]])}</div>
- <div class="note" style="margin-top:8px">Verloopt over ${dg} dagen. Zakt BESI onder ${eur(k)}, dan koop je ${n*100} aandelen voor ${eur(afn)}. Dat is ${f1(pct)}% van je portefeuille, bovenop wat je al hebt (${f1(own.find(r=>r.tk==="BESI.AS").w)}%). Het maximale verlies geldt als het aandeel naar nul gaat. *Kans met een eenvoudig model (schommeling van 45% per jaar), een schatting en geen belofte.</div>`}
+function optHtml(){const k=OPT.k,n=OPT.n,p=OPT.p,koers=optK(),afn=k*100*n,tot=TOT,pct=afn/tot*100;
+ const dg=OPT.d?Math.max(0,Math.round((new Date(OPT.d)-new Date())/864e5)):null,pr=((PRIVE&&PRIVE.opts)||[]).filter(x=>x.open).reduce((t,x)=>t+x.prem,0),be=pr>0?k-pr/(n*100):null,afst=koers?(koers/k-1)*100:null;
+ const bw=(own.find(r=>r.tk==="BESI.AS")||{}).w;
+ return `${kvs([["Afnamebedrag",eur(afn)],["Ontvangen premie",eur(pr),"pos"],["Break-even",be!=null?eur(be,0)+" per aandeel":"–"]])}<div style="margin-top:8px">${kvs([["Koers nu",koers?eur(koers,0):"–"],["Afstand tot strike",afst!=null?pc(afst):"–",afst>=0?"pos":"neg"],["Verloopt over",dg!=null?dg+" dagen":"–"]])}</div>
+ <div class="note" style="margin-top:8px">Zakt het aandeel onder ${eur(k)}${dg!=null?` voor de einddatum`:""}, dan koop je ${n*100} aandelen voor ${eur(afn)}. Dat is ${f1(pct)}% van je portefeuille${bw!=null?`, bovenop wat je al hebt (${f1(bw)}%)`:""}. Het maximale verlies geldt als het aandeel naar nul gaat.</div>`}
 function drawOpt(){const el=document.getElementById("optOut");if(el)el.innerHTML=optHtml()}
-function inzOpt(){const inp=(id,l,v,st)=>`<label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">${l}<input id="${id}" type="${id==="oD"?"date":"number"}" inputmode="decimal" ${st||""} value="${v}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label>`;
- return fold("Short put BESI",eur(OPT.k*100*OPT.n)+" afname",`<div class="two">${inp("oN","Contracten",OPT.n,'step="1"')}${inp("oK","Uitoefenprijs",OPT.k,'step="1"')}</div><div class="two" style="margin-top:8px">${inp("oP","Premie per aandeel",OPT.p,'step="0.5"')}${inp("oD","Einddatum",OPT.d)}</div><div id="optOut" style="margin-top:10px">${optHtml()}</div>`,"neg")}
+function inzOpt(){if(!(OPT.n>0))return "";const inp=(id,l,v,st)=>`<label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">${l}<input id="${id}" type="number" inputmode="decimal" ${st||""} value="${v}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label>`;
+ return fold("Short put "+(OPT.t||"BESI"),eur(OPT.k*100*OPT.n)+" afname",`${kvs([["Contracten",String(OPT.n)],["Uitoefenprijs",eur(OPT.k)]])}<div style="margin-top:8px">${inp("oP","Koers van de optie nu, per aandeel",OPT.p,'step="0.5"')}</div><div id="optOut" style="margin-top:10px">${optHtml()}</div>${nt("Aantal, uitoefenprijs en einddatum haal ik uit je DeGiro-export. De huidige koers van de optie staat niet in de export: vul die in zoals DeGiro hem toont. Je totale vermogen past zich aan als je de app opnieuw opent.")}`,"neg")}
 let TBP=30;
 const tbHit=(n,p)=>[...own].sort((a,b)=>b.w-a.w).slice(0,n).reduce((t,r)=>t+r.w,0)*p/100;
 function tbHtml(){const p=TBP,mx=tbHit(10,p)||1;return [[1,"Nummer 1"],[3,"Top 3"],[5,"Top 5"],[10,"Top 10"]].map(([n,t])=>`<div class="hb"><span class="nm">${t}</span><div class="tr"><i style="width:${tbHit(n,p)/mx*100}%;background:var(--bad)"></i></div><b class="num neg">−${f1(tbHit(n,p))}%</b></div>`).join("")+`<div class="note" style="margin-top:6px">Dit is het verlies op je totale portefeuille. Zakt je top 5 samen ${p}%, dan raakt dat je portefeuille voor ${f1(tbHit(5,p))}%, ongeveer ${eur(tbHit(5,p)/100*TOT)}.</div>`}
@@ -2088,7 +2178,12 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
  const iD=H.indexOf("datum"),iO=H.findIndex(h=>h==="omschrijving"||h==="description");let iM=H.findIndex(h=>h==="mutatie"||h==="change");
  if(iD<0||iO<0||iM<0)throw new Error("Dit lijkt geen Account.csv (rekeningoverzicht): ik mis de kolommen Datum, Omschrijving en Mutatie.");
  const ev=[],fxl=[];let rows=0;const iFX=H.indexOf("fx");
+ const iPr=H.indexOf("product"),iIs=H.indexOf("isin"),iTi=H.indexOf("tijd"),iS=H.indexOf("saldo"),DV=[],TX={},leg=[],legnm={};let saldo=null,sk="";
  for(const r of R.slice(1)){const d=isoD(r[iD]);if(!d)continue;const om=(r[iO]||"").trim(),cur=(r[iM]||"").trim(),a=num(r[iM+1]);
+  if(iS>=0&&String(r[iS]||"").trim()==="EUR"&&isFinite(num(r[iS+1]))){const k0=d+" "+(iTi>=0?(r[iTi]||""):"");if(!saldo||k0>sk){saldo={d,v:num(r[iS+1])};sk=k0}}
+  if(isFinite(a)&&cur&&/^(dividend|kapitaalsuitkering)$/i.test(om))DV.push([d,a,cur,(r[iPr]||"").trim(),(r[iIs]||"").trim(),0]);
+  if(isFinite(a)&&cur&&/^dividendbelasting$/i.test(om)){const k1=d+"|"+(r[iIs]||"").trim();TX[k1]=(TX[k1]||0)+a}
+  {const is=(r[iIs]||"").trim(),m=om.match(/^(Koop|Verkoop) ([\d.]+) @/);if(m&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is)&&!/^[A-Z]{2}E[NX]/.test(is)&&!/coupon/i.test(r[iPr]||"")){leg.push([d,is,(m[1]==="Koop"?1:-1)*parseFloat(m[2].replace(/\./g,""))]);legnm[is]=(r[iPr]||"").trim()}}
   if(isFinite(a)&&cur&&cur!=="EUR"){if(/^valuta (creditering|debitering)/i.test(om)&&iFX>=0&&isFinite(num(r[iFX]))&&num(r[iFX])>0)fxl.push([d,cur,num(r[iFX])]);else if(/^(dividend|kapitaalsuitkering)$/i.test(om))ev.push([d,"v",a,cur]);else if(/^dividendbelasting$/i.test(om))ev.push([d,"w",a,cur])}
   if(!isFinite(a)||cur!=="EUR")continue;rows++;
   if(/^(dividend|kapitaalsuitkering)$/i.test(om)){ev.push([d,"v",a,"EUR"]);continue}
@@ -2103,7 +2198,14 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
   else if(a<0&&/rente|interest/i.test(om))ev.push([d,"r",-a]);
   else if(a<0&&/degiro.*kosten|kosten van derden|fee/i.test(om))ev.push([d,"o",-a])}
  if(!rows)throw new Error("Geen regels in euro's gevonden. Is dit wel het rekeningoverzicht?");
- const ds=R.slice(1).map(r=>isoD(r[iD])).filter(Boolean).sort();return {ev,fxl,rows,min:ds[0],max:ds[ds.length-1]}}
+ const ds=R.slice(1).map(r=>isoD(r[iD])).filter(Boolean).sort();
+ const grp={};DV.forEach(e=>{const k=e[0]+"|"+e[4]+"|"+e[2];(grp[k]=grp[k]||[]).push(e)});const dv=[];
+ Object.values(grp).forEach(L=>{const keep=L.slice();for(let i=0;i<keep.length;i++)for(let j=i+1;j<keep.length;j++)if(Math.abs(keep[i][1]+keep[j][1])<0.005){keep.splice(j,1);keep.splice(i,1);i--;break}
+  keep.forEach(e=>dv.push(e))});
+ const byK={};dv.forEach(e=>{const k=e[0]+"|"+e[4];(byK[k]=byK[k]||[]).push(e)});
+ Object.keys(byK).forEach(k=>{if(TX[k]!=null){const e=byK[k].reduce((p,q)=>Math.abs(q[1])>Math.abs(p[1])?q:p);e[5]=Math.round(TX[k]*100)/100}});
+ dv.forEach(e=>e[1]=Math.round(e[1]*100)/100);
+ return {ev,fxl,rows,min:ds[0],max:ds[ds.length-1],dv,leg,legnm,saldo}}
 let FXL=[];
 function fxRate(cur,iso){const L=FXL.filter(x=>x[1]===cur);if(!L.length)return null;const T=d=>new Date(d).getTime();let best=L[0],bd=1e18;for(const x of L){const dd=Math.abs(T(x[0])-T(iso));if(dd<bd){bd=dd;best=x}}let r=best[2];if(cur==="GBP"&&r>20)r/=100;return r}
 function aggAcc(ev){const jr={},stort=[],flows=[];let kosten=0,divbel=0;const Y=y=>jr[y]||(jr[y]={i:0,u:0,k:0,t:0,kt:0,ka:0,ko:0,ks:0,r:0});
@@ -2121,9 +2223,9 @@ function parseTrx(text){const R=csvRows(text);if(R.length<2)throw new Error("Lee
  const iD=H.indexOf("datum"),iA=H.findIndex(h=>h==="aantal"||h==="quantity"),iP=H.findIndex(h=>h==="product");
  if(iD<0||iA<0||iP<0)throw new Error("Dit lijkt geen Transactions.csv: ik mis de kolommen Datum, Product en Aantal.");
  const iO=H.findIndex(h=>h==="order id"||h==="orderid"),iI=H.indexOf("isin"),iTt=H.findIndex(h=>h.startsWith("totaal")||h.startsWith("total")),iTm=H.indexOf("tijd"),iX=H.findIndex(h=>h.includes("autofx")),iF=H.findIndex(h=>h.includes("transactiekosten")||h.includes("transaction")&&h.includes("fee")||h.includes("transaction and/or third"));
- const dd=[],x=[];for(const r of R.slice(1)){const d=isoD(r[iD]),q=num(r[iA]);if(!d||!isFinite(q))continue;dd.push(d);
-  const fx=iX>=0?Math.abs(num(r[iX])||0):0,fee=iF>=0?(isFinite(num(r[iF]))?Math.abs(num(r[iF])):0):0;x.push([d,q>0?"k":"v",Math.round(fx*100)/100,Math.round(fee*100)/100,(r[iI]||r[iP]||""),q,iTt>=0?(num(r[iTt])||0):0,iTm>=0?(r[iTm]||""):"",iO>=0?(r[iO]||"").trim():""])}
- if(!dd.length)throw new Error("Geen transacties gevonden.");dd.sort();return {dd,x:mergeOrders(x),fx:iX>=0,fee:iF>=0,min:dd[0],max:dd[dd.length-1]}}
+ const dd=[],x=[],nm={};for(const r of R.slice(1)){const d=isoD(r[iD]),q=num(r[iA]);if(!d||!isFinite(q))continue;dd.push(d);nm[(r[iI]||r[iP]||"")]=(r[iP]||"").trim();
+  const fx=iX>=0?Math.abs(num(r[iX])||0):0,fee=iF>=0?(isFinite(num(r[iF]))?Math.abs(num(r[iF])):0):0;x.push([d,q>0?"k":"v",Math.round(fx*100)/100,Math.round(fee*100)/100,(r[iI]||r[iP]||""),q,iTt>=0?(num(r[iTt])||0):0,iTm>=0?(r[iTm]||""):"",iO>=0?(String(r[iO]||"").trim().toUpperCase()==="NULL"?"":(r[iO]||"").trim()):""])}
+ if(!dd.length)throw new Error("Geen transacties gevonden.");dd.sort();return {dd,x:mergeOrders(x),nm,fx:iX>=0,fee:iF>=0,min:dd[0],max:dd[dd.length-1]}}
 function fifo(x){const g={};const rows=x.filter(r=>r.length>=8).reverse().sort((a,b)=>{const p=a[0]+a[7],q=b[0]+b[7];return p<q?-1:p>q?1:0});const lots={};
  for(const [d,sd,fx,fee,k,q,tot] of rows){const y=d.slice(0,4),L=lots[k]||(lots[k]=[]);
   if(q>0){let rem=q;const per=-tot/q;while(rem>1e-9&&L.length&&L[0][0]<0){const t=Math.min(rem,-L[0][0]);g[y]=(g[y]||0)+(L[0][1]-per)*t;L[0][0]+=t;rem-=t;if(Math.abs(L[0][0])<1e-9)L.shift()}if(rem>1e-9)L.push([rem,per])}
@@ -2140,9 +2242,10 @@ function applyImp(){if(!IMP.acc)return;FXL=IMP.acc.fxl||[];const a=Object.assign
  JR=jr;STORT=a.stort;REAL.kosten=a.kosten;REAL.divbel=a.divbel;REAL.jaar={};let net=0;Object.keys(jr).forEach(y=>{REAL.jaar[y]=jr[y].i-jr[y].u;net+=jr[y].i-jr[y].u});REAL.netto=net;
  const val=TOT,x=xirrOf(a.flows,NOW,val);if(x!=null)REAL.xirr=x;IMP.xirr=x;IMP.val=val;BROKER_WV=TOT-REAL.netto}
 applyImp();
-const saveImp=()=>{try{localStorage.setItem("pf_import",JSON.stringify(IMP))}catch(e){}};
+const saveImp=()=>{};
 async function readFile(inp,kind){const f=inp.files&&inp.files[0];if(!f)return;IMP.err=IMP.err||{};
- try{const txt=await f.text();if(kind==="acc"){const n=parseAccount(txt),o=IMP.acc;const keep=o?o.ev.filter(x=>x[0]<n.min||x[0]>n.max):[];const keepF=o&&o.fxl?o.fxl.filter(x=>x[0]<n.min||x[0]>n.max):[];IMP.acc={ev:keep.concat(n.ev).sort((p,q)=>p[0]<q[0]?-1:1),fxl:keepF.concat(n.fxl),nieuw:n.ev.length,min:n.min,max:n.max,oud:!!o}}else{const n=parseTrx(txt),o=IMP.trx;const keep=o?o.dd.filter(d=>d<n.min||d>n.max):[];const keepX=o&&o.x?o.x.filter(r=>r[0]<n.min||r[0]>n.max):[];IMP.trx={dd:keep.concat(n.dd).sort(),x:keepX.concat(n.x),fx:n.fx||(o&&o.fx),fee:n.fee||(o&&o.fee),nieuw:n.dd.length,min:n.min,max:n.max,oud:!!o}}IMP.err[kind]=null;IMP.at=new Date().toISOString();saveImp();applyImp()}
+ try{const txt=await f.text();const n=kind==="acc"?parseAccount(txt):parseTrx(txt);
+  pfOvlSet(pfOvlAdd(pfOvlGet(),kind,n));try{sessionStorage.setItem("pf_goimp","1")}catch(e){}location.reload();return}
  catch(e){IMP.err[kind]=e.message||"Kon het bestand niet lezen."}
  render()}
 function impSlot(kind,nr,titel,bestand,waar,ok){const e=IMP.err&&IMP.err[kind],done=kind==="acc"?IMP.acc:IMP.trx;
@@ -2150,12 +2253,21 @@ function impSlot(kind,nr,titel,bestand,waar,ok){const e=IMP.err&&IMP.err[kind],d
  <label class="chip" style="display:block;text-align:center;padding:12px;font-weight:600;cursor:pointer;${done?"":"background:var(--acc);color:var(--bg);border-color:var(--acc)"}">${done?"Nieuwe periode toevoegen":"Kies "+bestand}<input type="file" id="f_${kind}" accept=".csv,text/csv,text/plain" style="position:absolute;opacity:0;width:1px;height:1px"></label>
  ${e?`<div class="note neg" style="margin-top:8px">${e}</div>`:""}${done?`<div class="note" style="margin-top:8px"><span class="pos">Geladen.</span> ${ok}</div>`:""}</div>`}
 function impAge(){if(!IMP.at)return null;return Math.floor((Date.now()-new Date(IMP.at).getTime())/864e5)}
-function vImport(){const a=IMP.aA,t=IMP.aT,age=impAge(),fm=d=>new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}),la=IMP.acc,lt=IMP.trx;
- return impSlot("acc",1,"Rekeningoverzicht","Account.csv","In DeGiro op de website: Inbox, Rekeningoverzicht. De eerste keer vanaf je eerste dag, daarna alleen de nieuwe periode. Klik op Exporteren, CSV.",a?`Gegevens van ${a.van?new Date(a.van).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}):"?"} tot ${fm(la.max)}. Laatste bestand: ${fm(la.min)} t/m ${fm(la.max)}${la.oud?", samengevoegd met wat er al stond":""}.`:"")+
- impSlot("trx",2,"Transacties","Transactions.csv","In DeGiro op de website: Inbox, Transacties. Zelfde periode als bij stap 1. Klik op Exporteren, CSV.",t?`${t.n} transacties in totaal. Laatste bestand: ${fm(lt.min)} t/m ${fm(lt.max)}${lt.oud?", samengevoegd met wat er al stond":""}.`:"")+
- (a?`<div class="sec"><h2>Wat de app nu gebruikt</h2><div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr"><div><small>Totaal gestort (netto)</small><b class="num">${eur(REAL.netto)}</b></div><div><small>Rendement per jaar (XIRR)</small><b class="num">${IMP.xirr!=null?f1(IMP.xirr)+"%":"n.v.t."}</b></div><div><small>Kosten sinds start</small><b class="num neg">${eur(REAL.kosten)}</b></div><div><small>Dividendbelasting</small><b class="num neg">${eur(REAL.divbel)}</b></div></div><div class="note">XIRR rekent met je stortingen en opnames en een waarde van ${eur(IMP.val)} vandaag. Vul die waarde in bij Instellingen als je ze wilt aanpassen. Laatste import: ${age===0?"vandaag":age+" dagen geleden"}.</div></div></div>
- <div class="sec"><button class="chip" id="impWis">Geïmporteerde gegevens wissen</button></div>`:"")+
- `<div class="note">De bestanden worden alleen in je browser gelezen. Ze gaan nergens heen en ik zie ze niet. Importeer je later een nieuwe periode (bijvoorbeeld alleen de laatste maand), dan wordt die toegevoegd. Overlappende dagen worden vervangen, dus niets telt dubbel. Kom je een foutmelding tegen, stuur me dan de eerste twee regels van het bestand (zonder bedragen), dan pas ik de inleesroutine aan.</div>`}
+function vImport(){const a=IMP.aA,t=IMP.aT,age=impAge(),fm=d=>new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}),la=IMP.acc,lt=IMP.trx,O=pfOvlGet(),D=PRIVE&&PRIVE.dyn;
+ const nmOf=tk=>(DR[tk]&&DR[tk].naam)||tk,fq=q=>(Math.round(q*100)/100).toLocaleString("nl-NL");
+ const herk=()=>{if(!D||!D.actief)return "";const rows=[];
+  D.changes.forEach(c=>rows.push(`<div class="row"><span class="grow">${nmOf(c.tk)}</span><span class="m">${c.soort==="nieuw"?"Nieuw: "+fq(c.naar)+" aandelen":c.soort==="verkocht"?"Volledig verkocht ("+fq(c.van)+")":(c.soort==="bijgekocht"?"Bijgekocht":"Deels verkocht")+": "+fq(c.van)+" naar "+fq(c.naar)}</span></div>`));
+  D.unknown.forEach(u=>rows.push(`<div class="row"><span class="grow">${u.name}</span><span class="m">Nieuw bedrijf: ${fq(u.qty)} aandelen, nog niet in de app</span></div>`));
+  const ex=D.extra&&D.extra.length?`<div class="note warn" style="margin-top:8px">Er staat naast je bestaande optie ook open: <b>${D.extra.join(", ")}</b>. De app rekent nu met één optie bij het risico. Zeg het me als je er meer wilt laten tonen.</div>`:"";
+  const w=D.warn.map(x=>`<div class="note warn" style="margin-top:8px"><b>${x.naam}</b>: het rekeningoverzicht laat ${fq(x.rekening)} aandelen zien en de transacties ${fq(x.transacties)}. Dat kan komen door het uitoefenen of toewijzen van een optie. Controleer de positie in DeGiro.</div>`).join("");
+  return `<div class="sec"><h2>Wat de app heeft herkend</h2>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="note">Geen wijzigingen in je posities.</div>`}${w}${ex}
+  <div class="note">Saldo ${eur(PRIVE.cash)}${D.opties?`, ${D.opties} open ${D.opties===1?"optie":"opties"}`:", geen open opties"}. ${D.unknown.length?"Een bedrijf dat de app nog niet kent staat hierboven, maar telt nog niet mee in de weging. De gegevens en mijn beoordeling vul ik aan.":"Alle posities, de weging, gesloten posities en de grafieken zijn hiermee bijgewerkt."}</div></div>`};
+ const ag=O&&O.at?Math.floor((Date.now()-new Date(O.at).getTime())/864e5):null,oud=ag!=null?`Laatste upload: ${ag===0?"vandaag":ag+" dagen geleden"}. `:"";
+ return impSlot("acc",1,"Rekeningoverzicht","Account.csv","In DeGiro op de website: Inbox, Rekeningoverzicht. De eerste keer vanaf je eerste dag, daarna alleen de nieuwe periode. Klik op Exporteren, CSV.",la?`Gegevens van ${a&&a.van?new Date(a.van).toLocaleDateString("nl-NL",{month:"long",year:"numeric"}):"?"} tot ${fm(la.max)}.${O&&O.acc?` Jouw laatste upload loopt van ${fm(O.acc.lo)} tot ${fm(O.acc.hi)}.`:""}`:"")+
+ impSlot("trx",2,"Transacties","Transactions.csv","In DeGiro op de website: Inbox, Transacties. Zelfde periode als bij stap 1. Klik op Exporteren, CSV.",t?`${t.n} transacties in totaal, tot ${fm(lt.max)}.${O&&O.trx?` Jouw laatste upload loopt van ${fm(O.trx.lo)} tot ${fm(O.trx.hi)}.`:""}`:"")+herk()+
+ (a?`<div class="sec"><h2>Wat de app nu gebruikt</h2><div class="tile"><div class="kv" style="grid-template-columns:1fr 1fr"><div><small>Totaal gestort (netto)</small><b class="num">${eur(REAL.netto)}</b></div><div><small>Rendement per jaar (XIRR)</small><b class="num">${IMP.xirr!=null?f1(IMP.xirr)+"%":"n.v.t."}</b></div><div><small>Kosten sinds start</small><b class="num neg">${eur(REAL.kosten)}</b></div><div><small>Dividendbelasting</small><b class="num neg">${eur(REAL.divbel)}</b></div></div><div class="note">XIRR rekent met je stortingen en opnames en de waarde van je portefeuille van vandaag (${eur(IMP.val)}). ${oud}</div></div></div>
+ ${O?`<div class="sec"><button class="chip" id="impWis">Mijn uploads wissen</button></div>`:""}`:"")+
+ `<div class="note">De bestanden worden alleen in je browser gelezen. Ze gaan nergens heen en ik zie ze niet. Importeer je later een nieuwe periode (bijvoorbeeld alleen de laatste maand), dan wordt die toegevoegd en vervangt hij de overlappende dagen, dus niets telt dubbel. Je uploads blijven op dit apparaat bewaard. Kom je een foutmelding tegen, stuur me dan de eerste twee regels van het bestand (zonder bedragen), dan pas ik de inleesroutine aan.</div>`}
 document.addEventListener("change",e=>{if(e.target.id==="f_acc")readFile(e.target,"acc");if(e.target.id==="f_trx")readFile(e.target,"trx")});
-document.addEventListener("click",e=>{if(e.target.id==="impWis"){IMP={acc:null,trx:null,at:null,err:{}};try{localStorage.removeItem("pf_import");localStorage.removeItem("pf_stort")}catch(x){}location.reload()}});
+document.addEventListener("click",e=>{if(e.target.id==="impWis"){IMP={acc:null,trx:null,at:null,err:{}};try{localStorage.removeItem("pf_import");localStorage.removeItem("pf_ovl");localStorage.removeItem("pf_stort")}catch(x){}location.reload()}});
 render();
