@@ -1283,22 +1283,25 @@ const CLU=[{n:"Tech-cluster",lim:50,u:"Technologie en Halfgeleiders. Deze bewege
 const cluW=c=>own.filter(c.f).reduce((t,r)=>t+r.w,0);
 function applyPar(){DOEL=PAR.doel;AI_LIM=PAR.ai;CLU[0].lim=PAR.tech;CLU[1].lim=PAR.overn}
 let AI_LIM=PAR.ai;const AI_NM={2:"Profiteert sterk",1:"Profiteert",0:"Neutraal","-1":"Kwetsbaar"};applyPar();
-const AI_PREV={"FTNT":1}; /* voorbeeld: vorige beoordeling per bedrijf */
+const AI_PREV={}; /* pas gevuld als de beoordelingstaak een echte verandering vastlegt */
 const AI_DATUM="2026-11-08";
 function actieLijst(){const a=[];
-   own.filter(r=>r.peh>0&&r.pe>r.peh*PAR.pe).sort((x,y)=>y.pe/y.peh-x.pe/x.peh).forEach(r=>a.push([`${r.naam}: PE ${f1(r.pe)} staat ${Math.round((r.pe/r.peh-1)*100)}% boven het eigen gemiddelde (${f1(r.peh)})`,'data-d="'+r.tk+'"']));
-const D=r=>'data-d="'+r.tk+'"';
- own.filter(r=>(TR[r.tk]||{}).rev<=-10).forEach(r=>a.push([`${r.naam}: winstverwachting volgend jaar ${Math.abs(TR[r.tk].rev)}% omlaag in een maand`,D(r)]));
- own.filter(r=>(TR[r.tk]||{}).dd<=-25).forEach(r=>a.push([`${r.naam} staat ${Math.abs(TR[r.tk].dd)}% onder de top van het afgelopen jaar`,D(r)]));
- own.filter(r=>(TR[r.tk]||{}).divcut).forEach(r=>a.push([`${r.naam}: dividend verlaagd of geschrapt`,D(r)]));
- own.filter(r=>r.nd!=null&&r.nd>PAR.nd).forEach(r=>a.push([`${r.naam}: schuld is ${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×`,D(r)]));
- own.forEach(r=>vkHit(r).forEach(h=>a.push([`${r.naam}: eigen verkoopcriterium geraakt (${h.t.toLowerCase()})`,D(r)])));
- {const kw=aiW(r=>r.ai[0]<=-1);if(kw>AI_LIM)a.push([`AI-kwetsbare bedrijven zijn ${f1(kw)}% van je portefeuille, grens is ${AI_LIM}%`,'data-s="ai"'])}
- own.filter(r=>AI_PREV[r.tk]!=null&&r.ai[0]<AI_PREV[r.tk]).forEach(r=>a.push([`${r.naam}: AI-beoordeling verslechterd van ${AI_NM[AI_PREV[r.tk]]} naar ${AI_NM[r.ai[0]]}`,'data-d="'+r.tk+'"']));
- CLU.filter(c=>cluW(c)>c.lim).forEach(c=>a.push([`${c.n} is ${f1(cluW(c))}% van je portefeuille, grens is ${c.lim}%`,'data-s="cluster"']));
- const sw=Object.entries(secW).sort((x,y)=>y[1]-x[1])[0];if(sw[1]>PAR.sec)a.push([`${sw[0]} is ${f1(sw[1])}% van je portefeuille, grens is ${PAR.sec}%`,'data-s="sector"']);
- return a}
-const actieRij=([t,at])=>`<button class="row" ${at}><span class="dot a"></span><span class="grow"><div class="t" style="white-space:normal">${t}</div></span><span class="m">›</span></button>`;
+ const D=r=>'data-d="'+r.tk+'"';
+ let skip=new Set();try{const A=advActs();[...A.rv,...A.dn].forEach(x=>skip.add(x.r.tk))}catch(e){}
+ const add=(r,t,sev,det,at)=>{if(r&&skip.has(r.tk))return;a.push({t,at:at||D(r),sev,det,tk:r&&r.tk})};
+ const stap=r=>{try{const s=streef(r);return s?` Volgens je regels streef je naar ${f1(s.t)}% (nu ${f1(r.w)}%).`:""}catch(e){return ""}};
+ const lst=(arr,n=3)=>arr.sort((x,y)=>y.w-x.w).slice(0,n).map(r=>`${r.naam} ${f1(r.w)}%`).join(", ");
+ own.filter(r=>r.peh>0&&r.pe>r.peh*PAR.pe).forEach(r=>{const p=r.pe/r.peh-1;add(r,`${r.naam}: PE ${f1(r.pe)} staat ${Math.round(p*100)}% boven het eigen gemiddelde (${f1(r.peh)})`,p>=0.6?3:p>=0.45?2:1,`Je betaalt nu ${f1(r.pe)}× de winst, tegen gemiddeld ${f1(r.peh)}×. Rekensom: bij gelijkblijvende winst en een terugval naar dat gemiddelde zou de koers ongeveer ${Math.round((1-r.peh/r.pe)*100)}% lager liggen.<br><b>Volgende stap:</b> kijk bij het bedrijf of de winstgroei dit hogere PE rechtvaardigt. Zo niet, koop dan niet extra bij.${stap(r)}`)});
+ own.filter(r=>(TR[r.tk]||{}).rev<=-10).forEach(r=>{const v=Math.abs(TR[r.tk].rev);add(r,`${r.naam}: winstverwachting volgend jaar ${v}% omlaag in een maand`,v>=20?3:2,`Analisten verwachten voor volgend jaar nu ${v}% minder winst dan een maand geleden.<br><b>Volgende stap:</b> lees het laatste nieuws en kijk of dit eenmalig is of een trend. Zolang de verwachting blijft dalen: niet bijkopen.${stap(r)}`)});
+ own.filter(r=>(TR[r.tk]||{}).dd<=-25).forEach(r=>{const v=Math.abs(TR[r.tk].dd);add(r,`${r.naam} staat ${v}% onder de top van het afgelopen jaar`,v>=40?3:2,`De koers is ${v}% gedaald vanaf de hoogste stand van het afgelopen jaar.<br><b>Volgende stap:</b> bepaal of de reden bij het bedrijf ligt (cijfers, vooruitzicht) of bij de hele markt. Alleen bij het eerste kan je these veranderd zijn.${stap(r)}`)});
+ own.filter(r=>(TR[r.tk]||{}).divcut).forEach(r=>add(r,`${r.naam}: dividend verlaagd of geschrapt`,3,`Het bedrijf heeft het dividend verlaagd of geschrapt.<br><b>Volgende stap:</b> lees de reden in het laatste bericht. Is het geld nodig voor groei, dan kan het goed zijn; is het geldnood, dan is dit een waarschuwing.${stap(r)}`));
+ own.filter(r=>r.nd!=null&&r.nd>PAR.nd).forEach(r=>{const q=r.nd/PAR.nd;add(r,`${r.naam}: schuld is ${f1(r.nd)}× EBITDA, grens is ${f1(PAR.nd)}×`,q>=2?3:2,`De schuld is ${f1(r.nd)}× de EBITDA, ${f1(q)}× je eigen grens. Bij hoge schuld wegen rentekosten zwaar als de winst tegenvalt.<br><b>Volgende stap:</b> geen extra geld erbij tot de schuld onder de grens zakt. Kijk bij het bedrijf of die schuld bij het verdienmodel hoort (bij overnemers is dat vaak zo).${stap(r)}`)});
+ own.forEach(r=>vkHit(r).forEach(h=>add(r,`${r.naam}: eigen verkoopcriterium geraakt (${h.t.toLowerCase()})`,3,`Dit heb je zelf als verkoopsignaal vastgelegd: ${h.t.toLowerCase()}.<br><b>Volgende stap:</b> heroverweeg de positie (nu ${f1(r.w)}% van je portefeuille) of pas je criterium bij Mijn grenzen aan als het niet meer klopt.`)));
+ {const k=own.filter(r=>r.ai[0]<=-1),kw=aiW(r=>r.ai[0]<=-1);if(kw>AI_LIM)a.push({t:`AI-kwetsbare bedrijven zijn ${f1(kw)}% van je portefeuille, grens is ${AI_LIM}%`,at:'data-s="ai"',sev:kw-AI_LIM>=5?3:2,det:`${f1(kw-AI_LIM)} punt (ongeveer ${eur((kw-AI_LIM)/100*TOT)}) boven je grens. Het gaat om: ${lst(k,4)}.<br><b>Volgende stap:</b> kijk welke hiervan het minst sterk is tegen AI en bouw die niet verder uit.`})}
+ CLU.filter(c=>cluW(c)>c.lim).forEach(c=>{const x=cluW(c)-c.lim;a.push({t:`${c.n} is ${f1(cluW(c))}% van je portefeuille, grens is ${c.lim}%`,at:'data-s="cluster"',sev:x>=5?3:x>=2?2:1,det:`${f1(x)} procentpunt (ongeveer ${eur(x/100*TOT)}) boven je grens. Grootste posities: ${lst(own.filter(c.f))}.<br><b>Volgende stap:</b> stort de komende tijd in bedrijven buiten dit cluster, dan zakt het percentage vanzelf zonder te verkopen.`})});
+ const sw=Object.entries(secW).sort((x,y)=>y[1]-x[1])[0];if(sw[1]>PAR.sec){const x=sw[1]-PAR.sec;a.push({t:`${sw[0]} is ${f1(sw[1])}% van je portefeuille, grens is ${PAR.sec}%`,at:'data-s="sector"',sev:x>=5?3:x>=2?2:1,det:`${f1(x)} procentpunt (ongeveer ${eur(x/100*TOT)}) boven je grens. Grootste posities: ${lst(own.filter(r=>r.sector===sw[0]))}.<br><b>Volgende stap:</b> stort in andere sectoren om onder de grens te komen.`})}
+ return a.map((x,i)=>[x,i]).sort((p,q)=>q[0].sev-p[0].sev||p[1]-q[1]).map(p=>p[0])}
+const actieRij=x=>`<details class="row" style="display:block;padding:0"><summary style="list-style:none;display:flex;gap:10px;align-items:center;padding:12px;cursor:pointer;color:var(--fg)"><span class="dot ${x.sev>=3?"r":x.sev===2?"a":"n"}"></span><span class="grow"><div class="t" style="white-space:normal">${x.t}</div></span><span class="m">⌄</span></summary><div class="note" style="margin:0;padding:0 12px 12px 32px;white-space:normal;line-height:1.45">${x.det}<div style="margin-top:8px"><button class="chip" ${x.at}>Open ›</button></div></div></details>`;
 function actieBlok(){const a=actieLijst();if(!a.length)return "";
  return `<div class="sec"><div class="sh">${a.length>3?`<button data-s="acties" style="background:none;border:0;padding:0;margin:0;text-align:left;flex:1;color:inherit;font:inherit;cursor:pointer"><h2>Actie nodig</h2></button>`:"<h2>Actie nodig</h2>"}${a.length>3?`<button class="chip" data-s="acties">Alles (${a.length}) ›</button>`:""}</div><div class="list">${a.slice(0,3).map(actieRij).join("")}</div></div>`}
 function vlakBlok(){const l=[...own].sort((a,b)=>b.w-a.w);
