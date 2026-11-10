@@ -1909,7 +1909,7 @@ function vInz(){
   risico:topRisico()+sekt("Risico en spreiding",inzConc()+inzKlap()+inzCorr()+inzOpt()+inzDD())+P.stS+P.stV+aiSec(),
   kwal:topSterkte()+sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
   bel:P.ko+inzGed(),
-  plan:sekt("Deze maand",inzVolg()+inzZone()+inzSeizoen())+P.vo+sekt("Beslislogboek",inzLog())};
+  plan:P.vo+sekt("Beslislogboek",inzLog())};
  return head("Inzichten")+seg+(T[inzTab]||T.rend)+demo}
 const KC=[["Aankoop","--c1",o=>o.fb||0],["Verkoop","--c2",o=>o.fv||0],["Valuta","--c3",o=>o.fx||0],["Beurstaks","--c4",o=>o.ks||0],["Aansluiting","--c5",o=>o.ka||0],["Rente en overig","--cx",o=>(o.r||0)+(o.ko||0)]];
 function kostChart(){const ys=Object.keys(JR).sort(),W=320,H=110,top=14,bot=H-18,tot=y=>KC.reduce((t,c)=>t+c[2](JR[y]),0),mx=Math.max(...ys.map(tot),1),bw=W/ys.length;
