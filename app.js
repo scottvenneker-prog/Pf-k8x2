@@ -185,11 +185,13 @@ function vPos(){
  if(filter==="opties")return vOpt();
  let l=rows.filter(r=>filter==="watch"?r.watch:!r.watch);
  if(filter==="g"||filter==="a"||filter==="r")l=l.filter(r=>r.licht===filter);
- const srt={weging:(a,b)=>b.waarde-a.waarde,periode:(a,b)=>pv(b)-pv(a),peg:(a,b)=>a.peg-b.peg};
+ const WT={};let hasW=false;try{winData().forEach(x=>{WT[x.r.tk]=x.tot;hasW=true})}catch(e){}
+ const srt={weging:(a,b)=>b.waarde-a.waarde,rend:(a,b)=>pv(b)-pv(a),winst:(a,b)=>(WT[b.tk]||0)-(WT[a.tk]||0),eps:(a,b)=>b.eps-a.eps,roic:(a,b)=>(b.roic==null?-1e9:b.roic)-(a.roic==null?-1e9:a.roic),peg:(a,b)=>(a.peg==null?1e9:a.peg)-(b.peg==null?1e9:b.peg)};
+ if(!srt[sort])sort="weging";
  l.sort(srt[sort]||srt.weging);
  const fl=posfl();
  return head("Posities")+posChips()+(filter==="watch"?"":vlakBlok())+perChips()+`<div class="chips">${fl.map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:10px"><span class="note" style="margin:0">${l.length} bedrijven</span><label class="note" style="margin:0">Sorteer <select id="sort">${["weging","periode","peg"].map(s=>`<option ${s===sort?"selected":""}>${s}</option>`).join("")}</select></label></div>`+
+ <div class="note" style="margin:10px 0 6px">${l.length} bedrijven, gesorteerd op</div><div class="chips" style="padding:0 0 10px">${[["weging","Weging"],["rend","Rendement"],...(hasW?[["winst","Winst totaal"]]:[]),["eps","Winstgroei"],["roic","ROIC"],["peg","PEG"]].map(([k,t])=>`<button class="chip" data-so="${k}" aria-pressed="${sort===k}">${t}</button>`).join("")}</div>`+
  l.map(r=>`<button class="card" data-d="${r.tk}"><div class="h"><div class="nm">${r.naam}<span>${r.tk} · ${r.sector} · ${r.land}</span></div><div style="text-align:right"><div class="num" style="font-weight:600">${r.watch?"watchlist":eur(r.waarde)}</div><div class="num ${cls(pv(r))}" style="font-size:12.5px">${pc(pv(r))} ${({d:"vandaag",m:"1 mnd",y:"1 jr",f:"5 jr",t:"totaal"})[per]}</div></div></div>
  <div class="kv"><div><small>EPS-groei</small><b class="num">${r.eps}%</b></div><div><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b></div><div><small>PEG</small><b class="num">${pgT(r.peg)}</b></div></div><div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span class="pill ${r.licht}">Kwaliteit: ${lichtTxt[r.licht]}</span><span class="pill ${r.tc}">${r.trend}</span><span class="pill ${aiC(r.ai[0])}">AI: ${aiL(r.ai[0])}</span><span class="note num" style="margin:0">50d ${pc(r.v50)} · 200d ${pc(r.v200)}</span>${r.watch?`<span class="pill n">${SLM[r.tk]?"ontdekt door mij":"van jou"}</span>`:""}${PINS.includes(r.tk)?`<span class="pill n">vastgezet</span>`:""}${slRisk(r)?`<span class="pill a">valt binnenkort af</span>`:""}</div></button>`).join("")+demo}
 let bTab="grafiek",kTab="short",slF="alles",slS="s";
@@ -2040,7 +2042,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.s){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub=b.dataset.s;det=null;render();document.getElementById("sheet").scrollTop=0}
  else if(b.dataset.p){per=b.dataset.p;render()}
  else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
- else if(b.dataset.pv){posView=b.dataset.pv;render()}
+ else if(b.dataset.pv){posView=b.dataset.pv;render()} else if(b.dataset.so){sort=b.dataset.so;render()}
  else if(b.dataset.nt){nwsTab=b.dataset.nt;render()}
  else if(b.dataset.dvg){det=null;sub=null;subStack=[];agTab="dividend";tab="div";render();window.scrollTo(0,0)}
  else if(b.dataset.stt){stTab=b.dataset.stt;render()}
