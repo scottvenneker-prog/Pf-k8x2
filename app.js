@@ -39,7 +39,7 @@ function pfOptions(x,nm,today){const by={};x.forEach(r=>{if(PF_ISOPT(r[4])&&isFi
  return out}
 // hoofdfunctie: past de overlay toe op de basis en bouwt posities/saldo/opties opnieuw op
 function pfDyn(P,O,names,today){if(!P||!P.imp)return P;
- const MAP={};Object.entries(P.hold||{}).forEach(([tk,h])=>{MAP[h.isin]=tk});
+ const MAP={};try{const F=(typeof window!=="undefined"&&window.PF)||{};[F.posities,F.watchlist].forEach(m=>Object.keys(m||{}).forEach(tk=>{if(m[tk]&&m[tk].isin)MAP[m[tk].isin]=tk}))}catch(e){}Object.entries(P.hold||{}).forEach(([tk,h])=>{MAP[h.isin]=tk});
  const imp=P.imp,baseX=((imp.trx&&imp.trx.x)||[]).slice();
  if(O&&O.trx&&O.trx.x){const base=(imp.trx&&imp.trx.x)||[];const nx=base.filter(r=>r[0]<O.trx.lo||r[0]>O.trx.hi).concat(O.trx.x);
   nx.sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?1:p>q?-1:0});
@@ -2257,7 +2257,8 @@ function vImport(){const a=IMP.aA,t=IMP.aT,age=impAge(),fm=d=>new Date(d).toLoca
  const nmOf=tk=>(DR[tk]&&DR[tk].naam)||tk,fq=q=>(Math.round(q*100)/100).toLocaleString("nl-NL");
  const herk=()=>{if(!D||!D.actief)return "";const rows=[];
   D.changes.forEach(c=>rows.push(`<div class="row"><span class="grow">${nmOf(c.tk)}</span><span class="m">${c.soort==="nieuw"?"Nieuw: "+fq(c.naar)+" aandelen":c.soort==="verkocht"?"Volledig verkocht ("+fq(c.van)+")":(c.soort==="bijgekocht"?"Bijgekocht":"Deels verkocht")+": "+fq(c.van)+" naar "+fq(c.naar)}</span></div>`));
-  D.unknown.forEach(u=>rows.push(`<div class="row"><span class="grow">${u.name}</span><span class="m">Nieuw bedrijf: ${fq(u.qty)} aandelen, nog niet in de app</span></div>`));
+  D.unknown.forEach(u=>{let rq=false,tok=false;try{rq=!!(JSON.parse(localStorage.getItem("pf_nwreq")||"{}")[u.isin]);tok=!!localStorage.getItem("pf_gh")}catch(e){}
+   rows.push(`<div class="row"><span class="grow">${u.name}</span><span class="m">Nieuw bedrijf, ${fq(u.qty)} aandelen</span></div><div class="row"><span class="grow note" style="margin:0">${rq?"Aangevraagd. Binnen een dag staat het bedrijf met gegevens en beoordeling in de app. Daarna tel je het mee in de weging.":tok?"Nog niet in de app.":"Nog niet in de app. Plak je GitHub-token bij Alerts of Notities, dan kun je het hier aanvragen."}</span>${!rq&&tok?`<button class="chip" data-nwi="${u.isin}" data-nwn="${String(u.name).replace(/"/g,"")}">Toevoegen</button>`:""}</div>`)});
   const ex=D.extra&&D.extra.length?`<div class="note warn" style="margin-top:8px">Er staat naast je bestaande optie ook open: <b>${D.extra.join(", ")}</b>. De app rekent nu met één optie bij het risico. Zeg het me als je er meer wilt laten tonen.</div>`:"";
   const w=D.warn.map(x=>`<div class="note warn" style="margin-top:8px"><b>${x.naam}</b>: het rekeningoverzicht laat ${fq(x.rekening)} aandelen zien en de transacties ${fq(x.transacties)}. Dat kan komen door het uitoefenen of toewijzen van een optie. Controleer de positie in DeGiro.</div>`).join("");
   return `<div class="sec"><h2>Wat de app heeft herkend</h2>${rows.length?`<div class="list">${rows.join("")}</div>`:`<div class="note">Geen wijzigingen in je posities.</div>`}${w}${ex}
@@ -2269,5 +2270,6 @@ function vImport(){const a=IMP.aA,t=IMP.aT,age=impAge(),fm=d=>new Date(d).toLoca
  ${O?`<div class="sec"><button class="chip" id="impWis">Mijn uploads wissen</button></div>`:""}`:"")+
  `<div class="note">De bestanden worden alleen in je browser gelezen. Ze gaan nergens heen en ik zie ze niet. Importeer je later een nieuwe periode (bijvoorbeeld alleen de laatste maand), dan wordt die toegevoegd en vervangt hij de overlappende dagen, dus niets telt dubbel. Je uploads blijven op dit apparaat bewaard. Kom je een foutmelding tegen, stuur me dan de eerste twee regels van het bestand (zonder bedragen), dan pas ik de inleesroutine aan.</div>`}
 document.addEventListener("change",e=>{if(e.target.id==="f_acc")readFile(e.target,"acc");if(e.target.id==="f_trx")readFile(e.target,"trx")});
-document.addEventListener("click",e=>{if(e.target.id==="impWis"){IMP={acc:null,trx:null,at:null,err:{}};try{localStorage.removeItem("pf_import");localStorage.removeItem("pf_ovl");localStorage.removeItem("pf_stort")}catch(x){}location.reload()}});
+document.addEventListener("click",async e=>{const nb=e.target.closest&&e.target.closest("[data-nwi]");if(nb){nb.disabled=true;nb.textContent="Bezig…";try{await ghEdit("nieuw.json",c=>{c[nb.dataset.nwi]={naam:nb.dataset.nwn,sinds:new Date().toISOString().slice(0,10)}});const q=JSON.parse(localStorage.getItem("pf_nwreq")||"{}");q[nb.dataset.nwi]=1;localStorage.setItem("pf_nwreq",JSON.stringify(q))}catch(x){alert(x.message||"Mislukt")}render();return}
+ if(e.target.id==="impWis"){IMP={acc:null,trx:null,at:null,err:{}};try{localStorage.removeItem("pf_import");localStorage.removeItem("pf_ovl");localStorage.removeItem("pf_stort")}catch(x){}location.reload()}});
 render();
