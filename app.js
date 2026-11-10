@@ -184,7 +184,7 @@ function vPos(){
  if(filter==="closed")return vClosed();
  if(filter==="opties")return vOpt();
  let l=rows.filter(r=>filter==="watch"?r.watch:!r.watch);
- if(filter==="g"||filter==="r")l=l.filter(r=>r.licht===filter);
+ if(filter==="g"||filter==="a"||filter==="r")l=l.filter(r=>r.licht===filter);
  const srt={weging:(a,b)=>b.waarde-a.waarde,periode:(a,b)=>pv(b)-pv(a),peg:(a,b)=>a.peg-b.peg};
  l.sort(srt[sort]||srt.weging);
  const fl=posfl();
@@ -372,7 +372,7 @@ function feeEst(r,amt){const t=feeTab(),f=t[r.munt]!=null?t[r.munt]:5,st=r.munt=
 function feeTxt(x,amt){if(!(amt>0))return "";const c=feeEst(x.r,amt);return `Aankoopkosten ongeveer ${eur(Math.round(c.t))} (${(c.t/amt*100).toFixed(1).replace(".",",")}%)${c.st?", inclusief 0,5% Britse zegelbelasting":""}`}
 
 let cSort="laatste",_CL=null;
-const POSFL=[["alles","Alle"],["g","Sterk"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"],["trans","Transacties"],["moeder","Moeder"]];
+const POSFL=[["alles","Alle"],["g","Sterk"],["a","Gemengd"],["r","Zwak"],["closed","Gesloten"],["opties","Opties"],["trans","Transacties"],["moeder","Moeder"]];
 function eyeBtn(){return `<button class="chip eye" data-eye="1" aria-label="${hide?"Bedragen tonen":"Bedragen verbergen"}" aria-pressed="${hide}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hide?'<path d="M4 20L20 4"/>':""}</svg></button>`}
 function posfl(){return POSFL.filter(x=>x[0]==="moeder"?!!(PRIVE&&PRIVE.moeder&&PRIVE.moeder.length):x[0]==="trans"?!!(PRIVE&&PRIVE.imp&&PRIVE.imp.trx):true)}
 function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL;
