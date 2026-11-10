@@ -191,6 +191,12 @@ details.fo[open]>summary.fs::after{transform:rotate(90deg)}
 .list.fl>details.fo{margin:0!important;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none}
 .list.fl>details.fo:last-of-type{border-bottom:0}
 .list.fl>details.fo[open]>.fb{border-top:1px solid var(--line);padding-top:10px!important}
+
+/* Inzichten: knoprij */
+button.fs{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;padding:13px 12px;background:none;border:0;text-align:left;color:var(--fg);font:inherit;cursor:pointer}
+button.fs::after{content:"\203A";color:var(--mut);font-size:18px;line-height:1;flex:none}
+.list.fl>button.fs{border-bottom:1px solid var(--line)}
+.list.fl>button.fs:last-child{border-bottom:0}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 </head><body>
