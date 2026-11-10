@@ -7,10 +7,10 @@ function pfOvlSet(o){try{if(o)localStorage.setItem(PF_OVL_KEY,JSON.stringify(o))
 function pfOvlAdd(o,kind,n){o=o||{};
  if(kind==="trx"){const old=o.trx,lo=old?(n.min<old.lo?n.min:old.lo):n.min,hi=old?(n.max>old.hi?n.max:old.hi):n.max;
   const keep=old?old.x.filter(r=>r[0]<n.min||r[0]>n.max):[];
-  o.trx={lo,hi,x:keep.concat(n.x.map(r=>r.slice(0,8))),nm:Object.assign({},old&&old.nm,n.nm||{}),fx:n.fx||(old&&old.fx),fee:n.fee||(old&&old.fee)}}
+  o.trx={lo,hi,x:keep.concat(n.x.map(r=>r.slice(0,9))),nm:Object.assign({},old&&old.nm,n.nm||{}),fx:n.fx||(old&&old.fx),fee:n.fee||(old&&old.fee)}}
  else{const old=o.acc,lo=old?(n.min<old.lo?n.min:old.lo):n.min,hi=old?(n.max>old.hi?n.max:old.hi):n.max;
   const out=(a,i)=>(a||[]).filter(r=>r[i]<n.min||r[i]>n.max);
-  o.acc={lo,hi,ev:out(old&&old.ev,0).concat(n.ev),fxl:out(old&&old.fxl,0).concat(n.fxl||[]),dv:out(old&&old.dv,0).concat(n.dv||[]),leg:out(old&&old.leg,0).concat(n.leg||[]),
+  o.acc={lo,hi,ev:out(old&&old.ev,0).concat(n.ev),fxl:out(old&&old.fxl,0).concat(n.fxl||[]),dv:out(old&&old.dv,0).concat(n.dv||[]),syn:out(old&&old.syn,0).concat(n.syn||[]),legnm:Object.assign({},old&&old.legnm,n.legnm||{}),leg:out(old&&old.leg,0).concat(n.leg||[]),
    saldo:(!old||!old.saldo||(n.saldo&&n.saldo.d>=old.saldo.d))?n.saldo:old.saldo}}
  o.at=new Date().toISOString();return o}
 const PF_MND={jan:"jan",feb:"feb",mar:"mrt",apr:"apr",may:"mei",jun:"jun",jul:"jul",aug:"aug",sep:"sep",oct:"okt",nov:"nov",dec:"dec"};
@@ -47,13 +47,20 @@ function pfDyn(P,O,names,today){if(!P||!P.imp)return P;
  if(O&&O.acc){const A=imp.acc||{ev:[],fxl:[],dv:[]};const out=(a,i)=>(a||[]).filter(r=>r[i]<O.acc.lo||r[i]>O.acc.hi);
   imp.acc=Object.assign({},A,{ev:out(A.ev,0).concat(O.acc.ev).sort((p,q)=>p[0]<q[0]?-1:p[0]>q[0]?1:0),fxl:out(A.fxl,0).concat(O.acc.fxl||[]),dv:out(A.dv,0).concat(O.acc.dv||[]).sort((p,q)=>p[0]<q[0]?1:p[0]>q[0]?-1:0),
    min:A.min&&A.min<O.acc.lo?A.min:O.acc.lo,max:A.max&&A.max>O.acc.hi?A.max:O.acc.hi,rows:(A.rows||0)})}
+ if(O&&O.acc&&imp.trx&&((O.acc.syn&&O.acc.syn.length)||(O.acc.leg&&O.acc.leg.length))){const hv=new Set(imp.trx.x.map(r=>r[0]+"|"+r[4]+"|"+r[5]+"|"+Math.round(r[6]*100))),hr={},bad={};let add=0;
+  imp.trx.x.forEach(r=>{hr[r[4]]=1});(O.acc.leg||[]).forEach(l=>{if(l[5]&&l[5]!=="EUR")bad[l[1]]=1});
+  const cand=(O.acc.syn||[]).slice();(O.acc.leg||[]).forEach(l=>{if(!hr[l[1]]&&!bad[l[1]]&&isFinite(l[3]))cand.push([l[0],l[2]>0?"k":"v",0,0,l[1],l[2],l[3],l[4]||"",0])});
+  const used=new Set(),DAY=864e5,by0={};imp.trx.x.forEach((r,i)=>{(by0[r[4]]=by0[r[4]]||[]).push(i)});
+  cand.forEach(r=>{const L=by0[r[4]]||[];let m=-1;for(const i of L){if(used.has(i))continue;const e=imp.trx.x[i];if(e[5]===r[5]&&Math.abs(e[6]-r[6])<1&&Math.abs(Date.parse(e[0])-Date.parse(r[0]))<=4*DAY){m=i;break}}
+   if(m>=0){used.add(m);return}imp.trx.x.push(r);add++});
+  if(add)imp.trx.x.sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?1:p>q?-1:0})}
  const x=(imp.trx&&imp.trx.x)||[];
- const pos=pfPositions(x),pos0=pfPositions(baseX),oldHold=P.hold||{},hold={},unknown=[],changes=[];
- const aff={};((O&&O.trx&&O.trx.x)||[]).forEach(r=>{if(!PF_ISOPT(r[4]))aff[r[4]]=1});
+ const hasRows0={};baseX.forEach(r=>{hasRows0[r[4]]=1});const pos=pfPositions(x),pos0=pfPositions(baseX),oldHold=P.hold||{},hold={},unknown=[],changes=[];
+ const aff={};((O&&O.trx&&O.trx.x)||[]).forEach(r=>{if(!PF_ISOPT(r[4]))aff[r[4]]=1});const fromTrx={};Object.keys(aff).forEach(k=>{fromTrx[k]=1});((O&&O.acc&&O.acc.syn)||[]).forEach(r=>{aff[r[4]]=1});((O&&O.acc&&O.acc.leg)||[]).forEach(l=>{if(!hasRows0[l[1]])aff[l[1]]=1});
  const soldBy={};(P.sold||[]).forEach(s=>{soldBy[s.isin]=s});
  Object.keys(oldHold).forEach(tk=>{const h=oldHold[tk];if(!aff[h.isin]){hold[tk]=h;return}const p=pos[h.isin];if(p&&p.qty>1e-6)hold[tk]=p});
  Object.keys(aff).forEach(isin=>{const p=pos[isin],tk=MAP[isin];if(!p)return;
-  if(p.qty>1e-6){if(tk){if(!hold[tk])hold[tk]=p}else if(!(pos0[isin]&&pos0[isin].qty>1e-6))unknown.push({isin,name:(O&&O.trx&&O.trx.nm&&O.trx.nm[isin])||(P.names&&P.names[isin])||isin,qty:p.qty,ink:p.ink})}
+  if(p.qty>1e-6){if(tk){if(!hold[tk])hold[tk]=p}else if(fromTrx[isin]&&!(pos0[isin]&&pos0[isin].qty>1e-6))unknown.push({isin,name:(O&&O.trx&&O.trx.nm&&O.trx.nm[isin])||(P.names&&P.names[isin])||isin,qty:p.qty,ink:p.ink})}
   else soldBy[isin]=Object.assign({},soldBy[isin]||{},{isin,eerste:p.eerste,laatste:p.laatste,n:p.n,buy:p.buy,sell:p.sell})});
  const sk=[];(P.sold||[]).forEach(s=>{sk.push(soldBy[s.isin]);delete soldBy[s.isin]});Object.values(soldBy).forEach(s=>sk.push(s));
  Object.keys(Object.assign({},oldHold,hold)).forEach(tk=>{const a=oldHold[tk],b=hold[tk];
@@ -78,7 +85,7 @@ function pfDyn(P,O,names,today){if(!P||!P.imp)return P;
   else{const nw=op.find(o=>o.open&&o.pn);if(nw){P.opt={n:Math.abs(nw.q),k:nw.pn.k,d:nw.pn.d,p:0,t:nw.pn.t};P.put=0;fresh.filter(z=>z.n!==pfOptLabel(nw.pn)).forEach(z=>extra.push(z.n))}else{P.opt={n:open.reduce((t,z)=>t+Math.abs(z.q),0),k:0,d:"",p:0};P.put=0}}}
  // waarschuwing: aandelenregels in het rekeningoverzicht zonder transactie (uitoefening of toewijzing van een optie)
  const warn=[];
- if(O&&O.acc&&O.acc.leg&&O.trx){const t={};x.forEach(r=>{if(r[0]>=O.acc.lo&&r[0]<=O.acc.hi&&!PF_ISOPT(r[4])&&isFinite(r[5]))t[r[4]]=(t[r[4]]||0)+r[5]});const a={},rec={},cut=new Date(new Date(today).getTime()-365*864e5).toISOString().slice(0,10);O.acc.leg.forEach(l=>{a[l[1]]=(a[l[1]]||0)+l[2];if(l[0]>=cut)rec[l[1]]=1});
+ if(O&&O.acc&&O.acc.leg&&O.trx){const t={};x.forEach(r=>{if(r[8]!==0&&r[0]>=O.acc.lo&&r[0]<=O.acc.hi&&!PF_ISOPT(r[4])&&isFinite(r[5]))t[r[4]]=(t[r[4]]||0)+r[5]});const a={},rec={},cut=new Date(new Date(today).getTime()-365*864e5).toISOString().slice(0,10);O.acc.leg.forEach(l=>{a[l[1]]=(a[l[1]]||0)+l[2];if(l[0]>=cut)rec[l[1]]=1});
   Object.keys(a).forEach(i=>{if((rec[i]||MAP[i])&&Math.abs(a[i]-(t[i]||0))>1e-6)warn.push({isin:i,naam:(O.acc.legnm&&O.acc.legnm[i])||i,rekening:a[i],transacties:t[i]||0})})}
  P.dyn={extra,actief:!!O,at:O&&O.at||null,unknown,changes,warn,opties:(P.opts||[]).filter(z=>z.open).length};
  return P}
@@ -125,7 +132,7 @@ function mk(tk,M,w){const D=DR[tk]||{};
  const a=AI[tk];o.ai=a||(M.ai?[M.ai[0],M.ai[1]||"Nog te beoordelen","Hier heb ik nog geen uitleg voor.",""]:[0,"Nog te beoordelen","Hier heb ik nog geen beoordeling voor.",""]);
  if(!w){const h=PRIVE&&PRIVE.hold[tk],kp=D.koers_eur;
   let RD=PRIVE&&PRIVE.rend&&PRIVE.rend[tk]!=null?PRIVE.rend[tk]:M.rend;if(RD===0&&h&&h.ink>0)RD=null;
-  if(h&&kp){o.qty=h.qty;o.waarde=h.qty*kp;o.inkoop=RD!=null?o.waarde/(1+RD/100):h.ink}
+  if(h&&kp){o.qty=h.qty;o.waarde=h.qty*kp;o.inkoop=h.ink>0?h.ink:(RD!=null?o.waarde/(1+RD/100):h.ink)}
   else{o.waarde=(M.weging||0)/100*TOTBASE;o.inkoop=RD!=null?o.waarde/(1+RD/100):o.waarde}}
  return o}
 ((DATA.scan&&DATA.scan.lijst)||[]).forEach(s=>{if(!PF.posities[s.tk]&&!(PF.watchlist||{})[s.tk]&&DR[s.tk]){PF.watchlist=PF.watchlist||{};PF.watchlist[s.tk]={naam:String(s.naam||s.tk).replace(/\s+Common St.*$/i,"").replace(/,?\s+(Inc|Corp|Corporation)\.?$/i,"").trim(),sector:s.sector,land:s.land,munt:s.munt,eigenaar:"–",ai:null,scan:s.sinds}}});
@@ -852,7 +859,7 @@ function risicos(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,L=[],add=(k,t,n,u
 function topRisico(){const L=risicos().slice(0,3);if(!L.length)return "";let prev=[];try{prev=JSON.parse(localStorage.getItem("pf_risk")||"[]")}catch(e){}
  try{localStorage.setItem("pf_risk",JSON.stringify(L.map(x=>x.k)))}catch(e){}
  const lv=r=>r>=1.3?["Hoog","r"]:r>=1?["Let op","a"]:["Beheersbaar","g"];
- return `<div class="tile hero2" style="margin-top:8px"><div class="lbl">Je drie grootste risico's nu</div>${L.map((x,i)=>{const v=lv(x.r);return `<details style="${i?"border-top:1px solid var(--line);":""}padding:2px 0"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:600;color:var(--${v[1]==="r"?"bad":v[1]==="a"?"warn":"good"})">${i+1}. ${x.t}${prev.length&&!prev.includes(x.k)?` <span class="pill n">nieuw</span>`:""}</span><span style="display:flex;gap:6px;align-items:center"><b class="num" style="color:var(--${v[1]==="r"?"bad":v[1]==="a"?"warn":"good"})">${x.n}</b><span class="pill ${v[1]}">${v[0]}</span></span></div><div class="note" style="margin:2px 0 0">${x.u.split(". ")[0].replace(/\.$/,"")}.</div></summary><div class="note" style="margin:0 0 8px">${x.u}<br><b>Wat kun je doen:</b> ${x.a}</div></details>`}).join("")}<div class="note" style="margin:6px 0 0">Rekent live mee met je portefeuille, dus verandert zodra je wegingen of regels veranderen. Gerangschikt naar hoe ver je boven je eigen limiet zit.</div></div>`}
+ return `<div class="tile hero2" style="margin-top:8px"><div class="lbl">Je drie grootste risico's nu</div>${L.map((x,i)=>{const v=lv(x.r);return `<details style="${i?"border-top:1px solid var(--line);":""}padding:2px 0"><summary style="list-style:none;cursor:pointer;padding:8px 0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-weight:600;color:var(--${v[1]==="r"?"bad":v[1]==="a"?"warn":"good"})">${i+1}. ${x.t}${prev.length&&!prev.includes(x.k)?` <span class="pill n">nieuw</span>`:""}</span><span style="display:flex;gap:6px;align-items:center"><b class="num" style="color:var(--${v[1]==="r"?"bad":v[1]==="a"?"warn":"good"})">${x.n}</b><span class="pill ${v[1]}">${v[0]}</span></span></div><div class="note" style="margin:2px 0 0">${x.u.split(". ")[0].replace(/\.$/,"")}.</div></summary><div class="note" style="margin:0 0 8px">${x.u.split(". ").slice(1).join(". ")?x.u.split(". ").slice(1).join(". ").replace(/\.?$/,".")+"<br>":""}<b>Wat kun je doen:</b> ${x.a}</div></details>`}).join("")}<div class="note" style="margin:6px 0 0">Rekent live mee met je portefeuille, dus verandert zodra je wegingen of regels veranderen. Gerangschikt naar hoe ver je boven je eigen limiet zit.</div></div>`}
 
 /* ---- top 3 sterkste punten ---- */
 function sterkten(){try{const W=own.reduce((t,r)=>t+r.w,0)||100,L=[],wa=f=>{let a=0,b=0;own.forEach(r=>{const v=f(r);if(v!=null&&isFinite(v)){a+=r.w*v;b+=r.w}});return b?a/b:null},sh=f=>own.filter(f).reduce((t,r)=>t+r.w,0)/W*100,add=(k,t,n,u,why,r)=>{if(r!=null&&isFinite(r))L.push({k,t,n,u,why,r})};
@@ -1371,6 +1378,18 @@ function vDet(){
  return `<div class="bar"><button class="back" id="bk">‹ Terug</button><button class="pill ${r.licht}" data-dx="scoreUit" aria-expanded="${!!dOpen.scoreUit}" style="border:0;font:inherit;font-size:inherit;cursor:pointer">${lichtTxt[r.licht]} · ${r.score}/10 ${dOpen.scoreUit?"˄":"˅"}</button></div>
  <h1 style="font-size:26px;letter-spacing:-.01em">${r.naam}</h1><div class="note" style="margin-top:2px">${r.tk} · ${r.sector} · ${r.land}</div>${dOpen.scoreUit?scoreUitleg(r):""}
  <div class="tabs" role="tablist" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;overflow:visible">${DT_TABS.map(([k,n])=>`<button role="tab" data-dt="${k}" aria-selected="${k===t}" style="padding:9px 4px;white-space:nowrap">${n}</button>`).join("")}</div>${b}${demo}`}
+// ===== Lopend jaar en jaarwissel: alles uit je export en de koersreeksen, niets met de hand =====
+function pfIdxYr(key,y,eindJaar){try{const L=DATA.indices.lang,S=L[key],t0=Date.parse(L.start+"T00:00:00Z");if(!S||!S.length)return null;
+ const dt=i=>new Date(t0+i*7*864e5).toISOString().slice(0,10);let ib=-1,ie=-1;
+ for(let i=0;i<S.length;i++){const d=dt(i);if(d<=(y-1)+"-12-31")ib=i;if(eindJaar?d<=y+"-12-31":true)ie=i}
+ if(ib<0||ie<=ib||!S[ib]||!S[ie])return null;return +((S[ie]/S[ib]-1)*100).toFixed(1)}catch(e){return null}}
+function pfYears(){try{const cy=new Date().getFullYear();let L=YRS[YRS.length-1];if(!L)return;
+ while(L.y<cy){const eind=TOT;
+  L.lopend=false;L.eind=eind;L.res=eind-L.begin-L.inleg;const s=pfIdxYr("sp500",L.y,true),w=pfIdxYr("wereld",L.y,true);if(s!=null)L.sp=s;if(w!=null)L.wr=w;
+  const n={y:L.y+1,begin:eind,inleg:0,res:0,eind:eind,lopend:true,sp:0,wr:0,afgeleid:true};YRS.push(n);L=n}
+ if(!JR[cy])JR[cy]={i:0,u:0,k:0,t:0,kt:0,ka:0,ko:0,ks:0,r:0};if(REAL.jaar&&REAL.jaar[cy]==null)REAL.jaar[cy]=0;
+ if(L.lopend){const j=REAL.jaar&&REAL.jaar[L.y];if(j!=null)L.inleg=Math.round(j);L.eind=TOT;L.res=TOT-L.begin-L.inleg;
+  const s=pfIdxYr("sp500",L.y,false),w=pfIdxYr("wereld",L.y,false);if(s!=null)L.sp=s;if(w!=null)L.wr=w}}catch(e){try{console.error("jaren",e)}catch(x){}}}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -1540,7 +1559,7 @@ function cols(items,titel,fmt,go,note,link){const mx=Math.max(...items.map(i=>Ma
 function inlegChart(){const it=Object.entries(REAL.jaar).map(([l,v])=>({l:l.slice(2),v}));
  return cols(it,"Netto inleg per jaar",null,"jaren","Groen is gestort, oranje is opgenomen.","Bekijk alle jaren")}
 function histFacts(r){const h=HIST[r.tk];if(!h)return "";
- const jaren=(new Date(2026,10,6)-new Date(h.eerste))/(365.25*864e5);
+ const jaren=(new Date()-new Date(h.eerste))/(365.25*864e5);
  return `<div class="fact"><small>Eerste aankoop</small><b class="num">${new Date(h.eerste).toLocaleDateString("nl-NL",{month:"short",year:"numeric"})}</b><em>${h.n} transacties</em></div><div class="fact"><small>Totaalrendement</small><b class="num ${cls(h.totaal)}">${pc(h.totaal)}</b><em>inclusief wat je verkocht</em></div>${jaren>=1&&h.xirr!=null?`<div class="fact"><small>Per jaar sinds aankoop</small><b class="num ${cls(h.xirr)}">${pc(h.xirr)}</b></div>`:`<div class="fact"><small>Per jaar</small><b class="num">–</b><em>nog geen jaar vastgehouden</em></div>`}`}
 function noteGet(tk){try{return localStorage.getItem("note_"+tk)||""}catch(e){return ""}}
 function noteSet(tk,v){try{localStorage.setItem("note_"+tk,v)}catch(e){}}
@@ -2178,12 +2197,13 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
  const iD=H.indexOf("datum"),iO=H.findIndex(h=>h==="omschrijving"||h==="description");let iM=H.findIndex(h=>h==="mutatie"||h==="change");
  if(iD<0||iO<0||iM<0)throw new Error("Dit lijkt geen Account.csv (rekeningoverzicht): ik mis de kolommen Datum, Omschrijving en Mutatie.");
  const ev=[],fxl=[];let rows=0;const iFX=H.indexOf("fx");
- const iPr=H.indexOf("product"),iIs=H.indexOf("isin"),iTi=H.indexOf("tijd"),iS=H.indexOf("saldo"),DV=[],TX={},leg=[],legnm={};let saldo=null,sk="";
+ const iPr=H.indexOf("product"),iIs=H.indexOf("isin"),iTi=H.indexOf("tijd"),iS=H.indexOf("saldo"),DV=[],TX={},leg=[],syn=[],legnm={};let saldo=null,sk="";
  for(const r of R.slice(1)){const d=isoD(r[iD]);if(!d)continue;const om=(r[iO]||"").trim(),cur=(r[iM]||"").trim(),a=num(r[iM+1]);
   if(iS>=0&&String(r[iS]||"").trim()==="EUR"&&isFinite(num(r[iS+1]))){const k0=d+" "+(iTi>=0?(r[iTi]||""):"");if(!saldo||k0>sk){saldo={d,v:num(r[iS+1])};sk=k0}}
   if(isFinite(a)&&cur&&/^(dividend|kapitaalsuitkering)$/i.test(om))DV.push([d,a,cur,(r[iPr]||"").trim(),(r[iIs]||"").trim(),0]);
   if(isFinite(a)&&cur&&/^dividendbelasting$/i.test(om)){const k1=d+"|"+(r[iIs]||"").trim();TX[k1]=(TX[k1]||0)+a}
-  {const is=(r[iIs]||"").trim(),m=om.match(/^(Koop|Verkoop) ([\d.]+) @/);if(m&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is)&&!/^[A-Z]{2}E[NX]/.test(is)&&!/coupon/i.test(r[iPr]||"")){leg.push([d,is,(m[1]==="Koop"?1:-1)*parseFloat(m[2].replace(/\./g,""))]);legnm[is]=(r[iPr]||"").trim()}}
+  {const is0=(r[iIs]||"").trim(),ms=om.match(/^(OPTIE ASSIGNMENT|WIJZIGING ISIN): (Koop|Verkoop) ([\d.]+) @/);if(ms&&cur==="EUR"&&isFinite(a)&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is0)&&!/^[A-Z]{2}E[NX]/.test(is0)){const q0=parseFloat(ms[3].replace(/\./g,""));syn.push([d,ms[2]==="Koop"?"k":"v",0,0,is0,(ms[2]==="Koop"?1:-1)*q0,a,iTi>=0?(r[iTi]||""):"",0]);legnm[is0]=(r[iPr]||"").trim()}}
+  {const is=(r[iIs]||"").trim(),m=om.match(/^(Koop|Verkoop) ([\d.]+) @/);if(m&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is)&&!/^[A-Z]{2}E[NX]/.test(is)&&!/coupon/i.test(r[iPr]||"")){leg.push([d,is,(m[1]==="Koop"?1:-1)*parseFloat(m[2].replace(/\./g,"")),a,iTi>=0?(r[iTi]||""):"",cur]);legnm[is]=(r[iPr]||"").trim()}}
   if(isFinite(a)&&cur&&cur!=="EUR"){if(/^valuta (creditering|debitering)/i.test(om)&&iFX>=0&&isFinite(num(r[iFX]))&&num(r[iFX])>0)fxl.push([d,cur,num(r[iFX])]);else if(/^(dividend|kapitaalsuitkering)$/i.test(om))ev.push([d,"v",a,cur]);else if(/^dividendbelasting$/i.test(om))ev.push([d,"w",a,cur])}
   if(!isFinite(a)||cur!=="EUR")continue;rows++;
   if(/^(dividend|kapitaalsuitkering)$/i.test(om)){ev.push([d,"v",a,"EUR"]);continue}
@@ -2205,7 +2225,7 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
  const byK={};dv.forEach(e=>{const k=e[0]+"|"+e[4];(byK[k]=byK[k]||[]).push(e)});
  Object.keys(byK).forEach(k=>{if(TX[k]!=null){const e=byK[k].reduce((p,q)=>Math.abs(q[1])>Math.abs(p[1])?q:p);e[5]=Math.round(TX[k]*100)/100}});
  dv.forEach(e=>e[1]=Math.round(e[1]*100)/100);
- return {ev,fxl,rows,min:ds[0],max:ds[ds.length-1],dv,leg,legnm,saldo}}
+ return {ev,fxl,rows,min:ds[0],max:ds[ds.length-1],dv,leg,legnm,saldo,syn}}
 let FXL=[];
 function fxRate(cur,iso){const L=FXL.filter(x=>x[1]===cur);if(!L.length)return null;const T=d=>new Date(d).getTime();let best=L[0],bd=1e18;for(const x of L){const dd=Math.abs(T(x[0])-T(iso));if(dd<bd){bd=dd;best=x}}let r=best[2];if(cur==="GBP"&&r>20)r/=100;return r}
 function aggAcc(ev){const jr={},stort=[],flows=[];let kosten=0,divbel=0;const Y=y=>jr[y]||(jr[y]={i:0,u:0,k:0,t:0,kt:0,ka:0,ko:0,ks:0,r:0});
@@ -2241,7 +2261,7 @@ function applyImp(){if(!IMP.acc)return;FXL=IMP.acc.fxl||[];const a=Object.assign
  Object.values(jr).forEach(o=>{o.k=Math.round((IMP.hasFee?(o.fb||0)+(o.fv||0):(o.kt||0))+(o.fx||0)+(o.ks||0)+(o.ka||0)+(o.ko||0)+(o.r||0))});a.kosten=Object.values(jr).reduce((t,o)=>t+o.k,0);
  JR=jr;STORT=a.stort;REAL.kosten=a.kosten;REAL.divbel=a.divbel;REAL.jaar={};let net=0;Object.keys(jr).forEach(y=>{REAL.jaar[y]=jr[y].i-jr[y].u;net+=jr[y].i-jr[y].u});REAL.netto=net;
  const val=TOT,x=xirrOf(a.flows,NOW,val);if(x!=null)REAL.xirr=x;IMP.xirr=x;IMP.val=val;BROKER_WV=TOT-REAL.netto}
-applyImp();
+applyImp();pfYears();
 const saveImp=()=>{};
 async function readFile(inp,kind){const f=inp.files&&inp.files[0];if(!f)return;IMP.err=IMP.err||{};
  try{const txt=await f.text();const n=kind==="acc"?parseAccount(txt):parseTrx(txt);
