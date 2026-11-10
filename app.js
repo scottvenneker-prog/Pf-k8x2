@@ -372,12 +372,12 @@ function feeEst(r,amt){const t=feeTab(),f=t[r.munt]!=null?t[r.munt]:5,st=r.munt=
 function feeTxt(x,amt){if(!(amt>0))return "";const c=feeEst(x.r,amt);return `Aankoopkosten ongeveer ${eur(Math.round(c.t))} (${(c.t/amt*100).toFixed(1).replace(".",",")}%)${c.st?", inclusief 0,5% Britse zegelbelasting":""}`}
 
 let cSort="laatste",_CL=null;
-const POSFL=[["alles","Alle"],["g","Sterk"],["a","Gemengd"],["r","Zwak"],["moeder","Moeder"]];
-const POSV={closed:"Gesloten posities",opties:"Opties",trans:"Transacties"};
+const POSFL=[["alles","Alle"],["g","Sterk"],["a","Gemengd"],["r","Zwak"]];
+const POSV={closed:"Gesloten posities",opties:"Opties",trans:"Transacties",moeder:"Moeder"};
 function posChips(){return POSV[filter]?`<button class="back" data-f="alles">‹ Terug naar posities</button>`:`<div class="chips">${posfl().map(([k,t])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${t}</button>`).join("")}</div>`}
-function posLinks(){const t=[["closed","Gesloten posities"],["opties","Opties"]];if(PRIVE&&PRIVE.imp&&PRIVE.imp.trx)t.push(["trans","Transacties"]);return `<div class="sec"><h2>Overzichten</h2>${t.map(([k,n])=>`<button class="tile go" data-f="${k}" style="margin-top:8px;display:block;width:100%;text-align:left;font:inherit;color:inherit"><div class="s" style="font-weight:600">Bekijk ${n.toLowerCase()} ›</div></button>`).join("")}</div>`}
+function posLinks(){const t=[["closed","Gesloten posities"],["opties","Opties"]];if(PRIVE&&PRIVE.imp&&PRIVE.imp.trx)t.push(["trans","Transacties"]);if(PRIVE&&PRIVE.moeder&&PRIVE.moeder.length)t.push(["moeder","Posities van moeder"]);return `<div class="sec"><h2>Overzichten</h2>${t.map(([k,n])=>`<button class="tile go" data-f="${k}" style="margin-top:8px;display:block;width:100%;text-align:left;font:inherit;color:inherit"><div class="s" style="font-weight:600">Bekijk ${n.toLowerCase()} ›</div></button>`).join("")}</div>`}
 function eyeBtn(){return `<button class="chip eye" data-eye="1" aria-label="${hide?"Bedragen tonen":"Bedragen verbergen"}" aria-pressed="${hide}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hide?'<path d="M4 20L20 4"/>':""}</svg></button>`}
-function posfl(){return POSFL.filter(x=>x[0]==="moeder"?!!(PRIVE&&PRIVE.moeder&&PRIVE.moeder.length):x[0]==="trans"?!!(PRIVE&&PRIVE.imp&&PRIVE.imp.trx):true)}
+function posfl(){return POSFL.filter(x=>x[0]==="trans"?!!(PRIVE&&PRIVE.imp&&PRIVE.imp.trx):true)}
 function closedList(){if(_CL)return _CL;_CL=[];if(!PRIVE||!PRIVE.sold)return _CL;
  const fl={};((PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[]).forEach(x=>{(fl[x[4]]=fl[x[4]]||[]).push([x[0],x[6]])});
  PRIVE.sold.forEach(s=>{if(!(s.buy>0))return;if(/\s[CP]\d+(\.\d+)?\s\d{2}[A-Z]{3}\d{2}$/.test((PRIVE.names&&PRIVE.names[s.isin])||""))return;const res=s.sell-s.buy;let xi=null;
