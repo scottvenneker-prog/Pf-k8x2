@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Portefeuille Cockpit</title>
-<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#13705c">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="theme-color" content="#13705c">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: één kolom op telefoon, vaste onderbalk met 4 schermen, detailpagina als overlay */
@@ -56,7 +56,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .card .nm{font-weight:600;min-width:0;flex:1}
 .card .nm span{display:block;font-weight:400;font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-.kv div{background:var(--bg);border-radius:8px;padding:7px 9px;min-width:0}
+.kv div{background:var(--bg);border-radius:8px;padding:7px 9px;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
 .kv small{display:block;font-size:11px;color:var(--mut)}
 .kv b{font-size:14px;font-weight:600}
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:20}
@@ -124,9 +124,10 @@ svg.sp{width:100%;height:84px;display:block}
 .dleg div{display:flex;align-items:center;gap:7px}
 .dleg i{width:10px;height:10px;border-radius:3px;flex:none}
 .dleg span{flex:1;color:var(--mut)}
-.hb{display:grid;grid-template-columns:78px 1fr 44px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}
+.hb{display:grid;grid-template-columns:78px 1fr 68px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}
 .hb .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mut)}
 .hb .tr{position:relative;height:12px}
+.hb b{white-space:nowrap}
 .hb .tr i{position:absolute;left:0;top:0;height:12px;border-radius:0 4px 4px 0;min-width:2px}
 .hb .tr u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);opacity:.6}
 .hb b{text-align:right;font-weight:600}
@@ -170,6 +171,7 @@ table.t th:first-child,table.t td:first-child{text-align:left}
 .cl b{display:block;font-weight:500;font-size:12.5px}.cl small{display:block;font-size:10px;color:var(--mut);margin-top:1px}.cl.g{background:color-mix(in srgb,var(--good) 20%,transparent)}.cl.a{background:color-mix(in srgb,var(--warn) 22%,transparent)}.cl.r{background:color-mix(in srgb,var(--bad) 22%,transparent)}.cl.n{background:var(--bg)}
 .bell{position:relative;display:inline-flex;align-items:center;padding:6px 10px}
 .bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.eye{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px}.eye svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.hero2{position:relative}.hero2>.eye{position:absolute;top:12px;right:12px;z-index:2;width:38px;height:38px;padding:0;border-radius:50%}
 .bd{position:absolute;top:-5px;right:-4px;background:var(--bad);color:var(--card);font-size:10px;font-style:normal;font-weight:600;border-radius:99px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 3px}
 .seg2{grid-template-columns:repeat(2,1fr)}.seg3{grid-template-columns:repeat(3,1fr)}
 .nd{width:8px;height:8px;border-radius:50%;background:var(--acc);flex:none}
@@ -216,7 +218,7 @@ function ask(msg){return new Promise(res=>{$("app").innerHTML='<div class="sec" 
  $("pwf").onsubmit=e=>{e.preventDefault();res($("pwi").value)};$("pws").onclick=()=>res(null)})}
 async function go(){
  say("Laden…");
- try{window.DATA=await j("data.json");window.PF=await j("portfolio.json")}catch(e){say("Kon de gegevens niet laden ("+e.message+"). Probeer het later opnieuw.");return}
+ try{window.DATA=await j("data.json");window.PF=await j("portfolio.json");try{window.BEO=await j("beoordelingen.json")}catch(e){window.BEO={}}try{window.OVN=await j("overnemers.json")}catch(e){window.OVN={}}}catch(e){say("Kon de gegevens niet laden ("+e.message+"). Probeer het later opnieuw.");return}
  let enc=null;try{const r=await fetch("prive.enc?v="+Date.now());if(r.ok)enc=await r.json()}catch(e){}
  if(enc){let pw=lsG("pf_pw"),msg="";
   for(;;){if(!pw){pw=await ask(msg);if(pw==null)break}
