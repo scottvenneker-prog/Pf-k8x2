@@ -1458,6 +1458,17 @@ function drawAi(){const el=document.getElementById("aiOut");if(!el)return;
  const a=Math.max(-100,Math.min(100,parseFloat(document.getElementById("aiA").value)||0)),b=Math.max(-100,Math.min(100,parseFloat(document.getElementById("aiB").value)||0));
  const wa=aiProfitW(),wb=aiW(r=>r.ai[0]<=-1),imp=-(wa*a+wb*b)/100;
  el.innerHTML=`<div class="tile" style="margin-top:10px"><div class="lbl">Profiteerders ${a>=0?"-":"+"}${Math.abs(a)}% en kwetsbaren ${b>=0?"-":"+"}${Math.abs(b)}%, de rest blijft gelijk</div><div class="v num ${imp<0?"neg":"pos"}">${pc(imp)} <span style="font-size:14px;font-weight:500">${hide?"":eur(TOT*imp/100)}</span></div><div class="s">${f1(wa)}% van je portefeuille profiteert van AI en ${f1(wb)}% is kwetsbaar. Vereenvoudigd: neutrale bedrijven bewegen in werkelijkheid vaak mee.</div></div>`}
+let stTab="beurs",bPv=20;
+function betaInfo(){const W=own.reduce((t,r)=>t+r.w,0)||100;let miss=0;const b=own.reduce((t,r)=>{const x=r.D&&r.D.beta!=null?r.D.beta:(miss++,1);return t+r.w/W*x},0);return {b,miss}}
+function stHtml(P){const seg=`<div class="seg" style="margin:0 0 8px;display:grid;grid-template-columns:repeat(3,1fr)">${[["beurs","Beurs"],["sector","Sector"],["valuta","Valuta"]].map(([k,t])=>`<button data-stt="${k}" aria-pressed="${stTab===k}">${t}</button>`).join("")}</div>`;
+ const inp=`style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"`;
+ let body;
+ if(stTab==="beurs"){const bi=betaInfo();body=`<div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Beurs daalt (%)<input id="bP" type="number" inputmode="decimal" min="-100" max="100" step="1" value="${bPv}" ${inp}></label><div class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Gemiddelde beta<div style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;color:var(--fg)">${f1(bi.b)}</div></div></div><div id="bOut"></div></div>`}
+ else if(stTab==="sector")body=P.stS.replace('<div class="sec"><h2>Stresstest sector</h2>','').replace(/<\/div>$/,'');
+ else body=P.stV.replace('<div class="sec"><h2>Stresstest valuta</h2>','').replace(/<\/div>$/,'');
+ return seg+body}
+function drawBeurs(){const el=document.getElementById("bOut");if(!el)return;const p=Math.max(-100,Math.min(100,parseFloat(document.getElementById("bP").value)||0));bPv=p;const bi=betaInfo(),imp=-p*bi.b;
+ el.innerHTML=`<div class="tile" style="margin-top:10px"><div class="lbl">De beurs ${p>=0?"daalt":"stijgt"} ${Math.abs(p)}%, jouw portefeuille beweegt mee</div><div class="v num ${imp<0?"neg":"pos"}">${pc(imp)} <span style="font-size:14px;font-weight:500">${hide?"":eur(TOT*imp/100)}</span></div><div class="s">Je gemiddelde beta is ${f1(bi.b)}: boven 1 beweegt je portefeuille harder dan de beurs. De beta komt van Yahoo${bi.miss?` en ontbreekt voor ${bi.miss} ${bi.miss===1?"bedrijf, dat telt":"bedrijven, die tellen"} als 1`:""}. Vuistregel, geen voorspelling: de echte daling kan groter of kleiner zijn.</div></div>`}
 function drawStress(){const el=document.getElementById("stOut");if(!el)return;
  const sec=document.getElementById("stS").value,p=Math.max(-100,Math.min(100,parseFloat(document.getElementById("stP").value)||0));
  const wS=secW[sec]||0,imp=-wS*p/100;
@@ -1552,7 +1563,7 @@ function yearSecOud(){const y=YRS[YRS.length-1];
 const aiW=f=>own.filter(f).reduce((t,r)=>t+r.w,0);
 const aiProfitW=()=>own.filter(r=>r.ai[0]>=1).reduce((t,r)=>t+r.w,0);
 function aiSec(){const cats=[[2,"Profiteert sterk"],[1,"Profiteert"],[0,"Neutraal"],[-1,"Kwetsbaar"]];
- const items=cats.map(([c,n])=>({n,v:own.filter(r=>r.ai[0]===c).reduce((t,r)=>t+r.w,0),k:c>=1?"g":c===0?"n":"a"}));
+ const items=cats.map(([c,n])=>({n,v:own.filter(r=>r.ai[0]===c).reduce((t,r)=>t+r.w,0),k:c>=1?"g":c===0?"n":"r"}));
  const kw=own.filter(r=>r.ai[0]<=-1).map(r=>r.naam).join(", ");
  return `<div class="sec"><h2>AI-impact op je portefeuille</h2><button class="tile go" data-s="ai">${hbars(items,0,"%")}<div class="kv" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px"><div><small>Profiteert</small><b class="num pos">${f1(aiProfitW())}%</b></div><div><small>Kwetsbaar</small><b class="num neg">${f1(aiW(r=>r.ai[0]<=-1))}%</b></div><div><small>Verschil</small><b class="num pos">${f1(aiProfitW()-aiW(r=>r.ai[0]<=-1))}%</b></div></div><div class="note">Verschil is profiteert min kwetsbaar. ${f1(aiProfitW())}% van je portefeuille profiteert van AI. Die bedrijven delen dezelfde bron van groei, namelijk de investeringen in AI. ${kw?"Kwetsbaar: "+kw+".":""} Mijn inschatting, tik voor de uitleg per bedrijf.</div></button></div>`}
 // ===== Extra inzichten =====
@@ -1900,13 +1911,13 @@ function subX(k){if(!k)return null;
 const sekt=(t,h)=>`<div class="sec"><h2>${t}</h2>${h.replace(/(?:<!--F-->[\s\S]*?<!--\/F-->\s*)+/g,m=>`<div class="list fl">${m}</div>`)}</div>`;
 function nieuweInz(){return `<div class="sec"><h2>Meer inzichten</h2>${inzDiv()}${inzBron()}${inzKw()}${inzGT()}${inzOpt()}${inzConc()}${inzSeizoen()}${inzVolg()}${inzDD()}</div>`}
 function vInz(){
- setTimeout(()=>{drawPrj();drawStress();drawVal();drawOpt();drawBox()},0);
+ setTimeout(()=>{drawPrj();drawStress();drawVal();drawBeurs();drawOpt();drawBox()},0);
  const secOpts=Object.keys(secW).map(k=>`<option>${k}</option>`).join("");
  const P={stS:`<div class="sec"><h2>Stresstest sector</h2><div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Sector daalt<select id="stS" style="width:100%">${secOpts}</select></label><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Daling in %<input id="stP" type="number" inputmode="decimal" min="-100" max="100" step="1" value="30" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><div id="stOut"></div></div></div>`,stV:`<div class="sec"><h2>Stresstest valuta</h2><div class="tile"><div class="two"><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Valuta daalt<select id="vS" style="width:100%"><option value="USD">Dollar (USD)</option><option value="GBP">Pond (GBP)</option><option value="ov">Overige valuta</option><option value="all">Alle valuta buiten de euro</option></select></label><label class="note" style="margin:0;display:flex;flex-direction:column;gap:4px">Daling in %<input id="vP" type="number" inputmode="decimal" min="-100" max="100" step="1" value="10" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label></div><div id="vOut"></div></div></div>`,wd:`<div class="sec"><h2>Waardering tegenover groei</h2>${secChips()}<button class="tile go" data-s="waard">${bubble()}<div class="note">Grootte is weging. Linksboven is goedkoop en snel groeiend, rechtsonder is duur en traag. De stippellijn is je doel van ${DOEL}%. Kleur is het oordeel uit Doelcheck. Namen staan alleen bij de grootste en opvallendste stippen. Tik voor de lijst per bedrijf.</div></button></div>`,vo:`<div class="sec"><h2>Vooruitblik</h2><div class="tile"><div class="three">${[["prm","Inleg per maand",prj.m,0,"numeric"],["pry","Aantal jaren",prj.y,1,"numeric"],["prr","Rendement in %",prj.r,0,"decimal"]].map(([id,l,v,mn,im])=>`<label class="note" style="margin:0;display:flex;flex-direction:column;justify-content:space-between;gap:4px">${l}<input id="${id}" type="number" inputmode="${im}" min="${mn}" ${id==="prr"?'step="0.5" max="60"':id==="pry"?'max="60"':'step="100"'} value="${v}" style="width:100%;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px"></label>`).join("")}</div><input id="prj" class="rg" type="range" min="5" max="25" step="0.5" value="${Math.min(25,Math.max(5,prj.r))}" aria-label="Rendement" style="margin-top:10px"><div id="prjOut" style="margin-top:8px"></div><div class="note">Lijnen: 8% (grijs), jouw keuze (groen) en je eigen ${f1(REAL.xirr)}% (blauw). Vul alles zelf in. Een rekenvoorbeeld, geen voorspelling.</div></div></div>`,ko:`<div class="sec"><h2>Alle DeGiro-kosten</h2><button class="tile go" data-s="kosten">${kostChart()}<div class="kv" style="grid-template-columns:1fr 1fr;margin-top:8px"><div><small>Kosten</small><b class="num neg">${eur(REAL.kosten)}</b></div><div><small>Dividendbelasting</small><b class="num neg">${eur(REAL.divbel)}</b></div></div><div class="note">Van elke € 100 winst gaat € ${f1(kPct())} naar kosten, en € ${f1(kbPct())} als je de dividendbelasting meetelt. Staafjes zijn alle kosten per jaar. Tik voor elk jaar.</div></button></div>`};
  const seg=`<div class="seg segi" style="margin:8px 0 4px">${[["rend","Rendement"],["kwal","Kwaliteit"],["risico","Risico"],["bel","Kosten"],["plan","Plannen"]].map(([k,t])=>`<button data-it="${k}" aria-pressed="${inzTab===k}">${t}</button>`).join("")}</div>`;
  const T={
   rend:inzRapport()+inzGedrag()+yearSec()+sekt("Rendement",inzBron()+inzGT()+inzVsSp()+inzWin()+inzDiv()+inzVT()),
-  risico:topRisico()+sekt("Risico en spreiding",inzConc()+inzKlap()+inzCorr()+inzOpt()+inzDD())+P.stS+P.stV+aiSec(),
+  risico:topRisico()+sekt("Risico en spreiding",inzConc()+inzCorr()+inzOpt()+inzDD())+sekt("Stresstests",stHtml(P))+aiSec(),
   kwal:topSterkte()+sekt("Kwaliteit van je bedrijven",inzKw()+xFold("skin")+xFold("verw")+xFold("marge")+xFold("cash")+xFold("beat"))+P.wd,
   bel:P.ko+inzGed(),
   plan:P.vo+sekt("Beslislogboek",inzLog())};
@@ -2002,6 +2013,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.pv){posView=b.dataset.pv;render()}
  else if(b.dataset.nt){nwsTab=b.dataset.nt;render()}
  else if(b.dataset.dvg){det=null;sub=null;subStack=[];agTab="dividend";tab="div";render();window.scrollTo(0,0)}
+ else if(b.dataset.stt){stTab=b.dataset.stt;render()}
  else if(b.dataset.dvm){dvmTab=b.dataset.dvm;render()}
  else if(b.dataset.cnc){concTab=b.dataset.cnc;render()}
  else if(b.dataset.ag){agTab=b.dataset.ag;render()}
@@ -2037,6 +2049,7 @@ document.addEventListener("input",e=>{const t=e.target;
  if(t.id==="pry"){const v=Math.round(parseFloat(t.value));if(isFinite(v)&&v>=1&&v<=60){prj.y=v;savePrj();drawPrj()}}
  if(t.id==="oN"||t.id==="oK"||t.id==="oP"||t.id==="oD"){const v=parseFloat(t.value);if(t.id==="oD"){if(t.value)OPT.d=t.value}else if(isFinite(v)&&v>0){OPT[{oN:"n",oK:"k",oP:"p"}[t.id]]=v}saveOpt();drawOpt()}
  if(t.id==="tbP"){TBP=+t.value;drawTb()}
+ if(t.id==="bP"){drawBeurs()}
  if(t.id==="stS"||t.id==="stP"){drawStress()}
  if(t.id==="vS"||t.id==="vP"){drawVal()}
  if(t.id==="aiA"||t.id==="aiB"){drawAi()}
