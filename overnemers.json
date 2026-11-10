@@ -11,5 +11,44 @@
   "fcfa2s_gr_9m": 21,
   "overnames_usd_mln": 609,
   "opm": "Cijfers uit het persbericht van het bedrijf zelf. Een eigen ROIC publiceert Constellation daarin niet."
+ },
+ "TOI.V": {
+  "periode": "Q3 2026",
+  "datum": "2026-11-04",
+  "bron": "https://www.globenewswire.com/news-release/2026/11/04/3395925/0/en/constellation-software-inc-and-topicus-com-inc-announce-results-for-topicus-com-inc-for-the-third-quarter-ended-september-30-2026.html",
+  "omzet_gr": 15,
+  "org_gr": 5,
+  "org_gr_9m": 5,
+  "org_gr_9m_fx": null,
+  "fcfa2s_gr": -16,
+  "fcfa2s_gr_9m": 19,
+  "overnames_usd_mln": null,
+  "opm": "Cijfers uit het persbericht van het bedrijf zelf. Rapporteert in euro: overnamebesteding kwartaal EUR 47,1 mln contant (EUR 64,0 mln incl. uitgestelde betalingen), daarom hier null. Een eigen ROIC publiceert Topicus daarin niet."
+ },
+ "LMN.V": {
+  "periode": "Q3 2026",
+  "datum": "2026-11-04",
+  "bron": "https://www.globenewswire.com/news-release/2026/11/04/3395761/0/en/lumine-group-inc-announces-results-for-the-third-quarter-ended-september-30-2026.html",
+  "omzet_gr": 55,
+  "org_gr": 3,
+  "org_gr_9m": null,
+  "org_gr_9m_fx": null,
+  "fcfa2s_gr": 27,
+  "fcfa2s_gr_9m": -14,
+  "overnames_usd_mln": 231.5,
+  "opm": "Cijfers uit het persbericht van het bedrijf zelf. Overnamebesteding is totale vergoeding (USD 218,5 mln contant plus USD 13,0 mln uitgestelde betalingen). Organische groei 9 maanden niet apart genoemd. Een eigen ROIC publiceert Lumine daarin niet."
+ },
+ "TEQ.ST": {
+  "periode": "Q3 2026",
+  "datum": "2026-10-17",
+  "bron": "https://www.placera.se/pressmeddelanden/teqnion-interim-report-july-september-2026-teqnion-ab-20261017",
+  "omzet_gr": 8,
+  "org_gr": -3,
+  "org_gr_9m": -3,
+  "org_gr_9m_fx": -1,
+  "fcfa2s_gr": null,
+  "fcfa2s_gr_9m": null,
+  "overnames_usd_mln": null,
+  "opm": "Cijfers uit het tussentijdse bericht van het bedrijf zelf (omzet SEK 492,2 mln); alleen groei genoemd, geen kasstroom voor aandeelhouders of overnamebedrag."
  }
 }
