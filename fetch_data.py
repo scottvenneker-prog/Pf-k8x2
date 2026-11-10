@@ -106,6 +106,22 @@ def fxw(c):
             print("FOUT fx", c, e); FXW[c] = None
     return FXW[c]
 
+def wk_full(s, n=600):
+    """Wekelijkse slotkoersen (week eindigt op zondag), altijd doorlopend tot en met de huidige week.
+    Ontbreekt de laatste week (bv. beurs nog dicht), dan nemen we de laatste koers over, zodat
+    de app elke reeks op dezelfde weken uitlijnt."""
+    w = s.resample("W").last().dropna()
+    if not len(w): return w
+    try:
+        if w.index.tz is not None: w.index = w.index.tz_localize(None)
+        end = pd.Timestamp.now("UTC").tz_localize(None).normalize()
+        end = end + pd.Timedelta(days=(6 - end.weekday()) % 7)
+        full = pd.date_range(w.index[0].normalize(), end, freq="W")
+        w = w.reindex(full.union(w.index)).ffill().reindex(full).dropna()
+    except Exception as e:
+        print("FOUT wk_full", e)
+    return w.tail(n)
+
 def in_eur(series, c):
     """Zet een wekelijkse koersreeks om naar euro's, met de wisselkoers van dezelfde week."""
     try:
@@ -290,7 +306,7 @@ def one(tk):
         fcf=[round(float(x) / 1e6) for x in fcf.values], fjaren=[str(d.year) for d in fcf.index],
         roic_reeks=[round(float(x), 3) for x in roic.values], rjaren=[str(d.year) for d in roic.index],
         ins_pct=info.get("heldPercentInsiders"), beta=info.get("beta"), ev_ebitda=info.get("enterpriseToEbitda"), roe=info.get("returnOnEquity"), fin=1 if fin else 0,
-        px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(histu.resample("W").last().dropna().tail(600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(histu, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
+        px_w=[round(float(v), 2) for v in wk.tail(53)], px_e=in_eur(wk_full(histu, 600), cur), px_d=daily_eur(hist, cur), px_ye=ye_eur(histu, cur), r1m=ret(30), r1y=ret(365), r5y=ret(1826), v50=v50, v200=v200, kd=kd, analisten=info.get("numberOfAnalystOpinions"), eps_fwd=fwd,
         dil=dil, vol=vol, dd5=dd5, om_reeks=[round(float(x), 3) for x in omr.values], omjaren=[str(d.year) for d in omr.index], er=er, uitslag=uitslag(t),
         nieuws=news(t), insiders=ins[:8],
         ins_koop=sum(i["type"] == "koop" and i["datum"] >= cut for i in ins),
