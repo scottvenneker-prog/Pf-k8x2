@@ -146,6 +146,8 @@ textarea{width:100%;min-height:80px;font:inherit;background:var(--bg);color:var(
 button.tile{width:100%;text-align:left;display:block;color:inherit;font:inherit}
 .go{position:relative;cursor:pointer}
 .go::after{content:"›";position:absolute;right:12px;top:8px;font-size:20px;color:var(--mut)}
+.seg.k4 button{white-space:nowrap;padding:8px 6px;font-size:14px}
+.go:has(>.s[style*="font-weight:600"])::after{content:none}
 .go:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 table.t{width:100%;border-collapse:collapse;font-size:13px}
 table.t th{font-weight:500;color:var(--mut);text-align:right;padding:6px 4px;font-size:11.5px}
