@@ -956,7 +956,7 @@ function methodeSub(){const it=(t,k,formule,bron,let_)=>fold(t,k,`<div><b>Formul
 let slMore=false;const SLTOP=()=>PAR.sl_top||10;
 
 let kOpen={};
-function kCard(x,top){const r=x.r;return `<div class="cand"><div class="top2"><div><button class="back" data-d="${r.tk}" style="margin-bottom:6px">${r.naam} ›</button><div class="note" style="margin:0">${r.tk} · ${r.sector}${r.ontdekt?" · ontdekt door scan":r.watch?" · mijn shortlist":""}</div></div></div>${brkBand(r)}<ul>${[...x.why].slice(0,4).map(t=>`<li>${t}</li>`).join("")}${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul>${analyse(x,0)}</div>`}
+function kCard(x,top){const r=x.r;return `<div class="cand"><div class="top2"><div><button class="back" data-d="${r.tk}" style="margin-bottom:6px;color:var(--good);border-color:var(--good)">${r.naam} ›</button><div class="note" style="margin:0">${r.tk} · ${r.sector}${r.ontdekt?" · ontdekt door scan":r.watch?" · mijn shortlist":""}</div></div></div>${brkBand(r)}<ul>${[...x.why].slice(0,4).map(t=>`<li>${t}</li>`).join("")}${x.warn.map(t=>`<li class="w">Let op: ${t}</li>`).join("")}</ul>${analyse(x,0)}</div>`}
 function kRij(x,sub){const o=!!kOpen[x.r.tk];return `<button class="row" data-kx="${x.r.tk}" aria-expanded="${o}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">${sub}</div></span>${x.s>=0?`<span class="pill n num">${f1(x.s)}</span>`:""}<span class="chev${o?" open":""}"></span></button>`}
 function vMaand(kseg){
  const k=kandV(),eigen=k.filter(x=>!x.r.watch),P=vervangPairs();
