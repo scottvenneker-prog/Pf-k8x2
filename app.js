@@ -20,7 +20,7 @@ function pfOptName(nm){const m=String(nm||"").match(/^(\S+)\s+([CP])([\d.]+)\s+(
  return {t:m[1],s:m[2]==="P"?"put":"call",k:+m[3],d:`20${m[6]}-${String(mm+1).padStart(2,"0")}-${m[4].padStart(2,"0")}`,m:m[5].toLowerCase()}}
 function pfOptLabel(o){return `${o.t} ${o.s} ${o.k} · ${PF_MND[o.m]||o.m} 20${o.d.slice(2,4)}`}
 // FIFO per ISIN, zelfde rekenregels als waarmee de basis is gemaakt
-const PF_ISOPT=i=>/^[A-Z]{2}E[NX]/.test(i);
+const PF_ISOPT=i=>/^[A-Z]{2}E[NX]|^DE000C/.test(i);
 function pfSum(a){let s=0,c=0;for(const v of a){const t=s+v;c+=Math.abs(s)>=Math.abs(v)?(s-t)+v:(v-t)+s;s=t}return s+c}
 function pfPositions(x){const by={};x.forEach(r=>{if(r[5]==null||!isFinite(r[6]))return;(by[r[4]]=by[r[4]]||[]).push(r)});const out={};
  for(const isin of Object.keys(by)){if(PF_ISOPT(isin))continue;const L=by[isin].slice().sort((a,b)=>{const p=a[0]+(a[7]||""),q=b[0]+(b[7]||"");return p<q?-1:p>q?1:0});
@@ -1728,14 +1728,14 @@ function inzDivOud(){const ys=Object.keys(JR).sort(),v=ys.map(y=>JR[y].dv||0),to
  return fold("Dividend",eur(ver)+" verwacht",`<button data-s="divpa" style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer">${miniBars(v,ys.map(y=>y.slice(2)),"€")}${nt("Dividend dat je per jaar binnenkreeg, bruto, uit je DeGiro-export. Totaal sinds 2016: "+eur(tot)+".")}
  <div style="margin-top:10px">${kvs([["Verwacht, 12 maanden",eur(ver)],["Op je inleg",f1(yoc)+"%"],["Op waarde nu",f1(yv)+"%"]])}</div>
  <div class="lbl" style="margin-top:12px">Wie betaalt het meeste</div>${top.map(r=>`<div class="hb"><span class="nm">${r.naam}</span><div class="tr"><i style="width:${r.waarde*r.yld/100/mx*100}%;background:var(--acc)"></i></div><b class="num">${eur(r.waarde*r.yld/100)}</b></div>`).join("")}${nt("Verwacht is je huidige bezit maal het dividendrendement van Yahoo. Een schatting, geen toezegging. Dividendbelasting gaat er nog af.")}<div class="s" style="margin-top:8px;font-weight:600">Bekijk dividend per aandeel ›</div></button>`)}
-function inzBron(){const ink=sumPos-sumInk,g=sumJ("g"),dv=sumJ("dv"),k=-REAL.kosten,b=-REAL.divbel;
+function inzBron(){const ink=sumPos-sumInk,g=sumJ("g"),dv=sumJ("dv"),b=-REAL.divbel;let tf=0;try{tf=((PRIVE&&PRIVE.imp&&PRIVE.imp.trx&&PRIVE.imp.trx.x)||[]).reduce((t,r)=>t+(isFinite(r[2])?r[2]:0)+(isFinite(r[3])?r[3]:0),0)}catch(e){tf=0}const k=-Math.max(0,REAL.kosten-tf);
  let sp=null;try{const C=closedList(),W=winData(),O=((PRIVE&&PRIVE.opts)||[]).filter(o=>!o.open);sp=[C.reduce((t,x)=>t+x.res,0),W.reduce((t,x)=>t+x.ver,0),O.reduce((t,o)=>t+o.res,0)];if(!sp.every(isFinite))sp=null}catch(e){sp=null}
  let oo=0;try{oo=((PRIVE&&PRIVE.opts)||[]).filter(x=>x.open).reduce((t,x)=>t+x.prem,0)+PUT;if(!isFinite(oo))oo=0}catch(e){oo=0}
  const rest=BROKER_WV-ink-(sp?sp[0]+sp[1]+sp[2]:g)-oo-dv-k-b;
- const rows=[["Koerswinst nog open",ink],...(sp?[["Winst op gesloten aandelen",sp[0]],["Winst op verkochte delen van open aandelen",sp[1]],["Gesloten opties",sp[2]]]:[["Winst op verkochte aandelen",g]]),...(oo?[["Open optie (premie min waarde nu)",oo]]:[]),["Dividend",dv],["Kosten",k],["Dividendbelasting",b],["Nog niet verklaard",rest]];
+ const rows=[["Koerswinst nog open",ink],...(sp?[["Winst op gesloten aandelen",sp[0]],["Winst op verkochte delen van open aandelen",sp[1]],["Gesloten opties",sp[2]]]:[["Winst op verkochte aandelen",g]]),...(oo?[["Open optie (premie min waarde nu)",oo]]:[]),["Dividend",dv],["Overige kosten (aansluiting, rente, dividendkosten)",k],["Dividendbelasting",b],["Nog niet verklaard",rest]];
  const mx=Math.max(...rows.map(r=>Math.abs(r[1])),1);
  return fold("Waar je winst vandaan komt",eur(BROKER_WV)+" totaal",`${rows.map(([n,v])=>`<div style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;font-size:14px;gap:8px"><span>${n}</span><b class="num ${cls(v)}" style="white-space:nowrap">${v<0?"−":"+"}${eur(Math.abs(v))}</b></div><div style="margin-top:4px;height:6px;border-radius:3px;background:var(--bg);overflow:hidden"><i style="display:block;height:100%;width:${Math.abs(v)/mx*100}%;background:var(${v>=0?"--good":"--bad"})"></i></div></div>`).join("")}
- ${nt("Samen is dit je Totaal W/V van DeGiro. Het deel dat ik nog niet aan een onderdeel kan toewijzen staat onderaan; dat is geen schatting maar het verschil met het totaal van DeGiro.")}`).replace("<details ","<details open ")}
+ ${nt("Samen is dit je totale winst of verlies. Transactiekosten en valutakosten zitten al in de winst per aandeel verwerkt en staan hier daarom niet apart. Het deel dat ik nog niet aan een onderdeel kan toewijzen staat onderaan; dat is geen schatting maar het verschil met het totaal.")}`).replace("<details ","<details open ")}
 function inzKw(){return "";}
 function inzKwOud(){const M=[["e","EPS-groei","eps","%",1],["r","ROIC","roic","%",1],["f","FCF-groei","fcf","%",1],["p","PE nu","pe","",-1],["n","Schuld/EBITDA","nd","×",-1]];
  const cur=k=>wAvg(r=>r[{e:"eps",r:"roic",f:"fcf",p:"pe",n:"nd"}[k]]);
@@ -2197,13 +2197,14 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
  const iD=H.indexOf("datum"),iO=H.findIndex(h=>h==="omschrijving"||h==="description");let iM=H.findIndex(h=>h==="mutatie"||h==="change");
  if(iD<0||iO<0||iM<0)throw new Error("Dit lijkt geen Account.csv (rekeningoverzicht): ik mis de kolommen Datum, Omschrijving en Mutatie.");
  const ev=[],fxl=[];let rows=0;const iFX=H.indexOf("fx");
- const iPr=H.indexOf("product"),iIs=H.indexOf("isin"),iTi=H.indexOf("tijd"),iS=H.indexOf("saldo"),DV=[],TX={},leg=[],syn=[],legnm={};let saldo=null,sk="";
+ const iPr=H.indexOf("product"),iIs=H.indexOf("isin"),iTi=H.indexOf("tijd"),iS=H.indexOf("saldo"),DV=[],TX={},leg=[],syn=[],legnm={},CS=[];let saldo=null,sk="";
  for(const r of R.slice(1)){const d=isoD(r[iD]);if(!d)continue;const om=(r[iO]||"").trim(),cur=(r[iM]||"").trim(),a=num(r[iM+1]);
   if(iS>=0&&String(r[iS]||"").trim()==="EUR"&&isFinite(num(r[iS+1]))){const k0=d+" "+(iTi>=0?(r[iTi]||""):"");if(!saldo||k0>sk){saldo={d,v:num(r[iS+1])};sk=k0}}
   if(isFinite(a)&&cur&&/^(dividend|kapitaalsuitkering)$/i.test(om))DV.push([d,a,cur,(r[iPr]||"").trim(),(r[iIs]||"").trim(),0]);
   if(isFinite(a)&&cur&&/^dividendbelasting$/i.test(om)){const k1=d+"|"+(r[iIs]||"").trim();TX[k1]=(TX[k1]||0)+a}
-  {const is0=(r[iIs]||"").trim(),ms=om.match(/^(OPTIE ASSIGNMENT|WIJZIGING ISIN): (Koop|Verkoop) ([\d.]+) @/);if(ms&&cur==="EUR"&&isFinite(a)&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is0)&&!/^[A-Z]{2}E[NX]/.test(is0)){const q0=parseFloat(ms[3].replace(/\./g,""));syn.push([d,ms[2]==="Koop"?"k":"v",0,0,is0,(ms[2]==="Koop"?1:-1)*q0,a,iTi>=0?(r[iTi]||""):"",0]);legnm[is0]=(r[iPr]||"").trim()}}
-  {const is=(r[iIs]||"").trim(),m=om.match(/^(Koop|Verkoop) ([\d.]+) @/);if(m&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is)&&!/^[A-Z]{2}E[NX]/.test(is)&&!/coupon/i.test(r[iPr]||"")){leg.push([d,is,(m[1]==="Koop"?1:-1)*parseFloat(m[2].replace(/\./g,"")),a,iTi>=0?(r[iTi]||""):"",cur]);legnm[is]=(r[iPr]||"").trim()}}
+  {const is0=(r[iIs]||"").trim(),ms=om.match(/^(OPTIE ASSIGNMENT|WIJZIGING ISIN): (Koop|Verkoop) ([\d.]+) @/);if(ms&&cur==="EUR"&&isFinite(a)&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is0)&&!/^[A-Z]{2}E[NX]|^DE000C/.test(is0)){const q0=parseFloat(ms[3].replace(/\./g,""));syn.push([d,ms[2]==="Koop"?"k":"v",0,0,is0,(ms[2]==="Koop"?1:-1)*q0,a,iTi>=0?(r[iTi]||""):"",0]);legnm[is0]=(r[iPr]||"").trim()}}
+  if(/^Contante Verrekening Aandelen/i.test(om)&&isFinite(a)&&cur&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test((r[iIs]||"").trim())&&!/^[A-Z]{2}E[NX]|^DE000C/.test((r[iIs]||"").trim())){CS.push([d,(r[iIs]||"").trim(),a,cur,iTi>=0?(r[iTi]||""):""]);legnm[(r[iIs]||"").trim()]=(r[iPr]||"").trim()}
+  {const is=(r[iIs]||"").trim(),m=om.match(/^(Koop|Verkoop) ([\d.]+) @/);if(m&&/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(is)&&!/^[A-Z]{2}E[NX]|^DE000C/.test(is)&&!/coupon/i.test(r[iPr]||"")){leg.push([d,is,(m[1]==="Koop"?1:-1)*parseFloat(m[2].replace(/\./g,"")),a,iTi>=0?(r[iTi]||""):"",cur]);legnm[is]=(r[iPr]||"").trim()}}
   if(isFinite(a)&&cur&&cur!=="EUR"){if(/^valuta (creditering|debitering)/i.test(om)&&iFX>=0&&isFinite(num(r[iFX]))&&num(r[iFX])>0)fxl.push([d,cur,num(r[iFX])]);else if(/^(dividend|kapitaalsuitkering)$/i.test(om))ev.push([d,"v",a,cur]);else if(/^dividendbelasting$/i.test(om))ev.push([d,"w",a,cur])}
   if(!isFinite(a)||cur!=="EUR")continue;rows++;
   if(/^(dividend|kapitaalsuitkering)$/i.test(om)){ev.push([d,"v",a,"EUR"]);continue}
@@ -2217,6 +2218,7 @@ function parseAccount(text){const R=csvRows(text);if(R.length<2)throw new Error(
   else if(a<0&&/transactiekosten|transaction/i.test(om))ev.push([d,"k",-a]);
   else if(a<0&&/rente|interest/i.test(om))ev.push([d,"r",-a]);
   else if(a<0&&/degiro.*kosten|kosten van derden|fee/i.test(om))ev.push([d,"o",-a])}
+ CS.forEach(c=>{let e=null;if(c[3]==='EUR')e=c[2];else{const L=fxl.filter(x=>x[1]===c[3]);if(L.length){const T=t=>new Date(t).getTime();let bst=L[0],bd=1e18;for(const x of L){const dd=Math.abs(T(x[0])-T(c[0]));if(dd<bd){bd=dd;bst=x}}let q=bst[2];if(c[3]==='GBP'&&q>20)q/=100;if(q>0)e=c[2]/q}}if(e!=null&&isFinite(e))syn.push([c[0],'v',0,0,c[1],0,Math.round(e*100)/100,c[4],0])});
  if(!rows)throw new Error("Geen regels in euro's gevonden. Is dit wel het rekeningoverzicht?");
  const ds=R.slice(1).map(r=>isoD(r[iD])).filter(Boolean).sort();
  const grp={};DV.forEach(e=>{const k=e[0]+"|"+e[4]+"|"+e[2];(grp[k]=grp[k]||[]).push(e)});const dv=[];
