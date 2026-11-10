@@ -1809,7 +1809,7 @@ function vtSub(){const s=vtStat();
 /* gedrag, uit je export */
 function gedStat(){const ys=Object.keys(JR).sort(),k=y=>JR[y].t?JR[y].k/JR[y].t:0,dr=ys.reduce((m,y)=>JR[y].t>JR[m].t?y:m,ys[0]),yr=NOW.getFullYear(),m=NOW.getMonth(),gh=[...Array(m)].filter((_,i)=>sumM(yr,i)>=SDOEL).length;return {ys,k,dr,yr,m,gh,n:JR[yr]?JR[yr].t:0}}
 function inzGed(){if(!Object.keys(JR).length)return "";const g=gedStat(),t=g.ys.map(y=>JR[y].t||0);
- return fold("Mijn gedrag",g.n+" transacties dit jaar",`<button data-s="ged" ${GOB}>${miniBars(t,g.ys.map(y=>y.slice(2)),"")}${kvs([["Dit jaar",g.n+" transacties"],["Kosten per transactie",eur(g.k(String(g.yr)),2)],["Stortdoel gehaald",g.gh+" van "+g.m+" mnd"]])}${nt(`Je drukste jaar was ${g.dr} met ${JR[g.dr].t} transacties en ${eur(JR[g.dr].k)} aan kosten. Dit jaar zit je op ${f1(g.n/(g.m+1))} transacties per maand. Echte cijfers uit je DeGiro-export.`)}${goRow("Per jaar")}</button>`)}
+ return `<div class="sec"><h2>Transacties</h2><div class="tile"><button data-s="ged" ${GOB}>${miniBars(t,g.ys.map(y=>y.slice(2)),"")}${kvs([["Dit jaar",g.n+" transacties"],["Kosten per transactie",eur(g.k(String(g.yr)),2)],["Stortdoel gehaald",g.gh+" van "+g.m+" mnd"]])}${nt(`Je drukste jaar was ${g.dr} met ${JR[g.dr].t} transacties en ${eur(JR[g.dr].k)} aan kosten. Dit jaar zit je op ${f1(g.n/(g.m+1))} transacties per maand. Echte cijfers uit je DeGiro-export.`)}${goRow("Per jaar")}</button></div></div>`}
 function gedSub(){const g=gedStat();
  return `<div class="tile" style="margin-top:12px">${miniBars(g.ys.map(y=>JR[y].t||0),g.ys.map(y=>y.slice(2)),"")}</div><div class="sec"><h2>Per jaar</h2><div class="tile"><table class="t"><tr><th>Jaar</th><th>Transacties</th><th>Kosten</th><th>Per stuk</th></tr>${[...g.ys].reverse().map(y=>`<tr><td>${y}</td><td class="num">${JR[y].t}</td><td class="num">${eur(JR[y].k)}</td><td class="num">${eur(g.k(y),2)}</td></tr>`).join("")}</table></div></div><div class="sec"><h2>Regelmaat</h2><div class="tile">${kvs([["Stortdoel",eur(SDOEL)+" per maand"],["Gehaald",g.gh+" van "+g.m+" maanden"],["Dit jaar gestort",eur(sumY(g.yr))]])}${nt("Stortingen uit je eigen lijst en je export. Hoe regelmatiger je stort, hoe minder het uitmaakt wanneer de markt draait.")}</div></div>${nt("Veel transacties kosten geld en hebben zelden meer opgeleverd dan rustig bijkopen. Het is een spiegel, geen oordeel.")}`}
 
@@ -1892,7 +1892,7 @@ function subX(k){if(!k)return null;
  if(k.startsWith("x_")){const a=k.slice(2);return XM[a]?[XM[a].t,xSub(a)]:null}
  if(k==="winst")return ["Winst per bedrijf",winSub()];
  if(k==="vt")return ["Verkocht te vroeg?",vtSub()];
- if(k==="ged")return ["Mijn gedrag",gedSub()];
+ if(k==="ged")return ["Transacties",gedSub()];
  if(k==="bronb")return ["Bronbelasting op dividend",bronSub()];
  if(k==="corr")return ["Schommeling en correlatie",corrSub()];
  return null}
