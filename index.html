@@ -48,6 +48,11 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
 .segi button{font-size:12px;padding:7px 0}.dot.n{background:var(--mut)}
 .dot.u{background:transparent;border:2px solid var(--mut);box-sizing:border-box}
+.chev{display:inline-flex;color:var(--mut);font-size:18px;line-height:1;flex:none}
+.chev::after{content:"\203A";display:inline-block;transition:transform .15s}
+.chev.open::after,details[open]>summary .chev::after{transform:rotate(90deg)}
+.row .num,.row b.num,.row .dt,div.num:not(.v):not(.big),span.note.num{font-family:var(--sans);font-variant-numeric:tabular-nums}
+.hb b.num,.dleg b.num,.list b.num{font-family:var(--sans);font-variant-numeric:tabular-nums}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--bg);font-weight:600}
