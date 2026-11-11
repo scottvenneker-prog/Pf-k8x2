@@ -245,7 +245,7 @@ let subStack=[],sub=(function(){try{if(sessionStorage.getItem("pf_goimp")){sessi
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
 function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
-function head(t){const n=unread();if(t==="Nieuws"||t==="Inzichten")return `<div class="bar"><button class="back" data-t="start">‹ Terug</button></div><div class="top"><h1>${t}</h1></div>`;
+function head(t){const n=unread();if(xBack&&xBack!==tab&&t===names[tab]&&!["inz","nws"].includes(tab))return `<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div><h1 style="font-size:26px;letter-spacing:-.01em">${t}</h1>`;if(t==="Nieuws"||t==="Inzichten")return `<div class="bar"><button class="back" data-t="start">‹ Terug</button></div><div class="top"><h1>${t}</h1></div>`;
  return `<div class="top"><h1>${t}</h1>${false?'':`${eyeBtn()}<button class="chip" data-t="inz">Inzichten</button><button class="chip bell" data-s="import" aria-label="DeGiro-export laden"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button><button class="chip bell" data-t="nws" aria-label="Nieuws${n?", "+n+" nieuw":""}"><svg viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4"/></svg>${n?`<i class="bd">${n}</i>`:""}</button>`}</div>`}
 const demo="";
 function weekBlok(){return ""}
@@ -2150,7 +2150,6 @@ function render(){const SQ=".tabs,.chips,.sc,.seg",sv=["app","sheet"].map(id=>[i
 function render0(){
  const s=document.getElementById("sheet");
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
- if(xBack&&xBack!==tab&&!["inz","nws"].includes(tab))document.getElementById("app").insertAdjacentHTML("afterbegin",`<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div>`);
  nav();
  if(det){s.hidden=false;s.innerHTML=vDet()}else if(sub){s.hidden=false;s.innerHTML=vSub()}else{s.hidden=true}
  try{histSync()}catch(x){}
