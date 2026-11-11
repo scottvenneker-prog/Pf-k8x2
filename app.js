@@ -1919,7 +1919,7 @@ function pfTWR(L){if(!PRIVE||!PRIVE.imp||!PRIVE.imp.trx||!PRIVE.imp.trx.x)return
 function pfIdx(L){return pfTWR(L)||pfSer(L)}
 function pfSer(L){const it=own.filter(r=>r.D&&(r.D.px_e||r.D.px_w)&&(r.D.px_e||r.D.px_w).length>=L);if(it.length<10)return null;const sw=r=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return r.w*a[0]/a[L-1]},tw=it.reduce((s,r)=>s+sw(r),0),pf=[];for(let i=0;i<L;i++)pf.push(it.reduce((s,r)=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return s+sw(r)*a[i]/a[0]},0)/tw*100);return pf}
 let ddTab="1";
-function inzDD(){const full=pfIdx(53);if(!full)return "";pfIdx(9999);const TD=_TD||[],PS=window._PS||[],all=_TW,Nn=all.length;
+function inzDD(){const full=pfIdx(53);if(!full)return "";pfIdx(9999);if(!_TW)return "";const TD=_TD||[],PS=window._PS||[],all=_TW,Nn=all.length;
  const per=[["1","1 jaar",53],["3","3 jaar",157],["5","5 jaar",261],["m","Sinds 2016",Nn]].filter(x=>x[2]<=Nn||x[0]==="m");
  const cur=per.find(x=>x[0]===ddTab)||per[0],L=Math.min(cur[2],Nn),off=Nn-L,s=all.slice(-L);
  let pk=s[0],kp=0,mn=0,kmin=0,kpk=0;const dd=s.map((v,i)=>{if(v>=pk){pk=v;kp=i}const d=(v/pk-1)*100;if(d<mn){mn=d;kmin=i;kpk=kp}return d});
