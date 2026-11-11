@@ -245,7 +245,7 @@ let subStack=[],sub=(function(){try{if(sessionStorage.getItem("pf_goimp")){sessi
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
 function nav(){document.getElementById("nav").innerHTML=Object.keys(names).map(k=>`<button data-t="${k}" ${k===tab?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ic[k]}</svg>${names[k]}</button>`).join("")}
-function head(t){const n=unread();if(xBack&&xBack!==tab&&t===names[tab]&&!["inz","nws"].includes(tab))return `<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div><h1 style="font-size:26px;letter-spacing:-.01em">${t}</h1>`;if(t==="Nieuws"||t==="Inzichten")return `<div class="bar"><button class="back" data-t="start">‹ Terug</button></div><div class="top"><h1>${t}</h1></div>`;
+function head(t){const n=unread();if(xBack&&xBack!==tab&&t===names[tab]&&!["inz","nws"].includes(tab))return `<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div><h1 style="font-size:26px;letter-spacing:-.01em">${tab==="doel"?((ADVT.find(x=>x[0]===advTab)||[0,t])[1]):t}</h1>`;if(t==="Nieuws"||t==="Inzichten")return `<div class="bar"><button class="back" data-t="start">‹ Terug</button></div><div class="top"><h1>${t}</h1></div>`;
  return `<div class="top"><h1>${t}</h1>${false?'':`${eyeBtn()}<button class="chip" data-t="inz">Inzichten</button><button class="chip bell" data-s="import" aria-label="DeGiro-export laden"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button><button class="chip bell" data-t="nws" aria-label="Nieuws${n?", "+n+" nieuw":""}"><svg viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15zM10 21h4"/></svg>${n?`<i class="bd">${n}</i>`:""}</button>`}</div>`}
 const demo="";
 function weekBlok(){return ""}
@@ -1355,7 +1355,8 @@ function pgT(v){return v==null||!(v>0)||v>=90?"n.v.t.":f1(v)}
 function verdict(r){const v=verdict0(r);if(!v||v.k==="structureel")return v;const s=streef(r);if(s&&s.tier!=="uitbouwen"&&/bijkopen/i.test(v.wat||"")){const lab=v.lab==="Behouden of bijkopen"?"Behouden":v.lab,cl=v.lab==="Behouden of bijkopen"?"g":v.cl;return Object.assign({},v,{lab,cl,wat:v.wat.replace("De waardering maakt bijkopen mogelijk.","Bijkopen hoeft nu niet.").replace(/bijkopen kan/g,"bijkopen hoeft nu niet")+(s.why?" Reden: "+r.naam+" "+s.why+".":"")})}return v}
 
 let advTab="ov";
-function advTabs(){const T=[["ov","Overzicht"],["pf","Portefeuille"],["aand","Per aandeel"],["nu","Wat nu"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
+const ADVT=[["ov","Overzicht"],["pf","Portefeuille"],["aand","Per aandeel"],["nu","Wat nu"],["vv","Vervangen"],["filo","Filosofie"]];
+function advTabs(){const T=ADVT;if(xBack&&xBack!==tab)return "";return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
 function advActs(){const L=own.map(r=>({r,v:verdict(r),s:streef(r)})).filter(x=>x.s);
  const up=L.filter(x=>x.s.d>0.4&&x.s.tier==="uitbouwen").sort((a,b)=>(b.s.z-a.s.z)||(b.s.d-a.s.d));
  const dn=L.filter(x=>x.s.d<-0.4&&x.s.tier!=="afbouwen").sort((a,b)=>a.s.d-b.s.d);
