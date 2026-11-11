@@ -72,7 +72,7 @@ summary .num,summary b.num{font-family:var(--sans);font-variant-numeric:tabular-
 .sheet{position:fixed;inset:0;background:var(--bg);z-index:30;overflow-y:auto;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-bottom:40px}
 .sheet .bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:12px 0 8px;display:flex;align-items:center;gap:10px;z-index:2}
 .sheet::before{content:"";position:sticky;top:0;display:block;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:3}
-.back{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-size:13px}
+.back{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-size:13px}.back[data-d]{font-weight:600}
 .tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:12px;scrollbar-width:none}
 .tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 10px;font-size:13.5px;color:var(--mut);white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--acc);font-weight:600}

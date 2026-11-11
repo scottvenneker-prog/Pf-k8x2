@@ -1325,7 +1325,7 @@ function pgT(v){return v==null||!(v>0)||v>=90?"n.v.t.":f1(v)}
 function verdict(r){const v=verdict0(r);if(!v||v.k==="structureel")return v;const s=streef(r);if(s&&s.tier!=="uitbouwen"&&/bijkopen/i.test(v.wat||"")){const lab=v.lab==="Behouden of bijkopen"?"Behouden":v.lab,cl=v.lab==="Behouden of bijkopen"?"g":v.cl;return Object.assign({},v,{lab,cl,wat:v.wat.replace("De waardering maakt bijkopen mogelijk.","Bijkopen hoeft nu niet.").replace(/bijkopen kan/g,"bijkopen hoeft nu niet")+(s.why?" Reden: "+r.naam+" "+s.why+".":"")})}return v}
 
 let advTab="ov";
-function advTabs(){const T=[["ov","Overzicht"],["nu","Wat nu"],["aand","Per aandeel"],["pf","Portefeuille"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
+function advTabs(){const T=[["ov","Overzicht"],["pf","Portefeuille"],["aand","Per aandeel"],["nu","Wat nu"],["vv","Vervangen"],["filo","Filosofie"]];return `<div class="seg" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${T.map(([k,t])=>`<button data-at="${k}" aria-pressed="${advTab===k}" style="padding:9px 4px;white-space:nowrap">${t}</button>`).join("")}</div>`}
 function advActs(){const L=own.map(r=>({r,v:verdict(r),s:streef(r)})).filter(x=>x.s);
  const up=L.filter(x=>x.s.d>0.4&&x.s.tier==="uitbouwen").sort((a,b)=>(b.s.z-a.s.z)||(b.s.d-a.s.d));
  const dn=L.filter(x=>x.s.d<-0.4&&x.s.tier!=="afbouwen").sort((a,b)=>a.s.d-b.s.d);
@@ -1860,8 +1860,20 @@ function pfTWR(L){if(!PRIVE||!PRIVE.imp||!PRIVE.imp.trx||!PRIVE.imp.trx.x)return
  const l=Math.min(L,_TW.length),s=_TW.slice(-l);return s.map(v=>v/s[0]*100)}
 function pfIdx(L){return pfTWR(L)||pfSer(L)}
 function pfSer(L){const it=own.filter(r=>r.D&&(r.D.px_e||r.D.px_w)&&(r.D.px_e||r.D.px_w).length>=L);if(it.length<10)return null;const sw=r=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return r.w*a[0]/a[L-1]},tw=it.reduce((s,r)=>s+sw(r),0),pf=[];for(let i=0;i<L;i++)pf.push(it.reduce((s,r)=>{const a=(r.D.px_e||r.D.px_w).slice(-L);return s+sw(r)*a[i]/a[0]},0)/tw*100);return pf}
-function inzDD(){const s=pfIdx(53);if(!s)return "";let pk=s[0];const dd=s.map(v=>{pk=Math.max(pk,v);return (v/pk-1)*100}),mn=Math.min(...dd),W=320,H=90,n=dd.length-1,Y=v=>8+(mn?v/mn:0)*(H-24);
- return fold("Grootste daling, laatste jaar",pc(mn),`<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img"><line class="g" x1="0" x2="${W}" y1="8" y2="8"/><path d="M0 8 ${dd.map((v,i)=>`L${(i*W/n).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ")} L${W} 8 Z" fill="var(--bad)" opacity=".25"/><path d="${dd.map((v,i)=>(i?"L":"M")+(i*W/n).toFixed(1)+" "+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--bad)" stroke-width="1.6"/></svg>${kvs([["Diepste daling",pc(mn),"neg"],["Nu onder de top",dd[n]>-.05?"Op de top":pc(dd[n]),dd[n]>-.05?"pos":"neg"]])}<div class="note">Op basis van je huidige posities en weging, zonder valuta-effect.</div><div class="chips" style="padding:10px 0 0"><button class="chip" data-s="x_dd">Diepste daling per bedrijf ›</button></div>`,"neg")}
+let ddTab="1";
+function inzDD(){const full=pfIdx(53);if(!full)return "";pfIdx(9999);const TD=_TD||[],PS=window._PS||[],all=_TW,Nn=all.length;
+ const per=[["1","1 jaar",53],["3","3 jaar",157],["5","5 jaar",261],["m","Sinds 2016",Nn]].filter(x=>x[2]<=Nn||x[0]==="m");
+ const cur=per.find(x=>x[0]===ddTab)||per[0],L=Math.min(cur[2],Nn),off=Nn-L,s=all.slice(-L);
+ let pk=s[0],kp=0,mn=0,kmin=0,kpk=0;const dd=s.map((v,i)=>{if(v>=pk){pk=v;kp=i}const d=(v/pk-1)*100;if(d<mn){mn=d;kmin=i;kpk=kp}return d});
+ const n=dd.length-1,W=320,H=90,Y=v=>8+(mn?v/mn:0)*(H-24);
+ const dt=k=>{const d=TD[off+k];return d?new Date(d).toLocaleDateString("nl-NL",{month:"short",year:"numeric"}):""};
+ const loss=(a,b)=>{let t=0,c=0;PS.forEach(p=>{const q=p.q[off+a];if(q>0&&isFinite(p.px[off+a])&&isFinite(p.px[off+b])){t+=q*(p.px[off+b]-p.px[off+a])}});return t};
+ let rk=0,pk2=s[0];s.forEach((v,i)=>{if(v>=pk2){pk2=v;rk=i}});
+ const eurM=loss(kpk,kmin),eurN=loss(rk,n),herst=(()=>{for(let k=kmin;k<=n;k++)if(s[k]>=s[kpk])return k;return -1})();
+ const mnd=(a,b)=>Math.max(1,Math.round((b-a)*7/30.4));
+ const tabs=`<div class="seg" style="margin-bottom:10px;display:grid;grid-template-columns:repeat(${per.length},1fr)">${per.map(x=>`<button data-ddp="${x[0]}" aria-pressed="${cur[0]===x[0]}">${x[1]}</button>`).join("")}</div>`;
+ const eu=v=>(v<0?"−":"")+eur(Math.abs(Math.round(v)));
+ return fold("Grootste daling, "+cur[1].toLowerCase(),pc(mn),tabs+`<svg class="ch" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img"><line class="g" x1="0" x2="${W}" y1="8" y2="8"/><path d="M0 8 ${dd.map((v,i)=>`L${(i*W/n).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ")} L${W} 8 Z" fill="var(--bad)" opacity=".25"/><path d="${dd.map((v,i)=>(i?"L":"M")+(i*W/n).toFixed(1)+" "+Y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--bad)" stroke-width="1.6"/></svg>`+kvs([["Diepste daling",pc(mn),"neg"],["Dat kostte",eurM?eu(eurM):"–","neg"]],2)+`<div style="margin-top:8px">`+kvs([["Piek",dt(kpk)],["Dieptepunt",dt(kmin)],["Herstel",herst<0?"nog niet":mnd(kmin,herst)+" mnd"]])+`</div><div style="margin-top:8px">`+kvs([["Nu onder de top",dd[n]>-.05?"Op de top":pc(dd[n]),dd[n]>-.05?"pos":"neg"],["Dat is nu",dd[n]>-.05?"–":eu(eurN),"neg"]],2)+`</div><div class="note">De daling is berekend op het rendement van je portefeuille per week (zonder stortingen), met de posities die je op dat moment hadden. Het bedrag is wat die posities op dat moment samen verloren tussen de piek en het dieptepunt. Koersen in euro, wekelijks.</div><div class="chips" style="padding:10px 0 0"><button class="chip" data-s="x_dd">Diepste daling per bedrijf ›</button></div>`,"neg")}
 /* ===== batch 11: extra inzichten (voorbeeldwaarden waar Yahoo nodig is) ===== */
 const GOB='style="display:block;width:100%;text-align:left;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer"';
 const goRow=t=>`<div class="s" style="margin-top:8px;font-weight:600">Bekijk ${t.charAt(0).toLowerCase()+t.slice(1)} ›</div>`;
@@ -2153,7 +2165,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dvg){det=null;sub=null;subStack=[];agTab="dividend";tab="div";render();window.scrollTo(0,0)}
  else if(b.dataset.stt){stTab=b.dataset.stt;render()}
  else if(b.dataset.dvm){dvmTab=b.dataset.dvm;render()}
- else if(b.dataset.cnc){concTab=b.dataset.cnc;render()}
+ else if(b.dataset.cnc){concTab=b.dataset.cnc;render()}else if(b.dataset.ddp){ddTab=b.dataset.ddp;render()}
  else if(b.dataset.spt){sprTab=b.dataset.spt;render()}
  else if(b.dataset.ag){agTab=b.dataset.ag;render()}
  else if(b.id==="readAll"){READ=NWS.map(x=>x.id);try{localStorage.setItem("pf_read",JSON.stringify(READ))}catch(e){}render()}
