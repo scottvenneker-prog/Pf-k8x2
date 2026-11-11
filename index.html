@@ -149,7 +149,7 @@ textarea{width:100%;min-height:80px;font:inherit;background:var(--bg);color:var(
 button.tile{width:100%;text-align:left;display:block;color:inherit;font:inherit}
 .go{position:relative;cursor:pointer}
 .go::after{content:"›";position:absolute;right:12px;top:8px;font-size:20px;color:var(--mut)}
-.seg.k4 button{white-space:nowrap;padding:8px 6px;font-size:13px}
+.seg>button{min-width:0;white-space:nowrap;padding-left:0;padding-right:0;letter-spacing:-.01em}.seg:has(>:nth-child(2):last-child){grid-template-columns:repeat(2,1fr)}.seg:has(>:nth-child(3):last-child){grid-template-columns:repeat(3,1fr)}.seg:has(>:nth-child(4):last-child){grid-template-columns:repeat(4,1fr)}
 .go:has(>.s[style*="font-weight:600"])::after{content:none}
 .go:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 table.t{width:100%;border-collapse:collapse;font-size:13px}
@@ -159,7 +159,7 @@ table.t th:first-child,table.t td:first-child{text-align:left}
 .sc{overflow-x:auto}
 
 .seg{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-radius:10px;padding:3px;gap:2px;margin:8px 0 10px}
-.seg button{border:0;background:none;border-radius:8px;padding:7px 2px;font-size:13px;color:var(--mut)}
+.seg button{border:0;background:none;border-radius:8px;padding:7px 2px;font-size:12.5px;color:var(--mut)}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .hero2{padding:16px}
 .hero2 .big{font-size:38px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px}
@@ -184,7 +184,7 @@ table.t th:first-child,table.t td:first-child{text-align:left}
 .bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .eye{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px}.eye svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.hero2{position:relative}.hero2>.eye{position:absolute;top:12px;right:12px;z-index:2;width:38px;height:38px;padding:0;border-radius:50%}
 .bd{position:absolute;top:-5px;right:-4px;background:var(--bad);color:var(--card);font-size:10px;font-style:normal;font-weight:600;border-radius:99px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 3px}
-.seg2{grid-template-columns:repeat(2,1fr)}.seg3{grid-template-columns:repeat(3,1fr)}.seg:not(.seg2):not(.seg3):has(>:nth-child(6):last-child){grid-template-columns:repeat(6,1fr)}.seg:has(>:nth-child(6):last-child) button{font-size:13px}
+.seg2{grid-template-columns:repeat(2,1fr)}.seg3{grid-template-columns:repeat(3,1fr)}.seg:not(.seg2):not(.seg3):has(>:nth-child(6):last-child){grid-template-columns:repeat(6,1fr)}.seg:has(>:nth-child(6):last-child) button{font-size:12.5px}
 .nd{width:8px;height:8px;border-radius:50%;background:var(--acc);flex:none}
 .dt{font-family:var(--mono);font-size:12px;color:var(--mut);width:46px;flex:none}
 .wk{font-size:12px;color:var(--mut);margin:14px 0 6px;font-weight:600}
