@@ -74,7 +74,7 @@ def insiders(t):
 
 def fx():
     out = dict(FALL)
-    for c in FALL:
+    for c in list(FALL) + ["HKD", "CNY", "TWD", "KRW", "INR", "JPY", "SGD", "BRL", "MXN", "ZAR", "DKK", "NOK", "CHF"]:
         try:
             h = yf.Ticker(f"EUR{c}=X").history(period="5d")["Close"].dropna()
             if len(h): out[c] = float(h.iloc[-1])

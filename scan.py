@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wekelijkse scan: loopt S&P 500, AEX en AMX langs op de regels uit portfolio.json
 en schrijft scan.json (lijst met kandidaten + logboek van wat erbij kwam of eraf ging)."""
-import io, json, os, time, datetime as dt
+import io, json, os, re, time, datetime as dt
 import pandas as pd, requests, yfinance as yf
 
 P = json.load(open("portfolio.json"))
@@ -16,14 +16,28 @@ EPSMAX = .40                                                 # boven 60% per jaa
 RULE = dict(eps=.15, roic=.20, peg=1.5, nd=1.0, rmin=.15)   # toevoegen
 STAY = dict(eps=.10, roic=.15, peg=2.0, nd=1.5, rmin=.10)             # blijven staan (marge, tegen heen-en-weer)
 MINCAP = 2e9                                                  # in dollars: ook middelgrote bedrijven, daar zitten de verborgen parels
-FXUSD = {"USD": 1, "EUR": 1.1, "GBP": 1.3, "SEK": .095, "DKK": .147, "NOK": .092, "CHF": 1.12, "CAD": .73}
+FXUSD = {"USD": 1, "EUR": 1.1, "GBP": 1.3, "SEK": .095, "DKK": .147, "NOK": .092, "CHF": 1.12, "CAD": .73,
+         "HKD": .128, "CNY": .14, "TWD": .031, "KRW": .00072, "INR": .012, "JPY": .0066, "SGD": .75, "BRL": .18, "MXN": .055, "ZAR": .055}   # ruwe koersen, alleen voor het grootte-filter
+# Aziatische en opkomende markten: eigen categorie, strengere regels, eigen quota (ander risico: staatsinvloed, boekhouding, valuta, regelgeving)
+EM_BEURZEN = (("HKG", "Hongkong"), ("SHH", "Shanghai"), ("SHZ", "Shenzhen"), ("NSI", "India"), ("TAI", "Taiwan"), ("KSC", "Zuid-Korea"),
+              ("JPX", "Japan"), ("SES", "Singapore"), ("SAO", "Brazilië"), ("MEX", "Mexico"), ("JNB", "Zuid-Afrika"))
+EM_RULE = dict(eps=.15, roic=.25, peg=1.2, nd=.75, rmin=.20, emax=.35)
+EM_STAY = dict(eps=.10, roic=.20, peg=1.6, nd=1.0, rmin=.15, emax=.35)
+EM_MINCAP = 5e9
+MAXN_EM = 5
+ASIA_EM = {"China", "Hong Kong", "India", "Taiwan", "South Korea", "Japan", "Singapore", "Brazil", "Mexico", "South Africa", "Indonesia", "Thailand", "Malaysia",
+           "Philippines", "Vietnam", "Turkey", "Argentina", "Uruguay", "Chile", "Colombia", "Peru", "Saudi Arabia", "United Arab Emirates", "Kazakhstan"}
+EM = {}                                                       # ticker -> beurs
+T0 = time.time(); BUDGET = 270 * 60                           # de workflow stopt na 300 minuten: ruim voor die tijd afronden
+_fxc = {}
 SKIP_SEC = ("Financial Services", "Real Estate")             # ROIC en schuld/EBITDA zeggen daar weinig
 SECMAP = {"Technology": "Technologie", "Financial Services": "Financieel", "Industrials": "Industrie", "Consumer Cyclical": "Consument",
           "Consumer Defensive": "Consument", "Healthcare": "Zorg", "Communication Services": "Communicatie", "Energy": "Energie",
           "Basic Materials": "Materialen", "Utilities": "Nutsbedrijven", "Real Estate": "Vastgoed"}
 LAND = {"United States": "VS", "Netherlands": "NL", "Canada": "CA", "Sweden": "SE", "United Kingdom": "VK", "Germany": "DE", "France": "FR",
         "Italy": "IT", "Ireland": "IE", "Switzerland": "CH", "Denmark": "DK", "Spain": "ES", "Belgium": "BE", "Taiwan": "TW", "Japan": "JP",
-        "Brazil": "BR", "Argentina": "AR", "Israel": "IL", "China": "CN", "Singapore": "SG", "Bermuda": "BM", "Luxembourg": "LU"}
+        "Brazil": "BR", "Argentina": "AR", "Israel": "IL", "China": "CN", "Singapore": "SG", "Bermuda": "BM", "Luxembourg": "LU", "Hong Kong": "HK", "India": "IN", "South Korea": "KR", "Mexico": "MX", "South Africa": "ZA", "Indonesia": "ID", "Uruguay": "UY",
+        "Thailand": "TH", "Malaysia": "MY", "Philippines": "PH", "Vietnam": "VN", "Turkey": "TR", "Chile": "CL", "Colombia": "CO", "Peru": "PE", "Saudi Arabia": "SA"}
 today = dt.date.today()
 MND = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
 dnl = f"{today.day} {MND[today.month - 1]}"
@@ -105,7 +119,38 @@ def universe():
             for x in l: U.setdefault(x, naam)
         except Exception as e:
             print("FOUT screener", naam, e); per[naam] = 0
+    def screen(codes, naam, cap, doel):
+        l = []
+        for code in codes:
+            q = yf.EquityQuery("and", [yf.EquityQuery("eq", ["exchange", code]), yf.EquityQuery("gt", ["intradaymarketcap", cap])])
+            off = 0
+            while off < 3000:
+                r = yf.screen(q, offset=off, size=250, sortField="intradaymarketcap", sortAsc=False)
+                qs = (r or {}).get("quotes") or []
+                l += [x["symbol"] for x in qs if x.get("symbol")]
+                if len(qs) < 250: break
+                off += 250
+        per[naam] = len(l)
+        for x in l:
+            if x not in U:
+                U[x] = naam
+                if doel is not None: doel[x] = naam
+    try: screen(("NMS", "NGM", "NCM"), "Nasdaq", MINCAP, None)          # alle Nasdaq-bedrijven; wie al in de S&P staat telt niet dubbel
+    except Exception as e: print("FOUT Nasdaq", e); per["Nasdaq"] = 0
+    for code, naam in EM_BEURZEN:
+        try: screen((code,), naam, EM_MINCAP, EM)
+        except Exception as e: print("FOUT EM", naam, e); per[naam] = 0
     return U, per
+
+
+def fxrate(fcur, cur):
+    k = (fcur, cur)
+    if k not in _fxc:
+        try:
+            h = yf.Ticker(f"{fcur}{cur}=X").history(period="5d")["Close"].dropna()
+            _fxc[k] = float(h.iloc[-1]) if len(h) else None
+        except Exception: _fxc[k] = None
+    return _fxc[k]
 
 
 def metrics(tk):
@@ -115,16 +160,27 @@ def metrics(tk):
     if any(w in ind0 for w in SKIP_IND): return "skip"   # geen airlines, farma of autofabrikanten
     cu0 = info.get("financialCurrency") or info.get("currency")
     if cu0 == "GBp": cu0 = "GBP"
-    if not mc or mc * FXUSD.get(cu0, 1) < MINCAP or not sec or sec in SKIP_SEC: return "skip"
+    em = tk in EM or info.get("country") in ASIA_EM        # ook ADR's en notering in de VS van bedrijven uit die landen
+    if em and cu0 not in FXUSD: return "skip"
+    if not mc or mc * FXUSD.get(cu0, 1) < (EM_MINCAP if em else MINCAP) or not sec or sec in SKIP_SEC: return "skip"
     roe = info.get("returnOnEquity")
     if roe is not None and roe == roe and roe < .08: return "skip"
     cur, fcur = info.get("currency"), info.get("financialCurrency")
-    if fcur and cur and fcur != cur and not (cur == "GBp" and fcur == "GBP"): return "skip"
+    omg = False
+    if fcur and cur and fcur != cur and not (cur == "GBp" and fcur == "GBP"):
+        if not em: return "skip"
+        omg = True                                     # alleen opkomend: rapportage in andere valuta, PE controleren we zelf (hieronder)
     inc = t.income_stmt
     eps = row(inc, "Diluted EPS", "Basic EPS")
     if len(eps) < 3: return "skip"
     g = cagr(eps)
     pe = info.get("trailingPE")
+    if omg:
+        ni = row(inc, "Net Income Common Stockholders", "Net Income")
+        fxr = fxrate(fcur, "GBP" if cur == "GBp" else cur)
+        if not len(ni) or ni.iloc[-1] <= 0 or not fxr: return "skip"
+        alt = mc / (float(ni.iloc[-1]) * fxr)
+        if not pe or pe != pe or pe <= 0 or abs(pe - alt) / alt > .25: return "skip"   # Yahoo-PE en eigen berekening moeten ongeveer kloppen, anders vertrouwen we het niet
     if g is None or not pe or pe != pe or pe <= 0: return "skip"
     bs = t.balance_sheet
     ebit = row(inc, "EBIT", "Operating Income")
@@ -138,11 +194,11 @@ def metrics(tk):
     ind = info.get("industry") or ""
     sector = "Halfgeleiders" if "Semiconductor" in ind else SECMAP.get(sec, sec)
     return dict(tk=tk, naam=info.get("shortName") or info.get("longName") or tk, sector=sector, land=LAND.get(info.get("country"), info.get("country")),
-                munt="GBP" if cur == "GBp" else cur, eps=g, roic=roic, rmin=rmin, peg=pe / (g * 100) if g > 0 else None, nd=ndv, pe=pe)
+                munt="GBP" if cur == "GBp" else cur, eps=g, roic=roic, rmin=rmin, peg=pe / (g * 100) if g > 0 else None, nd=ndv, pe=pe, regio=("Azië / opkomend" if em else None), beurs=EM.get(tk), omgerekend=omg or None)
 
 
 def ok(m, R):
-    return (m["eps"] is not None and R["eps"] <= m["eps"] <= EPSMAX and m["roic"] is not None and m["roic"] >= R["roic"] and m.get("rmin") is not None and m["rmin"] >= R["rmin"]
+    return (m["eps"] is not None and R["eps"] <= m["eps"] <= R.get("emax", EPSMAX) and m["roic"] is not None and m["roic"] >= R["roic"] and m.get("rmin") is not None and m["rmin"] >= R["rmin"]
             and m["peg"] is not None and 0 < m["peg"] < R["peg"] and m["nd"] is not None and m["nd"] <= R["nd"])
 
 
@@ -163,7 +219,10 @@ if __name__ == "__main__":
         cand.append(x); gezien.add(x)
     print("universum", len(U), per, "te scannen", len(cand))
     res, gescand, fout = {}, 0, 0
+    cand.sort(key=lambda t: t in EM)                    # eerst de gewone markten, opkomende markten achteraan
     for i, tk in enumerate(cand):
+        if time.time() - T0 > BUDGET:
+            print("Tijdbudget op, scan afgebroken bij", i); cand = cand[:i]; break
         try:
             m = metrics(tk)
             if m != "skip": res[tk] = m
@@ -174,9 +233,16 @@ if __name__ == "__main__":
         time.sleep(.2)
         if i % 50 == 0: print(i, len(res), fout, flush=True)
     # bewaakt: als Yahoo of Wikipedia grotendeels faalt, de oude lijst niet overschrijven
-    if len(cand) < 200 or gescand < .7 * len(cand):
+    nodig = [t for t in cand if t not in EM]
+    if len(cand) < 200 or gescand < .7 * len(cand) or len(nodig) < 2000:
         print("TE WEINIG DATA, scan.json blijft ongewijzigd", len(cand), gescand); raise SystemExit(1)
-    voldoet = sorted([m for m in res.values() if ok(m, RULE)], key=rang, reverse=True)
+    rl = lambda m: EM_RULE if m.get("regio") else RULE
+    sl = lambda m: EM_STAY if m.get("regio") else STAY
+    voldoet, sleutel = [], set()
+    for m in sorted([m for m in res.values() if ok(m, rl(m))], key=rang, reverse=True):
+        k = re.sub(r"[^a-z0-9]", "", (m["naam"] or "").lower())[:8]       # zelfde bedrijf op twee beurzen (ADR en lokaal): alleen de beste telt
+        if k in sleutel: continue
+        sleutel.add(k); voldoet.append(m)
     oud = {x["tk"]: x for x in (OLD or {}).get("lijst", [])}
     fails = dict((OLD or {}).get("fails", {}))
     log = list((OLD or {}).get("log", []))
@@ -188,7 +254,7 @@ if __name__ == "__main__":
         m = res.get(tk)
         if m is None:
             nieuw[tk] = x; continue                    # niet kunnen ophalen: laten staan
-        if ok(m, STAY):
+        if ok(m, sl(m) if m.get("regio") or x.get("regio") else STAY):
             fails.pop(tk, None); nieuw[tk] = dict(x, **{k: m[k] for k in ("eps", "roic", "peg", "nd", "pe")})
         else:
             fails[tk] = fails.get(tk, 0) + 1
@@ -197,14 +263,17 @@ if __name__ == "__main__":
                 fails.pop(tk, None)
             else: nieuw[tk] = dict(x, **{k: m[k] for k in ("eps", "roic", "peg", "nd", "pe")})
     for m in voldoet:                                  # nieuwe kandidaten, beste eerst
-        if len(nieuw) >= MAXN: break
         if m["tk"] in nieuw or m["tk"] in oud: continue
+        nem = sum(1 for v in nieuw.values() if v.get("regio"))
+        if m.get("regio"):
+            if nem >= MAXN_EM: continue
+        elif len(nieuw) - nem >= MAXN: continue
         nieuw[m["tk"]] = dict(m, sinds=today.isoformat(), bron=U.get(m["tk"]))
-        if OLD: log_nw.append(dict(t="add", n=m["naam"], tk=m["tk"], d=dnl, iso=today.isoformat(), m=f"Voldoet aan al je regels: {waarden(m)}."))
+        if OLD: log_nw.append(dict(t="add", n=m["naam"], tk=m["tk"], d=dnl, iso=today.isoformat(), m=f"Voldoet aan al je regels: {waarden(m)}." + (" Azië/opkomend: strengere regels, hoger risico, controleer of je het bij DEGIRO kunt kopen." if m.get("regio") else "")))
     if not OLD:
         log_nw.append(dict(t="info", n="Eerste scan", tk=None, d=dnl, iso=today.isoformat(), m=f"{len(nieuw)} bedrijven voldoen aan je regels en staan op de lijst."))
     log = (log_nw + log)[:80]
-    out = dict(datum=today.isoformat(), universum=len(U), per_index=per, gescand=gescand, voldoen=len(voldoet), max=MAXN,
+    out = dict(datum=today.isoformat(), universum=len(U), per_index=per, gescand=gescand, voldoen=len(voldoet), max=MAXN, max_em=MAXN_EM, em_regels=EM_RULE,
                regels=dict(eps=RULE["eps"], roic=RULE["roic"], peg=RULE["peg"], nd=RULE["nd"], rmin=RULE["rmin"], stay=STAY), lijst=list(nieuw.values()), fails=fails, log=log)
     json.dump(clean(out), open("scan.json", "w"), ensure_ascii=False, indent=1)
     print("klaar", len(nieuw), "lijst,", len(log_nw), "wijzigingen")
