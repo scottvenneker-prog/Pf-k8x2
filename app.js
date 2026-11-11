@@ -1443,7 +1443,7 @@ function vDet(){
  const r=rows.find(x=>x.tk===det);let t=DT_MAP[dtab]||dtab;if(!DT_TABS.some(x=>x[0]===t))t="ov";
  let b="";
  if(t==="ov")b=brkDet(r)+analyseTab(r);
- else if(t==="cijfers"){const K=cfKeys(r);b=dqTile(r)+ettmTile(r)+(r.fin?"":kasTile(r))+cfAcc("q","Groei en kwaliteit",K.q,finFix(r,dBody("kwaliteit")),1)+cfAcc("w","Waardering",K.w,dBody("waardering"))+cfAcc("d","Dividend",K.d,dBody("dividend"))+cfAcc("s","Laatste vier cijferseizoenen",K.s,cfSeason(r))}
+ else if(t==="cijfers"){const K=cfKeys(r);b=dqTile(r)+ettmTile(r)+(r.fin?"":kasTile(r))+cfAcc("q","Groei en kwaliteit",K.q,finFix(r,dBody("kwaliteit")),0)+cfAcc("w","Waardering",K.w,dBody("waardering"))+cfAcc("d","Dividend",K.d,dBody("dividend"))+cfAcc("s","Laatste vier cijferseizoenen",K.s,cfSeason(r))}
  else if(t==="koers")b=dBody("trend");
  else if(t==="bedrijf")b=omsTile(r)+dBody("ai")+moatTab(r);
  else if(t==="nieuws")b=dBody("nieuws");
@@ -2075,7 +2075,7 @@ const MKT={vix:16.8,sp:.3,sp200:4.1};
 
 
 /* inzichten: schakelaar */
-let inzTab="rend";try{inzTab=localStorage.getItem("pf_inz")||"rend"}catch(e){}
+let inzTab="rend";
 function subX(k){if(!k)return null;
  if(k.startsWith("x_")){const a=k.slice(2);return XM[a]?[XM[a].t,xSub(a)]:null}
  if(k==="winst")return ["Resultaat per bedrijf",winSub()];
@@ -2183,7 +2183,7 @@ function histSync(){const d=(sub||det)?subStack.length+1:0;while(histN<d){histor
 window.addEventListener("popstate",()=>{if(histIgn>0){histIgn=0;return}if(histN>0){histN--;goBack();render()}});
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
- if(b.dataset.t){dvBack=null;const xb=(!b.closest("#nav")&&!b.classList.contains("back")&&!b.classList.contains("chip")&&b.dataset.t!==tab&&!["inz","nws"].includes(b.dataset.t))?tab:null;xBack=xb;tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
+ if(b.dataset.t){dvBack=null;if(b.dataset.t==="inz")inzTab="rend";const xb=(!b.closest("#nav")&&!b.classList.contains("back")&&!b.classList.contains("chip")&&b.dataset.t!==tab&&!["inz","nws"].includes(b.dataset.t))?tab:null;xBack=xb;tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
  else if(b.dataset.d){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
  else if(b.id==="bk"){goBack();render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
