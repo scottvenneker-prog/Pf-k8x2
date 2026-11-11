@@ -130,9 +130,9 @@ svg.sp{width:100%;height:84px;display:block}
 .donut{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .donut svg{width:132px;height:132px;flex:none}
 .dleg{flex:1;min-width:150px;display:grid;gap:5px;font-size:13px}
-.dleg div{display:flex;align-items:center;gap:7px}
+.dleg div{display:flex;align-items:center;gap:7px;min-width:0}.dleg b{flex:none}.dleg{overflow:hidden}
 .dleg i{width:10px;height:10px;border-radius:3px;flex:none}
-.dleg span{flex:1;color:var(--mut)}
+.dleg span{flex:1;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .hb{display:grid;grid-template-columns:78px 1fr 68px;gap:8px;align-items:center;font-size:12.5px;margin:5px 0}
 .hb .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mut)}
 .hb .tr{position:relative;height:12px}
