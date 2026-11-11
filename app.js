@@ -1469,7 +1469,7 @@ function pfYears(){try{const cy=new Date().getFullYear();let L=YRS[YRS.length-1]
   const s=pfIdxYr("sp500",L.y,false),w=pfIdxYr("wereld",L.y,false);if(s!=null)L.sp=s;if(w!=null)L.wr=w}}catch(e){try{console.error("jaren",e)}catch(x){}}}
 
 /* Hele tegel klikbaar: raak je de achtergrond van een tegel met precies één doorklikdoel, dan opent dat doel. */
-document.addEventListener("click",e=>{try{if(e.target.closest("button,a,input,select,textarea,summary,label,svg,[data-dx],[data-p]"))return;const t=e.target.closest(".tile");if(!t||!t.closest("#app,#sheet"))return;
+document.addEventListener("click",e=>{try{if(e.target.closest("button,a,input,select,textarea,summary,label,svg,[data-dx],[data-p]"))return;const cd=e.target.closest(".cand");if(cd&&cd.closest("#app,#sheet")){const dx=cd.querySelectorAll("button[data-dx]");if(dx.length===1){dx[0].click();return}}const t=e.target.closest(".tile");if(!t||!t.closest("#app,#sheet"))return;
  const bs=[...t.querySelectorAll("button[data-s],button[data-t],button[data-d]")].filter(b=>!b.closest(".chips,.seg"));if(!bs.length)return;
  const key=b=>["s","t","d"].map(k=>b.dataset[k]||"").join("|");if(bs.some(b=>key(b)!==key(bs[0])))return;bs[0].click()}catch(x){}});
 
