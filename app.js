@@ -1167,7 +1167,7 @@ function ytdX(r){try{if(!PRIVE||!PRIVE.imp||!PRIVE.hold||!PRIVE.hold[r.tk])retur
  return {e:s,p:inv>0?s/inv*100:null}}catch(e){return null}}
 function ytdE(r){const x=ytdX(r);return x?x.e:null}
 
-function yrCard(k){if(dOpen["g"+k]===undefined)dOpen["g"+k]=(+k===Math.max(...Object.keys(JR).map(Number)));const o=!!dOpen["g"+k],Y=YRS.find(x=>x.y===+k),r=yrRecon(+k),res=Y?Y.res:(r&&r.eind>0?r.res:null),yl=Y?Y.res/Y.begin*100:(r&&r.ok&&r.begin>0?r.res/r.begin*100:null),d=JR[k];
+function yrCard(k){const o=!!dOpen["g"+k],Y=YRS.find(x=>x.y===+k),r=yrRecon(+k),res=Y?Y.res:(r&&r.eind>0?r.res:null),yl=Y?Y.res/Y.begin*100:(r&&r.ok&&r.begin>0?r.res/r.begin*100:null),d=JR[k];
  const sub=yl!=null&&isFinite(yl)?"yield "+pc(yl):"netto inleg "+eur(d.i-d.u);
  const hd=`<button class="row" data-dx="g${k}" aria-expanded="${o}" style="border:0;background:none;width:100%;border-radius:12px"><span class="grow"><div class="t">${k}${Y&&Y.lopend?" (tot nu)":""}</div><div class="m">${sub}</div></span>${res!=null&&isFinite(res)?`<span class="num ${res>=0?"pos":"neg"}">${eur(res)}</span>`:""}<span class="chev${o?" open":""}"></span></button>`;
  return `<div class="tile" style="margin-top:8px;padding:0">${hd}${o?`<div style="padding:0 12px 12px">${yrCard0(k).replace('<div class="sec">','<div>').replace('<div class="tile"','<div').replace(/^<div>\s*/,'<div>')}</div>`:""}</div>`}
