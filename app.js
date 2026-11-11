@@ -2012,7 +2012,7 @@ function erTbl(r){const x=xd(r),b=x.er.filter(e=>e.s>0).length,u=x.er.filter(e=>
 function winD(r){const hh=HIST[r.tk],yrs=hh?Math.max(.3,(Date.now()-new Date(hh.eerste).getTime())/315576e5):1.5+(r.h%5)*.5,k=r.waarde-r.inkoop,d=r.inkoop*(r.yld||0)/100*Math.min(yrs,6);return {k,d,t:k+d,yrs}}
 function winTile(r){return winTileN(r)}
 function inzWin(){return inzWinN()}
-function winSub(){return winSeg()+winTot()+(winTab==="gesloten"?closedWin():winOpen())}
+function winSub(){return winTot()+winSeg()+(winTab==="gesloten"?closedWin():winOpen())}
 function winSub0(){const l=own.map(r=>({r,w:winD(r)})).sort((a,b)=>b.w.t-a.w.t),mx=Math.max(...l.map(x=>Math.abs(x.w.t)),1);
  return `<div class="tile" style="margin-top:12px">${l.map(x=>`<div class="hb"><span class="nm">${x.r.naam}</span><div class="tr"><i style="width:${Math.max(3,Math.abs(x.w.t)/mx*100)}%;background:var(--${x.w.t>=0?"good":"bad"})"></i></div><b class="num ${cls(x.w.t)}">${eur(x.w.t)}</b></div>`).join("")}</div><div class="sec"><h2>Per bedrijf</h2><div class="list">${l.map(x=>`<button class="row" data-d="${x.r.tk}"><span class="grow"><div class="t">${x.r.naam}</div><div class="m">koers ${eur(x.w.k)} · dividend ${eur(x.w.d)}</div></span><span style="text-align:right"><div class="num ${cls(x.w.t)}">${eur(x.w.t)}</div><div class="m num ${cls(x.w.t)}">${pc(x.w.t/x.r.inkoop*100)}</div></span></button>`).join("")}</div></div>${nt("Koerswinst is waarde nu min inkoop en komt uit je export. Dividend is een schatting per bedrijf (inkoop maal rendement maal de tijd dat je het hebt), want je export geeft het dividend alleen per jaar. Later tel ik de echte uitbetalingen per bedrijf uit je rekeningoverzicht.")}`}
 
