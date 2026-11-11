@@ -1335,7 +1335,7 @@ function filoData(){const W=own.reduce((t,r)=>t+r.w,0)||100,sh=f=>own.filter(f).
 
 function filoSub(){const D=filoData(),J=/^(Duidelijke moat|Megatrend|Toekomstbestendig|Weinig, goed)/,VKm={g:"pos",a:"warn",r:"neg",n:""},op=h=>h.replace('<details class="tile fo"','<details class="tile fo" open'),
  val=x=>{const m=x[1].match(/^[\d.,]+(?:%| trades| aandelen)?/);return m?m[0]:"mijn oordeel"},
- fl=x=>{const h=fold(x[0],val(x),`<div>${x[1]}</div>`,VKm[x[2]]);return x[2]==="r"?op(h):h},
+ fl=x=>{const h=fold(x[0],val(x),`<div>${x[1]}</div>`,VKm[x[2]]);return h},
  ec=D.filter(x=>!J.test(x[0])),ins=D.filter(x=>J.test(x[0])),cn=c=>ec.filter(x=>x[2]===c).length;
  return `<div class="tile" style="margin-top:12px">${kvs([["Op groen",String(cn("g")),"pos"],["Oranje",String(cn("a")),cn("a")?"warn":""],["Rood",String(cn("r")),cn("r")?"neg":""]])}<div class="note" style="margin-top:8px">${ec.length} principes op echte cijfers, getoetst aan je eigen drempels. Doel: ${DOEL}% per jaar.</div></div>
  <div class="sec"><h2>Op echte cijfers</h2><div class="list fl">${ec.map(fl).join("")}</div></div>
