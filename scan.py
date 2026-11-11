@@ -105,7 +105,8 @@ def universe():
             print("FOUT universum", naam, e); per[naam] = 0
     # Europese beurzen via de Yahoo-screener (alles boven MINCAP): Stockholm, Parijs, Frankfurt, Londen, Milaan, Madrid, Kopenhagen, Helsinki, Oslo, Zurich, Brussel
     for code, naam in (("STO", "Stockholm"), ("PAR", "Parijs"), ("GER", "Frankfurt"), ("LSE", "Londen"), ("MIL", "Milaan"), ("MCE", "Madrid"),
-                       ("CPH", "Kopenhagen"), ("HEL", "Helsinki"), ("OSL", "Oslo"), ("EBS", "Zurich"), ("BRU", "Brussel")):
+                       ("CPH", "Kopenhagen"), ("HEL", "Helsinki"), ("OSL", "Oslo"), ("EBS", "Zurich"), ("BRU", "Brussel"),
+                       ("VIE", "Wenen"), ("ISE", "Dublin"), ("LIS", "Lissabon")):
         try:
             q = yf.EquityQuery("and", [yf.EquityQuery("eq", ["exchange", code]), yf.EquityQuery("gt", ["intradaymarketcap", MINCAP])])
             l, off = [], 0
