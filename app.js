@@ -2197,7 +2197,7 @@ function introNaarOnder(b){if(typeof b!=="string")return b;const m=b.match(/^(\s
 let lastDet=null,lastScr;
 function render(){const SQ=".tabs,.chips,.sc,.seg",sv=["app","sheet"].map(id=>[id,[...document.querySelectorAll(SQ.split(",").map(q=>"#"+id+" "+q).join(","))].map(e=>e.scrollLeft)]);render0();cleanDom();for(const [id,a] of sv){const c=document.getElementById(id);if(!c)continue;[...c.querySelectorAll(SQ)].forEach((e,j)=>{if(a[j])e.scrollLeft=a[j];const t=e.classList.contains("tabs")&&e.querySelector("[aria-selected=true]");if(t){const l=t.offsetLeft-e.offsetLeft;if(l<e.scrollLeft)e.scrollLeft=l-8;else if(l+t.offsetWidth>e.scrollLeft+e.clientWidth)e.scrollLeft=l+t.offsetWidth-e.clientWidth+8}})}}
 function render0(){
- if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;const scrK=[tab,sub,det,dtab,inzTab,agTab,kTab,advTab].join("|");if(typeof lastScr!=="undefined"&&scrK!==lastScr)Object.keys(foOpen).forEach(k=>delete foOpen[k]);lastScr=scrK;
+ if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;const scrK=[tab,sub,det,dtab,inzTab,agTab,kTab,advTab].join("|");if(typeof lastScr!=="undefined"&&scrK!==lastScr){Object.keys(foOpen).forEach(k=>delete foOpen[k]);Object.keys(dOpen).forEach(k=>delete dOpen[k])}lastScr=scrK;
  const s=document.getElementById("sheet");
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
  nav();
