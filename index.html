@@ -57,6 +57,9 @@ summary .num,summary b.num{font-family:var(--sans);font-variant-numeric:tabular-
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--bg);font-weight:600}
+.chips:has(.chip[aria-pressed]){background:var(--bg);border-radius:10px;padding:3px!important;gap:2px;margin:8px 0 10px}
+.chips:has(.chip[aria-pressed]) .chip{border:0;background:none;border-radius:8px;padding:7px 12px;color:var(--mut)}
+.chips:has(.chip[aria-pressed]) .chip[aria-pressed="true"]{background:var(--card);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;width:100%;text-align:left;display:block}
 .card .h{display:flex;gap:10px;align-items:center}
 .card .nm{font-weight:600;min-width:0;flex:1}
