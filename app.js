@@ -237,6 +237,7 @@ function bars(cagr,label,base){const n=5;const arr=[];let e=100;for(let i=n-1;i>
  const yrs=[2021,2022,2023,2024,2025];
  return `<div class="bars">${v.map((x,i)=>`<div><span class="num">${Math.round(x)}</span><i style="height:${Math.max(6,x/mx*72)}px"></i></div>`).join("")}</div><div class="axis">${yrs.map(y=>`<span>${y}</span>`).join("")}</div>`}
 // state
+let dvBack=null;
 let subStack=[],sub=(function(){try{if(sessionStorage.getItem("pf_goimp")){sessionStorage.removeItem("pf_goimp");return "import"}}catch(e){}return null})(),tab="start",filter="alles",sort="weging",det=null,dtab="analyse",budget=INLEG;
 const ic={start:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',pos:'<path d="M4 6h16M4 12h16M4 18h16"/>',kand:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',div:'<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',doel:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'};
 const names={start:"Start",pos:"Posities",doel:"Doelcheck",kand:"Kandidaten",div:"Agenda"};
@@ -1103,7 +1104,7 @@ function vDiv(){
  const lijst=`<div class="list" style="margin-top:12px"><button class="row" data-dx="come" aria-expanded="${!!dOpen.come}" style="${dOpen.come?"background:var(--bg);":""}"><span class="grow"><div class="t">Komende twee maanden</div><div class="m">${c2.length} ${c2.length===1?"uitbetaling":"uitbetalingen"}</div></span><span class="num pos">${eur(e2)}</span><span class="chev${dOpen.come?" open":""}"></span></button>${dOpen.come?`<div style="background:var(--bg)">${c2.map(x=>`<button class="row" data-d="${x.r.tk}" style="padding-left:26px"><span class="grow"><div class="t" style="font-size:14px;font-weight:500">${x.r.naam}</div><div class="m" style="font-size:12px">${divLbl(x)}</div></span><span class="num pos" style="font-size:14px">${eur(x.eur,0)}</span></button>`).join("")||'<div class="note" style="padding:8px 12px 8px 26px">De komende twee maanden verwacht ik geen uitbetalingen.</div>'}</div>`:""}</div>`;
  let jaarN='';const jaarH=(()=>{const y=divYParts(),g=P.jaar.match(/<div class="note" style="margin-top:8px">Alles bruto[\s\S]*?<\/div>/);jaarN=(g?g[0].replace(' style="margin-top:8px"',''):'')+'<div class="note">Het nettobedrag is het Dividend bij Inzichten, onder "Waar je winst vandaan komt".</div><div class="note">Netto is wat DeGiro na bronbelasting bijschreef. Bruto is wat het bedrijf uitbetaalde, omgerekend naar euro. Het verschil is bronbelasting en wisselkoers. Dit jaar telt alleen wat al is ontvangen.</div>';return `<div class="sec" style="margin-top:12px"><h2>Per jaar, sinds ${y.ys0}</h2><div class="tile">${y.tiles}<div style="margin-top:12px">${y.chart}</div>${y.list}</div></div>`})();
  const notes=''+(geenDat?`<div class="note">Voor een deel van je aandelen komen de uitbetaaldata bij de volgende dagelijkse update binnen; tot dan staat hun verwachting er nog niet bij.</div>`:"")+`<div class="note">Verwacht rond: de uitbetaaldatum van vorig jaar plus een jaar. Bedrijven die vier keer per jaar uitkeren reken ik met hun laatste bedrag, de rest met het bedrag van vorig jaar. Een bedrijf dat zijn dividend verandert of overslaat, wijkt af.</div>`;
- return head("Dividend")+`<div class="sec" style="margin-top:12px"><h2>Dit jaar, ${new Date().getFullYear()}</h2><div class="tile">${kvs([["Ontvangen",eur(got),"pos"],["Nog te ontvangen",eur(exp),"pos"],["Verwacht heel jaar",eur(tot),"pos"]])}<div style="margin-top:8px">${P.rend}</div><div style="margin-top:12px">${divChart(G.m,come)}</div>${lijst}</div></div>`+jaarH+`<div class="note" >Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting. Is er al een datum aangekondigd (Yahoo), dan gebruik ik die met het laatste dividend per aandeel. De rest is wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div>`+jaarN+notes+demo}
+ return head("Dividend")+(dvBack?`<button class="back" data-dvb="1" style="margin-top:8px">‹ Terug naar Inzichten</button>`:"")+`<div class="sec" style="margin-top:12px"><h2>Dit jaar, ${new Date().getFullYear()}</h2><div class="tile">${kvs([["Ontvangen",eur(got),"pos"],["Nog te ontvangen",eur(exp),"pos"],["Verwacht heel jaar",eur(tot),"pos"]])}<div style="margin-top:8px">${P.rend}</div><div style="margin-top:12px">${divChart(G.m,come)}</div>${lijst}</div></div>`+jaarH+`<div class="note" >Ontvangen is het echt bijgeschreven dividend (bruto, voor bronbelasting) uit je rekeningoverzicht. Nog te ontvangen is een verwachting. Is er al een datum aangekondigd (Yahoo), dan gebruik ik die met het laatste dividend per aandeel. De rest is wat elk bedrijf in dezelfde periode vorig jaar uitkeerde, maal het aantal aandelen dat je nu hebt.</div>`+jaarN+notes+demo}
 
 let sOpen={};
 
@@ -2212,7 +2213,7 @@ function histSync(){const d=(sub||det)?subStack.length+1:0;while(histN<d){histor
 window.addEventListener("popstate",()=>{if(histIgn>0){histIgn=0;return}if(histN>0){histN--;goBack();render()}});
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
- if(b.dataset.t){tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
+ if(b.dataset.t){dvBack=null;tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
  else if(b.dataset.d){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
  else if(b.id==="bk"){goBack();render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
@@ -2223,7 +2224,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
  else if(b.dataset.pv){posView=b.dataset.pv;render()} else if(b.dataset.so){sort=b.dataset.so;render()}
  else if(b.dataset.nt){nwsTab=b.dataset.nt;render()}
- else if(b.dataset.dvg){det=null;sub=null;subStack=[];agTab="dividend";tab="div";render();window.scrollTo(0,0)}
+ else if(b.dataset.dvg){dvBack=tab==="inz"?"inz":null;det=null;sub=null;subStack=[];agTab="dividend";tab="div";render();window.scrollTo(0,0)}
  else if(b.dataset.stt){stTab=b.dataset.stt;render()}
  else if(b.dataset.dvm){dvmTab=b.dataset.dvm;render()}
  else if(b.dataset.cnc){concTab=b.dataset.cnc;render()}else if(b.dataset.ddp){ddTab=b.dataset.ddp;render()}
@@ -2246,6 +2247,7 @@ document.addEventListener("click",e=>{
  else if(b.dataset.dx){dOpen[b.dataset.dx]=!dOpen[b.dataset.dx];render()}else if(b.dataset.sx){sOpen[b.dataset.sx]=!sOpen[b.dataset.sx];render()}else if(b.dataset.gx){gOpen[b.dataset.gx]=!gOpen[b.dataset.gx];render()}else if(b.dataset.kx){kOpen[b.dataset.kx]=!kOpen[b.dataset.kx];render()}else if(b.dataset.more){slMore=!slMore;render()}else if(b.dataset.sf){slF=b.dataset.sf;render()}
  else if(b.dataset.ss){slS=b.dataset.ss;render()}
  else if(b.dataset.ds){docS=b.dataset.ds;render()}
+ else if(b.dataset.dvb){dvBack=null;det=null;sub=null;subStack=[];tab="inz";render();window.scrollTo(0,0)}
  else if(b.dataset.go==="par"){det=null;sub=null;subStack=[];tab="nws";nwsTab="inst";render();document.getElementById("sheet").hidden=true;window.scrollTo(0,0)}
 });
 document.addEventListener("input",e=>{const t=e.target;
