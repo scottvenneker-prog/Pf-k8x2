@@ -1,7 +1,146 @@
 {
- "nlo": {},
- "moat": {},
- "aix": {},
- "aiv": {},
- "mega": {}
+ "nlo": {
+  "MEDP": "Amerikaans onderzoeksbureau dat klinische studies uitvoert voor farma- en biotechbedrijven, met vooral kleine en middelgrote biotechklanten.",
+  "HRB": "Amerikaanse belastingadviseur die aangiftes verzorgt via kantoren en een eigen online programma voor wie het zelf wil doen.",
+  "TUI1.DE": "Duitse reisorganisatie met pakketreizen, eigen hotels, cruises en een eigen vliegmaatschappij, vooral voor Europese vakantiegangers.",
+  "ADBE": "Softwarebedrijf achter Photoshop, Illustrator, Acrobat en Premiere, grotendeels verkocht via abonnementen, met eigen AI-functies zoals Firefly.",
+  "COR": "Amerikaanse groothandel in geneesmiddelen die medicijnen levert aan apotheken, ziekenhuizen en artsen, met extra diensten voor fabrikanten."
+ },
+ "moat": {
+  "MEDP": {
+   "s": "Matig",
+   "m": "Goede naam en ervaring met kleine biotechbedrijven, maar klanten kunnen overstappen naar andere onderzoeksbureaus",
+   "c": [
+    "IQVIA",
+    "ICON",
+    "Thermo Fisher (PPD)",
+    "Fortrea"
+   ],
+   "b": [
+    "Afhankelijk van de geldstroom van kleine biotechbedrijven",
+    "Studies kunnen uitgesteld of geschrapt worden",
+    "Personeel is schaars en duur"
+   ]
+  },
+  "HRB": {
+   "s": "Smal",
+   "m": "Bekend merk en veel kantoren, maar klanten stappen makkelijk over",
+   "c": [
+    "Intuit (TurboTax)",
+    "Gratis IRS-programma's",
+    "Jackson Hewitt",
+    "Kleine belastingadviseurs"
+   ],
+   "b": [
+    "Gratis en eenvoudiger aangifte van de overheid",
+    "AI-hulpmiddelen die de adviseur minder nodig maken",
+    "Seizoensgebonden omzet"
+   ]
+  },
+  "TUI1.DE": {
+   "s": "Smal",
+   "m": "Groot en bekend merk met eigen hotels en vliegtuigen, maar een bedrijfstak met lage marges en weinig loyaliteit",
+   "c": [
+    "Jet2",
+    "Booking.com",
+    "Expedia",
+    "DER Touristik"
+   ],
+   "b": [
+    "Reizigers boeken steeds vaker zelf online",
+    "Gevoelig voor crises, brandstofprijzen en een terugval in reizen",
+    "Hoge schulden en veel vaste kosten"
+   ]
+  },
+  "ADBE": {
+   "s": "Breed",
+   "m": "Hoge overstapkosten: ontwerpers en bedrijven werken in Adobe-bestanden en -programma's",
+   "c": [
+    "Canva",
+    "Figma",
+    "Midjourney en andere AI-beeldmakers",
+    "Microsoft"
+   ],
+   "b": [
+    "AI-gereedschap waarmee iedereen zonder vakkennis beelden maakt",
+    "Goedkopere concurrenten voor gewone gebruikers",
+    "Hoge AI-kosten drukken de winst"
+   ]
+  },
+  "COR": {
+   "s": "Breed",
+   "m": "Schaal en vaste contracten in een markt met weinig grote spelers; apotheken en fabrikanten hebben ze nodig",
+   "c": [
+    "McKesson",
+    "Cardinal Health",
+    "Kleinere regionale groothandels",
+    "Directe levering door fabrikanten"
+   ],
+   "b": [
+    "Zeer lage marges en grote afhankelijkheid van een paar klanten",
+    "Prijsregels en druk van de overheid op medicijnprijzen",
+    "Rechtszaken rond opioïden"
+   ]
+  }
+ },
+ "aix": {
+  "MEDP": [
+   0,
+   "Neutraal",
+   "AI kan het ontwerpen en volgen van studies sneller en goedkoper maken. Medpace verkoopt echter vertrouwen en uitvoering, en dat blijft mensenwerk.",
+   "Of AI de prijs per studie drukt, en of Medpace die voordelen zelf houdt of aan klanten doorgeeft."
+  ],
+  "HRB": [
+   -1,
+   "Kwetsbaar",
+   "AI-assistenten kunnen steeds beter een aangifte invullen en vragen beantwoorden, waardoor klanten minder snel naar een kantoor gaan. H&R Block gebruikt AI zelf ook, maar verkoopt vooral het gemak van een adviseur.",
+   "Klanten die zelf met een AI-assistent hun aangifte doen, en hoe snel de gratis opties beter worden."
+  ],
+  "TUI1.DE": [
+   -1,
+   "Kan omzeild worden",
+   "Een AI-assistent kan vluchten, hotels en uitjes zelf samenstellen, zonder pakketreis van TUI. Eigen hotels en vliegtuigen blijven wel iets wat een AI niet kan nabouwen.",
+   "Meer boekingen via AI-assistenten en Google, en minder via TUI zelf."
+  ],
+  "ADBE": [
+   0,
+   "Neutraal",
+   "AI maakt het makkelijker om beelden en video te maken, ook voor wie niet in Adobe werkt. Adobe verwerkt AI in zijn eigen programma's en heeft de bestanden en klanten van professionals.",
+   "AI-beeldmakers en Canva die gewone gebruikers wegtrekken, en kosten van AI die op de winst drukken."
+  ],
+  "COR": [
+   0,
+   "Weinig invloed",
+   "Een groothandel die fysiek medicijnen levert. AI maakt voorraad en planning efficiënter, maar verandert niet wat er verkocht wordt.",
+   "Weinig AI-risico, maar ook weinig AI-groei; de winst hangt aan prijsbeleid en volumes."
+  ]
+ },
+ "aiv": {
+  "MEDP": [
+   1,
+   "Medpace verkoopt uitvoering van studies, met artsen, patiënten en toezichthouders. AI kan daar tijd besparen, maar vervangt het werk niet; netto weinig kwetsbaar."
+  ],
+  "HRB": [
+   -1,
+   "H&R Block gebruikt zelf AI en heeft adviseurs, maar het gemak van een aangifte laten doen wordt door AI-assistenten steeds meer nagebootst. Netto kwetsbaar voor klanten die zelf gaan doen."
+  ],
+  "TUI1.DE": [
+   0,
+   "TUI heeft eigen hotels, vliegtuigen en merk, die een AI-assistent niet kan namaken. Maar de klant kan wel via een AI-assistent een eigen reis samenstellen, dus de positie tussen klant en aanbod staat onder druk."
+  ],
+  "ADBE": [
+   0,
+   "Adobe heeft eigen AI en veel professionele gebruikers die moeilijk overstappen. Maar AI-beeldmakers maken het voor gewone gebruikers makkelijker om elders te werken, dus netto neutraal."
+  ],
+  "COR": [
+   1,
+   "Cencora levert fysieke medicijnen en heeft schaal en contracten. AI verandert dat niet, dus netto niet kwetsbaar."
+  ]
+ },
+ "mega": {
+  "MEDP": "Gezondheid en vergrijzing",
+  "TUI1.DE": "Reizen",
+  "ADBE": "Software",
+  "COR": "Gezondheid en vergrijzing"
+ }
 }
