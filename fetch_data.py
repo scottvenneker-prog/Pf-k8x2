@@ -73,8 +73,8 @@ def insiders(t):
     return sorted(out, key=lambda i: i["datum"], reverse=True)
 
 def fx():
-    out = dict(FALL)
-    for c in list(FALL) + ["HKD", "CNY", "TWD", "KRW", "INR", "JPY", "SGD", "BRL", "MXN", "ZAR", "DKK", "NOK", "CHF"]:
+    out = dict(FALL); out["EUR"] = 1.0
+    for c in list(FALL) + ["HKD", "CNY", "TWD", "KRW", "INR", "JPY", "SGD", "BRL", "MXN", "ZAR", "DKK", "NOK", "CHF", "KZT", "TRY", "PLN", "AUD"]:
         try:
             h = yf.Ticker(f"EUR{c}=X").history(period="5d")["Close"].dropna()
             if len(h): out[c] = float(h.iloc[-1])
