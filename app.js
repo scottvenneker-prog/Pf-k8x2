@@ -1478,15 +1478,16 @@ function rendJaren(){try{const g=DATA.indices&&DATA.indices.lang;if(!g||!g.sp500
  const last=c=>{let b=-1;for(let i=off;i<n;i++)if(dt(i)<=c)b=i;return b};
  const y0=+dt(off).slice(0,4),y1=+dt(n-1).slice(0,4),rows=[],gaten=[];
  for(let y=y0;y<=y1;y++){let ib=last((y-1)+"-12-31"),part=false;if(ib<0){ib=off;part=true}const ie=y===y1?n-1:last(y+"-12-31");if(ie<=ib)continue;
-  let z=0;for(let i=ib+1;i<=ie;i++)if(Math.abs(me[i-off]/me[i-1-off]-1)<1e-9)z++;if(ie-ib>8&&z/(ie-ib)>.25){gaten.push(y);continue}
+  let z=0;for(let i=ib+1;i<=ie;i++)if(Math.abs(me[i-off]/me[i-1-off]-1)<1e-9)z++;const gap=ie-ib>8&&z/(ie-ib)>.25;if(gap)gaten.push(y);
   const r=a=>a&&a[ib]&&a[ie]?(a[ie]/a[ib]-1)*100:null;
-  rows.push({y,part,lopend:y===y1,me:(me[ie-off]/me[ib-off]-1)*100,sp:r(g.sp500),wr:r(g.wereld),from:part?MND[+dt(off).slice(5,7)-1]:""})}
+  rows.push({y,part,lopend:y===y1,gap,me:gap?null:(me[ie-off]/me[ib-off]-1)*100,sp:r(g.sp500),wr:r(g.wereld),from:part?MND[+dt(off).slice(5,7)-1]:""})}
  if(!rows.length)return null;
- const ok=rows.filter(r=>r.sp!=null&&r.wr!=null),bs=ok.filter(r=>r.me>r.sp).length,bw=ok.filter(r=>r.me>r.wr).length,t=ok.length;
- const c=(v)=>v==null?"":`<td class="num ${cls(v)}">${pc(v)}</td>`;
- return `<div class="sec"><h2>Jij tegenover de index, per jaar</h2><div class="tile" style="margin-bottom:8px">${kvs([["Boven S&P 500",bs+" van "+t,bs*2>=t?"pos":"neg"],["Boven Wereld",bw+" van "+t,bw*2>=t?"pos":"neg"]])}</div>
- <div class="tile"><table class="t"><thead><tr><th>Jaar</th><th>Jij</th><th>S&amp;P 500</th><th>Wereld</th></tr></thead><tbody>${rows.slice().reverse().map(r=>`<tr><td><b>${r.y}</b>${r.lopend?'<div style="font-size:11.5px;color:var(--mut)">tot nu</div>':r.part?`<div style="font-size:11.5px;color:var(--mut)">vanaf ${r.from}</div>`:""}</td>${c(r.me)}${c(r.sp)}${c(r.wr)}</tr>`).join("")}</tbody></table></div></div>
- <div class="note">Jouw rendement is tijdgewogen: stortingen en opnames zijn eruit gerekend, dus het is vergelijkbaar met de index. Het komt uit je echte transacties. De indexen staan in euro en tellen alleen de koers, zonder dividend.${gaten.length?` ${gaten.join(" en ")} ontbreekt: daarvoor heb ik niet genoeg koersdata van je posities.`:""}</div>`}catch(e){return null}}
+ const ok=rows.filter(r=>!r.gap&&r.sp!=null&&r.wr!=null),bs=ok.filter(r=>r.me>r.sp).length,bw=ok.filter(r=>r.me>r.wr).length,t=ok.length;
+ const cg=(v)=>v==null?`<td class="num" style="color:var(--mut);font-size:12px">onbekend</td>`:`<td class="num ${cls(v)}">${pc(v)}</td>`;
+ const tot=k=>(ok.reduce((m,r)=>m*(1+r[k]/100),1)-1)*100,tm=tot("me"),ts=tot("sp"),tw=tot("wr"),begin=rows[0].part?rows[0].from+" "+rows[0].y:"januari "+rows[0].y;
+ return `<div class="sec"><h2>Totaal sinds ${begin}</h2><div class="tile" style="margin-bottom:8px">${kvs([["Jij",pc(tm),cls(tm)],["S&P 500",pc(ts),cls(ts)],["Wereld",pc(tw),cls(tw)]],3)}</div></div><div class="sec"><h2>Jij tegenover de index, per jaar</h2><div class="tile" style="margin-bottom:8px">${kvs([["Boven S&P 500",bs+" van "+t,bs*2>=t?"pos":"neg"],["Boven Wereld",bw+" van "+t,bw*2>=t?"pos":"neg"]])}</div>
+ <div class="tile"><table class="t"><thead><tr><th>Jaar</th><th>Jij</th><th>S&amp;P 500</th><th>Wereld</th></tr></thead><tbody>${rows.slice().reverse().map(r=>`<tr><td><b>${r.y}</b>${r.lopend?'<div style="font-size:11.5px;color:var(--mut)">tot nu</div>':r.part?`<div style="font-size:11.5px;color:var(--mut)">vanaf ${r.from}</div>`:""}</td>${cg(r.me)}${cg(r.sp)}${cg(r.wr)}</tr>`).join("")}</tbody></table></div></div>
+ <div class="note">Jouw rendement is tijdgewogen: stortingen en opnames zijn eruit gerekend, dus het is vergelijkbaar met de index. Het komt uit je echte transacties. De indexen staan in euro en tellen alleen de koers, zonder dividend.${gaten.length?` Voor ${gaten.join(" en ")} heb ik niet genoeg koersdata van je posities, dus jouw cijfer is onbekend. Dat jaar staat ook niet in het totaal en de telling, voor de indexen ook niet.`:""}</div>`}catch(e){return null}}
 const NWS=buildNws();
 const TYP={zone:["Koopzone","g"],shortlist:["Shortlist","g"],oordeel:["Oordeel","g"],koersdoel:["Koersdoel","n"],aankondiging:["Aankondiging","a"],insider:["Insider","g"],trend:["Trend","a"],dividend:["Dividend","g"],weging:["Weging","a"],ai:["AI","n"],cijfers:["Cijfers","n"],nieuws:["Nieuws","n"]};
 let READ=[];try{READ=JSON.parse(localStorage.getItem("pf_read")||"[]")}catch(e){}
@@ -2187,10 +2188,10 @@ function vSub(){
   body=top+lists+`<div class="sec"><h2>Hoe ik dit beoordeel</h2><div class="tile"><div class="s">Per bedrijf stel ik drie vragen. Eén: levert het bedrijf iets waar AI veel van nodig heeft, zoals chips, machines of cloud? Twee: kan AI het product vervangen of de concurrentie goedkoper maken? Drie: hoe sterk zijn de klantrelaties en hoe moeilijk is overstappen? Dat is mijn oordeel op basis van het bedrijfsmodel, geen meting. Ik loop het elk kwartaal na. Laatst beoordeeld: ${new Date(AI_DATUM).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})}. Verslechtert mijn oordeel of komt de kwetsbare groep boven ${AI_LIM}%, dan krijg je een actie en een melding.</div></div></div>`}
  return `<div class="bar"><button class="back" id="bk">‹ Terug</button></div><h1 style="font-size:26px;letter-spacing:-.01em">${title}</h1>${introNaarOnder(body)}${demo}`}
 function introNaarOnder(b){if(typeof b!=="string")return b;const m=b.match(/^(\s*<div class="seg"[^>]*>(?:(?!<\/div>)[\s\S])*<\/div>)?\s*<div class="note"[^>]*>((?:(?!<div)[\s\S])*?)<\/div>/);if(!m)return b;const rest=b.slice(m[0].length);if(!rest.trim())return b;return (m[1]||"")+rest+`<div class="note" style="margin-top:12px">${m[2]}</div>`}
-let lastDet=null;
+let lastDet=null,lastScr;
 function render(){const SQ=".tabs,.chips,.sc,.seg",sv=["app","sheet"].map(id=>[id,[...document.querySelectorAll(SQ.split(",").map(q=>"#"+id+" "+q).join(","))].map(e=>e.scrollLeft)]);render0();cleanDom();for(const [id,a] of sv){const c=document.getElementById(id);if(!c)continue;[...c.querySelectorAll(SQ)].forEach((e,j)=>{if(a[j])e.scrollLeft=a[j];const t=e.classList.contains("tabs")&&e.querySelector("[aria-selected=true]");if(t){const l=t.offsetLeft-e.offsetLeft;if(l<e.scrollLeft)e.scrollLeft=l-8;else if(l+t.offsetWidth>e.scrollLeft+e.clientWidth)e.scrollLeft=l+t.offsetWidth-e.clientWidth+8}})}}
 function render0(){
- if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;
+ if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;const scrK=[tab,sub,det,dtab,inzTab,agTab,kTab,advTab].join("|");if(typeof lastScr!=="undefined"&&scrK!==lastScr)Object.keys(foOpen).forEach(k=>delete foOpen[k]);lastScr=scrK;
  const s=document.getElementById("sheet");
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
  nav();
