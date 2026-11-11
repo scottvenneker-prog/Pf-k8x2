@@ -128,7 +128,7 @@ def universe():
             while off < 3000:
                 r = yf.screen(q, offset=off, size=250, sortField="intradaymarketcap", sortAsc=False)
                 qs = (r or {}).get("quotes") or []
-                l += [x["symbol"] for x in qs if x.get("symbol")]
+                l += [x["symbol"] for x in qs if x.get("symbol") and not re.search(r"3[1-9]\.SA$", x["symbol"])]  # geen Braziliaanse BDR's (certificaten van Amerikaanse aandelen, al gedekt door de VS-lijst)
                 if len(qs) < 250: break
                 off += 250
         per[naam] = len(l)
