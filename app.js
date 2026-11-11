@@ -2150,7 +2150,7 @@ function render(){const SQ=".tabs,.chips,.sc,.seg",sv=["app","sheet"].map(id=>[i
 function render0(){
  const s=document.getElementById("sheet");
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
- if(xBack&&xBack!==tab&&tab==="kand")document.getElementById("app").insertAdjacentHTML("afterbegin",`<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div>`);
+ if(xBack&&xBack!==tab&&!["inz","nws"].includes(tab))document.getElementById("app").insertAdjacentHTML("afterbegin",`<div class="bar"><button class="back" data-xb="1">‹ Terug</button></div>`);
  nav();
  if(det){s.hidden=false;s.innerHTML=vDet()}else if(sub){s.hidden=false;s.innerHTML=vSub()}else{s.hidden=true}
  try{histSync()}catch(x){}
@@ -2161,7 +2161,7 @@ function histSync(){const d=(sub||det)?subStack.length+1:0;while(histN<d){histor
 window.addEventListener("popstate",()=>{if(histIgn>0){histIgn=0;return}if(histN>0){histN--;goBack();render()}});
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
- if(b.dataset.t){dvBack=null;xBack=null;tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
+ if(b.dataset.t){dvBack=null;const xb=(!b.closest("#nav")&&!b.classList.contains("back")&&!b.classList.contains("chip")&&b.dataset.t!==tab&&!["inz","nws"].includes(b.dataset.t))?tab:null;xBack=xb;tab=b.dataset.t;det=null;sub=null;subStack=[];if(b.closest("#nav")){if(tab==="pos"){filter="alles";posView="bedrijf"}else if(tab==="doel"){advTab="ov"}else if(tab==="kand"){kTab="short"}else if(tab==="div"){agTab="alles"}}render();window.scrollTo(0,0)}
  else if(b.dataset.d){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];det=b.dataset.d;dtab="analyse";render();document.getElementById("sheet").scrollTop=0}
  else if(b.id==="bk"){goBack();render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
