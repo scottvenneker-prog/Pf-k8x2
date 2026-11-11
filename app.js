@@ -2207,7 +2207,7 @@ function introNaarOnder(b){if(typeof b!=="string")return b;const m=b.match(/^(\s
 let lastDet=null,lastScr;
 function render(){const SQ=".tabs,.chips,.sc,.seg",sv=["app","sheet"].map(id=>[id,[...document.querySelectorAll(SQ.split(",").map(q=>"#"+id+" "+q).join(","))].map(e=>e.scrollLeft)]);render0();cleanDom();for(const [id,a] of sv){const c=document.getElementById(id);if(!c)continue;[...c.querySelectorAll(SQ)].forEach((e,j)=>{if(a[j])e.scrollLeft=a[j];const t=e.classList.contains("tabs")&&e.querySelector("[aria-selected=true]");if(t){const l=t.offsetLeft-e.offsetLeft;if(l<e.scrollLeft)e.scrollLeft=l-8;else if(l+t.offsetWidth>e.scrollLeft+e.clientWidth)e.scrollLeft=l+t.offsetWidth-e.clientWidth+8}})}}
 function render0(){
- if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;const scrK=[tab,sub,det,dtab,inzTab,agTab,kTab,advTab].join("|");if(typeof lastScr!=="undefined"&&scrK!==lastScr){Object.keys(foOpen).forEach(k=>delete foOpen[k]);Object.keys(dOpen).forEach(k=>delete dOpen[k])}lastScr=scrK;
+ if(det&&det!==lastDet){dOpen.scoreUit=false;Object.keys(dOpen).forEach(k=>{if(k.startsWith("cf_"))delete dOpen[k]})}lastDet=det;const scrK=[tab,sub,det,dtab,inzTab,agTab,kTab,advTab].join("|");if(typeof lastScr!=="undefined"&&scrK!==lastScr){Object.keys(foOpen).forEach(k=>delete foOpen[k]);Object.keys(dOpen).forEach(k=>delete dOpen[k])}lastScr=scrK;if(sub!==window._lastSub){if(!window._keepSub){try{bTab="grafiek"}catch(e){}try{stTab="beurs"}catch(e){}try{dvmTab="maand"}catch(e){}try{concTab="ver"}catch(e){}try{ddTab="1"}catch(e){}try{sprTab="sector"}catch(e){}try{dvSort="bedrag"}catch(e){}try{xdSort="g5"}catch(e){}try{rTab="jaar"}catch(e){}}window._keepSub=0;window._lastSub=sub}
  const s=document.getElementById("sheet");
  document.getElementById("app").innerHTML={start:vStart,pos:vPos,doel:vDoel,kand:vKand,div:vAgenda,nws:vNws,inz:vInz}[tab]();
  nav();
@@ -2225,7 +2225,7 @@ document.addEventListener("click",e=>{
  else if(b.id==="bk"){goBack();render()}
  else if(b.id==="addS"){const d=document.getElementById("sd").value,a=+document.getElementById("sa").value;if(d&&a>0){STORT.push([d,Math.round(a*100)/100]);saveS();render()}}
  else if(b.dataset.del!==undefined){STORT.splice(+b.dataset.del,1);saveS();render()}
- else if(b.dataset.wgs){bTab="streef";if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub="bedrijven";det=null;render();document.getElementById("sheet").scrollTop=0}
+ else if(b.dataset.wgs){bTab="streef";window._keepSub=1;if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub="bedrijven";det=null;render();document.getElementById("sheet").scrollTop=0}
  else if(b.dataset.s){if(sub||det)subStack.push({s:sub,d:det,t:dtab});else subStack=[];sub=b.dataset.s;det=null;render();document.getElementById("sheet").scrollTop=0}
  else if(b.dataset.p){per=b.dataset.p;render()}
  else if(b.dataset.ws!==undefined){wSec=b.dataset.ws;try{localStorage.setItem("pf_wsec",wSec)}catch(x){}render()}
