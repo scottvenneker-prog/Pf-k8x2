@@ -412,7 +412,7 @@ function vDet0(){
  const tabs=[["analyse","Analyse"],["kwaliteit","Kwaliteit"],["trend","Trend"],["ai","AI"],["waardering","Waardering"],["moat","Moat en risico"],["dividend","Dividend"],["nieuws","Nieuws & insiders"],["positie","Positie"]];
  let body="";
  if(t==="analyse")body=analyseTab(r);if(t==="moat")body=dqTile(r)+moatTab(r);if(t==="analyse")body=brkDet(r)+omsTile(r)+dqTile(r)+ettmTile(r)+kasTile(r)+body;
- if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${epsT(r)}</b><em>${r.epsSer?"kasstroomgroei, overnames vertekenen de winst":"doel: 12% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
+ if(t==="kwaliteit")body=`<div class="facts"><div class="fact"><small>EPS-groei per jaar</small><b class="num">${epsT(r)}</b><em>${r.epsSer?"kasstroomgroei, overnames vertekenen de winst":"doel: 15% of meer"}</em></div><div class="fact"><small>FCF-groei per jaar</small><b class="num">${r.fcf==null?"–":r.fcf+"%"}</b><em>${r.fcf==null?"niet van toepassing":"5 jaar"}</em></div><div class="fact"><small>ROIC</small><b class="num">${r.roic==null?(r.sector==="Financieel"?"n.v.t.":"–"):r.roic+"%"}</b><em>doel: 15% of meer</em></div><div class="fact"><small>Schuld / EBITDA</small><b class="num">${r.nd==null?"–":f1(r.nd)}</b><em>${r.nd==null?"niet voor financials":"onder 2,5 is veilig"}</em></div></div>
  ${cagrBlock(r)}${((r.D||{}).eps||[]).length>1?`<div class="chart"><h3>Winst per aandeel (EPS)</h3><p>Per jaar, in de munt van het bedrijf</p>${barsR(r.D.eps,r.D.jaren)}</div>`:""}${((r.D||{}).fcf||[]).length>1?`<div class="chart"><h3>Vrije kasstroom (FCF)</h3><p>Per jaar, in miljoenen</p>${barsR(r.D.fcf,r.D.fjaren)}</div>`:""}${kwExtra(r)}`;
  if(t==="trend")body=`<div class="facts"><div class="fact"><small>Trend</small><b><span class="pill ${r.tc}">${r.trend}</span></b><em>50- en 200-daags gemiddelde</em></div><div class="fact"><small>Analisten koersdoel</small><b class="num ${cls(r.kd)}">${pc(r.kd,0)}</b><em>gemiddelde verwachting</em></div><div class="fact"><small>T.o.v. 50-daags</small><b class="num ${cls(r.v50)}">${pc(r.v50)}</b></div><div class="fact"><small>T.o.v. 200-daags</small><b class="num ${cls(r.v200)}">${pc(r.v200)}</b></div></div>
  <div class="chart"><h3>Koers, 12 maanden</h3><p>Van 12 maanden geleden tot nu</p>${spark(r)}</div>
@@ -1385,12 +1385,36 @@ function brkBand(r){return "";const L=brkVoor(r.tk);return L.map(x=>`<button dat
 function zoneTile0(r){return r.peh==null||r.fin?"":zoneTile0(r)}
 function dBody(k){const o=dtab;dtab=k;let s;try{s=vDet0()}finally{dtab=o}const i=s.indexOf('role="tablist">'),j=s.indexOf('</div>',i)+6;let b=s.slice(j);if(demo&&b.endsWith(demo))b=b.slice(0,-demo.length);return b}
 const DT_MAP={analyse:"ov",kwaliteit:"cijfers",waardering:"cijfers",dividend:"cijfers",trend:"koers",ai:"bedrijf",moat:"bedrijf",nieuws:"nieuws",positie:"positie"};
-const DT_TABS=[["ov","Overzicht"],["cijfers","Cijfers"],["koers","Koers"],["bedrijf","Bedrijf"],["nieuws","Nieuws"],["positie","Mijn positie"]];
+const DT_TABS=[["ov","Overzicht"],["bedrijf","Bedrijf"],["cijfers","Cijfers"],["koers","Koers"],["positie","Mijn positie"],["nieuws","Nieuws"]];
 function nlFix(s){return s.replace(/(\d)\.(\d+)(?=%|×)/g,"$1,$2")}
 function cutDiv(s,mk){const i=s.indexOf(mk);if(i<0)return s;let d=0,p=i;const re=/<div\b|<\/div>/g;re.lastIndex=i;let m;while((m=re.exec(s))){if(m[0]==="</div>"){d--;if(d===0){return s.slice(0,i)+s.slice(m.index+6)}}else d++}return s}
 function finFix(r,s){if(!r.fin)return s;s=s.replace(/<div class="fact"><small>FCF-groei per jaar<\/small>[\s\S]*?<\/div>/,"");s=s.replace(/<div class="fact"><small>Schuld \/ EBITDA<\/small>[\s\S]*?<\/div>/,`<div class="fact"><small>ROE</small><b class="num">${r.roe==null?"–":f1(r.roe)+"%"}</b><em>rendement op eigen vermogen, doel ${RULES.roe}%</em></div>`);return cutDiv(s,'<div class="chart"><h3>Vrije kasstroom (FCF)</h3>')}
 function dH(t){return `<div class="sec" style="margin-bottom:0"><h2>${t}</h2></div>`}
 function nwsFilter(r,s){return s}
+/* ===== Uniforme kleurcodes op de bedrijfspagina: groen = voldoet aan je regel, oranje = net niet, rood = voldoet niet ===== */
+function colorizeDet(h,r){
+ const nv=s=>{const m=String(s).replace(/\./g,"").replace(",",".").replace("−","-").match(/-?\d+(\.\d+)?/);return m?+m[0]:null};
+ const g15=v=>v>=15?"pos":v>=0?"warn":"neg",g10=v=>v>=10?"pos":v>=0?"warn":"neg",sg=v=>v>0?"pos":v<0?"neg":"";
+ const R={
+  "Alleen boekjaren":g15,"Incl. laatste 12 mnd":g15,"Verwacht komend jaar":g10,
+  "Omzetgroei per jaar":sg,"FCF-marge":v=>v>=10?"pos":v>=0?"warn":"neg","FCF ÷ winst":v=>v>=1?"pos":v>=0?"warn":"neg",
+  "EPS-groei per jaar":g15,"FCF-groei per jaar":g15,"ROIC":v=>v>=15?"pos":v>=10?"warn":"neg",
+  "ROE":v=>v>=18?"pos":v>=12?"pos":v>=0?"warn":"neg",
+  "Schuld / EBITDA":v=>v<=1?"pos":v<=1.5?"warn":"neg","FCF-rendement":v=>v>=3?"pos":v>=0?"warn":"neg",
+  "PEG":v=>v<=1.5?"pos":"warn","Rendement":v=>v>0?"pos":""};
+ h=h.replace(/<small>([^<]+)<\/small>\s*<b class="num">([^<]*)<\/b>(\s*<em[^>]*>([^<]*(?:<span[^>]*>[^<]*<\/span>)?[^<]*)<\/em>)?/g,(m,lab,val,emw,em)=>{
+  lab=lab.trim();let c="";const v=nv(val);
+  if(lab==="Belang bestuur")c=/Laag/.test(emw||"")?"warn":/Hoog/.test(emw||"")?"pos":"";
+  else if(lab==="Winstmarge"){const q=(em||"").match(/\(([+−-]?\d+[,.]?\d*) pt\)/);if(q){const d=nv(q[1]);c=d>=-2?"pos":"neg"}}
+  else if(lab==="PE nu"){const q=(em||"").match(/historisch (\d+[,.]?\d*)/);if(q&&v!=null)c=v<=nv(q[1])?"pos":"warn"}
+  else if(R[lab]&&v!=null&&!/n\.v\.t|–/.test(val))c=R[lab](v);
+  return c?m.replace('<b class="num">','<b class="num '+c+'">'):m});
+ {const z=h.match(/<small>Zone vanaf PE<\/small><b class="num">([^<]+)<\/b>/);if(z)h=h.replace(/(<small>PE nu<\/small><b class="num)(">)([^<]+)(<\/b><\/div>)/,(m,a1,a2,val,a4)=>{const v=nv(val),zv=nv(z[1]);return v!=null&&zv!=null?a1+(v<=zv?" pos":" warn")+a2+val+a4:m})}
+ /* vergelijking met branchegenoten: groei en PEG kleuren, PE blijft neutraal */
+ h=h.replace(/<tr(?: style="[^"]*")?><td>[^<]*<\/td><td class="num">[^<]*<\/td><td class="num">([^<]*)<\/td><td class="num">([^<]*)<\/td><\/tr>/g,(m,gr,pg)=>{
+  const a=nv(gr),b=nv(pg);let o=m;if(a!=null&&/%/.test(gr))o=o.replace('<td class="num">'+gr+'</td>','<td class="num '+g15(a)+'">'+gr+'</td>');
+  if(b!=null&&!/n\.v\.t/.test(pg))o=o.replace('<td class="num">'+pg+'</td>','<td class="num '+(b<=1.5?"pos":"warn")+'">'+pg+'</td>');return o});
+ return h}
 function vDet(){
  const r=rows.find(x=>x.tk===det);let t=DT_MAP[dtab]||dtab;if(!DT_TABS.some(x=>x[0]===t))t="ov";
  let b="";
@@ -1401,7 +1425,7 @@ function vDet(){
  else if(t==="nieuws")b=dBody("nieuws");
  else if(t==="positie")b=dBody("positie")+moatTab(r,"pos");
  if(t==="cijfers")b+=ovnTile(r);
- b=nlFix(b);
+ b=colorizeDet(nlFix(b),r);
  return `<div class="bar"><button class="back" id="bk">‹ Terug</button><button class="pill ${r.licht}" data-dx="scoreUit" aria-expanded="${!!dOpen.scoreUit}" style="border:0;font:inherit;font-size:inherit;cursor:pointer">${lichtTxt[r.licht]} · ${r.score}/10 ${dOpen.scoreUit?"˄":"˅"}</button></div>
  <h1 style="font-size:26px;letter-spacing:-.01em">${r.naam}</h1><div class="note" style="margin-top:2px">${r.tk} · ${r.sector} · ${r.land}</div>${dOpen.scoreUit?scoreUitleg(r):""}
  <div class="tabs" role="tablist" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;overflow:visible">${DT_TABS.map(([k,n])=>`<button role="tab" data-dt="${k}" aria-selected="${k===t}" style="padding:9px 4px;white-space:nowrap">${n}</button>`).join("")}</div>${b}${demo}`}
