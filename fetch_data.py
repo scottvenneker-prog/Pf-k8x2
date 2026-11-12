@@ -468,9 +468,25 @@ def idx_ye(sym, cur):
         return ye_eur(z, cur)
     except Exception as e:
         print("FOUT idx_ye", sym, e); return None
+def idx_yes(sym, cur):
+    """Slotkoers (in euro, of onbewerkt bij cur=EUR) op de laatste handelsdag van elk kalenderjaar sinds 2015."""
+    try:
+        z = yf.Ticker(sym).history(period="max", auto_adjust=True)["Close"].dropna()
+        out = {}
+        for y in range(2015, dt.date.today().year):
+            q = z[z.index.strftime("%Y-%m-%d") <= f"{y}-12-31"].tail(1)
+            if len(q):
+                v = in_eur(q, cur)
+                if v: out[str(y)] = v[0]
+        return out
+    except Exception as e:
+        print("FOUT idx_yes", sym, e); return {}
+YEJ = {}
+for _k, (_s, _c) in dict(sp500=("^GSPC", "USD"), sp500_usd=("^GSPC", "EUR"), wereld=("IWDA.AS", "EUR")).items():
+    for _y, _v in idx_yes(_s, _c).items(): YEJ.setdefault(_y, {})[_k] = _v
 YE = dict(sp500=idx_ye("^GSPC", "USD"), sp500_usd=idx_ye("^GSPC", "EUR"), wereld=idx_ye("IWDA.AS", "EUR"))
 INDICES = dict(sp500=sp5, wereld=wr5, vix=vix, sp500_usd=sp5u, ye=YE, dagen=dict(sp500=idx_daily("^GSPC","USD"), sp500_usd=idx_daily("^GSPC","EUR"), wereld=idx_daily("IWDA.AS","EUR")), dag=dict(sp500=idx_dag("^GSPC"), wereld=idx_dag("IWDA.AS")),
-               lang=dict(start=d0, sp500=spL, wereld=wrL, sp500_usd=spLu))
+               lang=dict(start=d0, sp500=spL, wereld=wrL, sp500_usd=spLu, ye=YEJ))
 
 # Koersen van reeds verkochte aandelen (alleen ISIN's staan in verkocht.json; geen bedragen of aantallen)
 SOLD = json.load(open("verkocht.json")) if os.path.exists("verkocht.json") else []

@@ -1481,8 +1481,8 @@ function rendJaren(){try{const g=DATA.indices&&DATA.indices.lang;if(!g||!g.sp500
  const y0=+dt(off).slice(0,4),y1=+dt(n-1).slice(0,4),rows=[],gaten=[];
  for(let y=y0;y<=y1;y++){let ib=last((y-1)+"-12-31"),part=false;if(ib<0){ib=off;part=true}const ie=y===y1?n-1:last(y+"-12-31");if(ie<=ib)continue;
   let z=0;for(let i=ib+1;i<=ie;i++)if(Math.abs(me[i-off]/me[i-1-off]-1)<1e-9)z++;const gap=ie-ib>8&&z/(ie-ib)>.25;if(gap)gaten.push(y);
-  const r=a=>a&&a[ib]&&a[ie]?(a[ie]/a[ib]-1)*100:null;
-  rows.push({y,part,lopend:y===y1,gap,me:gap?null:(me[ie-off]/me[ib-off]-1)*100,sp:r(g.sp500),su:g.sp500_usd&&g.sp500_usd.length===n?r(g.sp500_usd):null,wr:r(g.wereld),from:part?MND[+dt(off).slice(5,7)-1]:""})}
+  const YJ=g.ye||{},y_b=YJ[y-1],y_e=y===y1?null:YJ[y];const r=(a,k)=>{if(!a||!a[ib]||!a[ie])return null;const b=!part&&y_b&&y_b[k]?y_b[k]:a[ib],e=y_e&&y_e[k]?y_e[k]:a[ie];return (e/b-1)*100};
+  rows.push({y,part,lopend:y===y1,gap,me:gap?null:(y===y1&&window._F0&&ib+1<=ie?window._F0*me[ie-off]/me[ib+1-off]:me[ie-off]/me[ib-off])*100-100*(y===y1&&window._F0&&ib+1<=ie?1:1),sp:r(g.sp500,'sp500'),su:g.sp500_usd&&g.sp500_usd.length===n?r(g.sp500_usd,'sp500_usd'):null,wr:r(g.wereld,'wereld'),from:part?MND[+dt(off).slice(5,7)-1]:""})}
  if(!rows.length)return null;
  const ok=rows.filter(r=>!r.gap&&r.sp!=null&&r.wr!=null),bs=ok.filter(r=>r.me>r.sp).length,bw=ok.filter(r=>r.me>r.wr).length,t=ok.length;
  const cg=(v)=>v==null?`<td class="num" style="color:var(--mut);font-size:12px">onbekend</td>`:`<td class="num ${cls(v)}">${pc(v)}</td>`;
