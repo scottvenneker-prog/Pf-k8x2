@@ -452,6 +452,7 @@ sp5, _ = idx_series("^GSPC", "USD", n=261)
 wr5, _ = idx_series("IWDA.AS", "EUR", n=261)
 spL, d0 = idx_series("^GSPC", "USD", start="2016-01-01")
 wrL, d1 = idx_series("IWDA.AS", "EUR", start="2016-01-01")
+spLu, _ = idx_series("^GSPC", "EUR", start="2016-01-01")  # S&P 500 in dollars (geen omrekening)
 vix, _ = idx_series("^VIX", "EUR", n=53)
 def idx_daily(sym, cur):
     try:
@@ -469,7 +470,7 @@ def idx_ye(sym, cur):
         print("FOUT idx_ye", sym, e); return None
 YE = dict(sp500=idx_ye("^GSPC", "USD"), sp500_usd=idx_ye("^GSPC", "EUR"), wereld=idx_ye("IWDA.AS", "EUR"))
 INDICES = dict(sp500=sp5, wereld=wr5, vix=vix, sp500_usd=sp5u, ye=YE, dagen=dict(sp500=idx_daily("^GSPC","USD"), sp500_usd=idx_daily("^GSPC","EUR"), wereld=idx_daily("IWDA.AS","EUR")), dag=dict(sp500=idx_dag("^GSPC"), wereld=idx_dag("IWDA.AS")),
-               lang=dict(start=d0, sp500=spL, wereld=wrL))
+               lang=dict(start=d0, sp500=spL, wereld=wrL, sp500_usd=spLu))
 
 # Koersen van reeds verkochte aandelen (alleen ISIN's staan in verkocht.json; geen bedragen of aantallen)
 SOLD = json.load(open("verkocht.json")) if os.path.exists("verkocht.json") else []
