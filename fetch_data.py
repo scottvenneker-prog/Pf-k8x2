@@ -191,6 +191,16 @@ def despike(s):
 def one(tk):
     t = yf.Ticker(tk); info = t.info or {}
     raw = despike(t.history(period="max", auto_adjust=True)["Close"].dropna())
+    try:   # Yahoo's dagreeks loopt voor Europese beurzen soms 1 à 2 handelsdagen achter: de actuele koers erbij zetten als die nieuwer is
+        _p, _t = info.get("regularMarketPrice"), info.get("regularMarketTime")
+        if _p and _t and _p > 0:
+            _d = pd.Timestamp(int(_t), unit="s", tz="UTC")
+            _tz = raw.index.tz
+            _dd = (_d.tz_convert(_tz) if _tz is not None else _d.tz_localize(None)).normalize()
+            if _dd > raw.index[-1].normalize():
+                raw = pd.concat([raw, pd.Series([float(_p)], index=[_dd])])
+    except Exception as e:
+        print("FOUT actuele koers", tk, e)
     px = float(raw.iloc[-1]); day = float(px / raw.iloc[-2] - 1)
     cur = "GBP" if info.get("currency") == "GBp" else info.get("currency")
     hist = raw / 100 if info.get("currency") == "GBp" else raw          # pence -> ponden
