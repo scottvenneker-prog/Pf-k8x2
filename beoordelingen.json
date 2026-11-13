@@ -81,6 +81,66 @@
     "Prijsregels en druk van de overheid op medicijnprijzen",
     "Rechtszaken rond opioïden"
    ]
+  },
+  "SFM": {
+   "s": "Smal",
+   "m": "Duidelijk profiel rond vers en gezond, maar winkelketens zijn makkelijk na te bootsen en klanten stappen zonder kosten over",
+   "c": [
+    "Whole Foods (Amazon)",
+    "Kroger",
+    "Trader Joe's",
+    "Walmart"
+   ],
+   "b": [
+    "Grote ketens kopen steeds meer natuurlijke producten in en drukken de prijs",
+    "Groei hangt af van nieuwe winkels openen op goede locaties",
+    "Consument die minder uitgeeft aan duurder verse voeding"
+   ]
+  },
+  "STRL": {
+   "s": "Smal",
+   "m": "Goede lokale positie en kennis van complexe terreinwerken, maar aannemerswerk is project voor project en niet bijzonder beschermd",
+   "c": [
+    "Quanta Services",
+    "MasTec",
+    "Granite Construction",
+    "Lokale grondverzetbedrijven"
+   ],
+   "b": [
+    "Sterk afhankelijk van investeringen in datacenters en chipfabrieken",
+    "Aannemerswerk kent kostenoverschrijdingen en dunne marges",
+    "Overheidsbudgetten voor wegen en infrastructuur kunnen veranderen"
+   ]
+  },
+  "NFLX": {
+   "s": "Breed",
+   "m": "Schaalvoordeel: een enorm abonneebestand betaalt voor dure producties, en de eigen kijkdata stuurt wat er gemaakt wordt",
+   "c": [
+    "Disney+",
+    "Amazon Prime Video",
+    "YouTube",
+    "Apple TV+"
+   ],
+   "b": [
+    "Concurrenten met grote techbedrijven achter zich kunnen jarenlang verlies nemen",
+    "Kijktijd verschuift naar YouTube en korte video",
+    "Content blijft duur en abonnees kunnen maandelijks opzeggen"
+   ]
+  },
+  "META": {
+   "s": "Breed",
+   "m": "Netwerkeffect: miljarden gebruikers zitten op de apps van Meta, en adverteerders volgen het bereik en de gerichte advertentiedata",
+   "c": [
+    "Google/YouTube",
+    "TikTok",
+    "Snap",
+    "Pinterest"
+   ],
+   "b": [
+    "Bijna alle omzet komt uit advertenties en schommelt met de economie",
+    "Strengere privacy- en mededingingsregels, vooral in Europa",
+    "Zeer hoge uitgaven aan AI en nieuwe producten die zich nog moeten terugbetalen"
+   ]
   }
  },
  "aix": {
