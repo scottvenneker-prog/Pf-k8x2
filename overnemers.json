@@ -50,5 +50,18 @@
   "fcfa2s_gr_9m": null,
   "overnames_usd_mln": null,
   "opm": "Cijfers uit het tussentijdse bericht van het bedrijf zelf (omzet SEK 492,2 mln); alleen groei genoemd, geen kasstroom voor aandeelhouders of overnamebedrag."
+ },
+ "ROKO-B.ST": {
+  "periode": "Q3 2026",
+  "datum": "2026-10-23",
+  "bron": "https://storage.mfn.se/17623568-9183-48c2-a052-5af33ed7aed4/261023-roko-interim-report-q32026-final.pdf",
+  "omzet_gr": 44,
+  "org_gr": 9,
+  "org_gr_9m": 6,
+  "org_gr_9m_fx": null,
+  "fcfa2s_gr": null,
+  "fcfa2s_gr_9m": null,
+  "overnames_usd_mln": null,
+  "opm": "Cijfers uit het tussentijdse bericht van het bedrijf zelf (omzet SEK 2.180 mln). Organische groei is in lokale valuta (valuta-effect kwartaal +2%, 9 maanden -2%). Kasstroom voor aandeelhouders wordt niet gepubliceerd (alleen operationele kasstroom SEK 337 mln, +60%). Overnamebesteding in SEK (netto SEK 457 mln in Q3), daarom hier null."
  }
 }
